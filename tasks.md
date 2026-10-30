@@ -44,3 +44,23 @@ claude -p "Do the next unchecked task in tasks.md following AGENTS.md" --max-tur
 
 - [ ] Replace polling on the Matched page
       Done when: `/matched/[token]` gets the claim through Supabase Realtime (or server-sent events) instead of `setInterval`, with polling kept as a fallback; lint + typecheck pass.
+
+## PRD gaps (see `docs/PRD.md`)
+
+- [ ] Rename the safe safety category from `ok` to `none`
+      Done when: `SafetyCategory` in `src/lib/ask/types.ts` uses `"none"` instead of `"ok"` (matching the PRD's AI functions table), every usage and the safetyCheck zod enum/prompt are updated, and `rg '"ok"' src/lib/ask src/lib/ai/ask src/server/actions/ask.ts "src/app/(flow)"` finds no safety-category uses; lint + typecheck pass.
+
+- [ ] Add the extension-email option to the "write my essay" redirect
+      Done when: `/resources?type=tutoring` shows a third option, "Ask your professor for an extension", with a short editable email template the user can copy (nothing is sent); tutoring and writing center options stay; lint + typecheck pass.
+
+- [ ] Private match route: ask one helper directly
+      Done when: each helper card on `/where` has an "Ask {firstName}" button that goes to a private preview (exact message, no group), and on an explicit tap creates a post with no `groupId` in the store and goes to `/matched/[token]`; the "coming soon" note is removed; sensitive asks can use this route but still never get group chats; `postToGroup` is never called for private asks; lint + typecheck pass.
+
+- [ ] Asker accepts before helper contact info is shared
+      Done when: a claim on `/h/[token]` is saved as pending; `/matched/[token]` shows "{firstName} offered to help" with Accept / Not this time; the helper's email and the meeting spot appear only after Accept; the "Covered" follow-up posts only after Accept; `getPostStatus` never returns the helper email before acceptance; lint + typecheck pass.
+
+## Needs a human (agents: skip)
+
+- [ ] Put the real campus counseling number on the crisis screen
+      Done when: `CRISIS_RESOURCES` in `src/lib/ask/mock-data.ts` has the real counseling center name and number (confirmed by the team, see PRD open questions) alongside 988; lint + typecheck pass.
+      Note for agents: needs the real number from the team, so don't guess one.

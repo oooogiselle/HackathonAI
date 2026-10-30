@@ -4,6 +4,10 @@
 
 Mobile-first web app that helps college students (especially international students) ask for help. A student types a vague need; AI turns it into a clear, small ask and suggests who or where to ask. People do all the helping.
 
+Full product spec: `docs/PRD.md` (loaded below). It wins on product questions; the code may lag behind it.
+
+@docs/PRD.md
+
 Hackathon demo: one ask, start to finish. No DB schema, no auth for the Ask flow yet; state is in memory.
 
 ## Run
