@@ -15,10 +15,9 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// TODO: rename once the project has a name.
 export const metadata: Metadata = {
-  title: "Hackathon Starter",
-  description: "Next.js + Supabase + AI SDK starter",
+  title: "Ask",
+  description: "Turn an awkward need into a clear, small ask, and find who to ask.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

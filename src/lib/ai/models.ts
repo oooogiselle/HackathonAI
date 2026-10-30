@@ -4,6 +4,9 @@ import { openai } from "@ai-sdk/openai"; // reads OPENAI_API_KEY
 
 export const chatModel = anthropic("claude-sonnet-5-5");
 
+// Ask flow (src/lib/ai/ask/*). Set ANTHROPIC_MODEL to swap models without a code change.
+export const askModel = anthropic(process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5");
+
 // Anthropic has no embeddings API, so RAG uses OpenAI. If you change this,
 // update EMBEDDING_DIMENSIONS in src/db/schema/documents.ts and migrate.
 export const embeddingModel = openai.embeddingModel("text-embedding-3-small");

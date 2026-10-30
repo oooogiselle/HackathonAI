@@ -1,0 +1,152 @@
+// Server actions for the Ask flow. No auth yet (TODO(auth)), so anything the
+// client sends is re-checked here: safety runs again on the exact text before
+// any post, and only explicit taps (Post to group, I can help) call postToGroup.
+"use server";
+
+import { randomBytes } from "node:crypto";
+import { z } from "zod";
+
+import { clarify } from "@/lib/ai/ask/clarify";
+import { draftAsk as draftAskAI } from "@/lib/ai/ask/draft-ask";
+import { privacyScrub } from "@/lib/ai/ask/privacy-scrub";
+import { safetyCheck } from "@/lib/ai/ask/safety-check";
+import { suggestWhere as suggestWhereAI } from "@/lib/ai/ask/suggest-where";
+import { COVERED_MESSAGE, formatPostMessage } from "@/lib/ask/format";
+import { findGroup, HELPERS, MEETING_SPOTS } from "@/lib/ask/mock-data";
+import { getPost, MAX_POSTS_PER_GROUP_PER_DAY, savePost, takeRateLimit } from "@/lib/ask/store";
+import type { ClarifyAnswer, Post } from "@/lib/ask/types";
+import { postToGroup } from "@/lib/groups";
+import { siteUrl } from "@/lib/site-url";
+
+const text = z.string().trim().min(1).max(1000);
+
+export async function checkSafety(need: string) {
+  return safetyCheck(text.parse(need));
+}
+
+export async function getClarifyQuestions(need: string) {
+  return clarify(text.parse(need));
+}
+
+export async function draftAsk(need: string, answers: ClarifyAnswer[]) {
+  return draftAskAI(text.parse(need), answers.slice(0, 2));
+}
+
+export async function suggestWhere(ask: string) {
+  const { category } = await safetyCheck(text.parse(ask));
+  return { category, ...(await suggestWhereAI(ask, category, HELPERS)) };
+}
+
+export async function scrubForAnonymous(ask: string) {
+  return privacyScrub(text.parse(ask));
+}
+
+export type PostAskResult = { token: string } | { error: string };
+
+const postAskSchema = z.object({
+  groupId: z.string(),
+  text,
+  anonymous: z.boolean(),
+  name: z.string().trim().max(40).optional(),
+});
+
+/** Called only from the "Post to group" button on the Share preview. */
+export async function postAsk(input: z.input<typeof postAskSchema>): Promise<PostAskResult> {
+  const parsed = postAskSchema.safeParse(input);
+  if (!parsed.success) return { error: "Something's missing from your ask." };
+  const { groupId, anonymous, name } = parsed.data;
+
+  const group = findGroup(groupId);
+  if (!group) return { error: "That group isn't available." };
+
+  const safety = await safetyCheck(parsed.data.text);
+  if (safety.category !== "ok") {
+    return { error: "This ask is better shared one-on-one, so we won't post it to a group." };
+  }
+
+  if (!takeRateLimit(group.id)) {
+    return {
+      error: `${group.name} already has ${MAX_POSTS_PER_GROUP_PER_DAY} asks today. Try another group or tomorrow.`,
+    };
+  }
+
+  const token = randomBytes(9).toString("base64url");
+  const message = formatPostMessage(
+    parsed.data.text,
+    anonymous ? null : name || null,
+    `${siteUrl()}/h/${token}`,
+  );
+
+  try {
+    await postToGroup(group, message);
+  } catch (error) {
+    console.error("postToGroup failed:", error);
+    return { error: "Couldn't reach the group chat. Please try again." };
+  }
+
+  savePost({ token, groupId, text: parsed.data.text, anonymous, createdAt: Date.now() });
+  return { token };
+}
+
+export type PublicPost = Pick<Post, "token" | "text" | "claim" | "thanks"> & { groupName: string };
+
+export async function getPostStatus(token: string): Promise<PublicPost | null> {
+  const post = getPost(token);
+  if (!post) return null;
+  return {
+    token: post.token,
+    text: post.text,
+    claim: post.claim,
+    thanks: post.thanks,
+    groupName: findGroup(post.groupId)?.name ?? "",
+  };
+}
+
+export type ClaimResult = { ok: true } | { error: string };
+
+const claimSchema = z.object({
+  token: z.string(),
+  firstName: z.string().trim().min(1, "Add your first name.").max(40),
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .email("That doesn't look like an email.")
+    .refine((e) => e.endsWith(".edu"), "Please use your school (.edu) email."),
+});
+
+/** Called only from the "I can help" button on /h/[token]. */
+export async function claimAsk(input: z.input<typeof claimSchema>): Promise<ClaimResult> {
+  const parsed = claimSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+
+  const post = getPost(parsed.data.token);
+  if (!post) return { error: "This ask has expired." };
+  if (post.claim) return { error: "Someone already offered to help. Thank you!" };
+
+  // TODO(auth): verify the school email (magic link) before trusting a claim.
+  post.claim = {
+    firstName: parsed.data.firstName,
+    email: parsed.data.email,
+    meetingSpot: MEETING_SPOTS[Math.floor(Math.random() * MEETING_SPOTS.length)],
+    claimedAt: Date.now(),
+  };
+  savePost(post);
+
+  const group = findGroup(post.groupId);
+  if (group) {
+    // Never names the asker (or the helper), anonymous or not.
+    await postToGroup(group, COVERED_MESSAGE).catch((error) =>
+      console.error("Covered follow-up failed:", error),
+    );
+  }
+  return { ok: true };
+}
+
+export async function saveThanks(token: string, note: string) {
+  const post = getPost(token);
+  if (!post?.claim) return;
+  // TODO(notifications): actually deliver the note to the helper.
+  post.thanks = text.parse(note);
+  savePost(post);
+}
