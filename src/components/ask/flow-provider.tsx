@@ -29,7 +29,7 @@ export type AskFlowState = {
 
 const INITIAL: AskFlowState = {
   need: "",
-  category: "ok",
+  category: "none",
   answers: [],
   ask: "",
   anonymous: false,

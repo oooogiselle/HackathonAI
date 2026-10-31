@@ -43,7 +43,7 @@ claude -p "Do the next unchecked task in tasks.md following AGENTS.md" --max-tur
 
 The PRD's demo path is board-first: Home → Clarify → Your ask with a price → public board → bot posts the same card to GroupMe → claim in the browser → "Already taken" + "Covered" → Matched → mocked "Pay $15" → Thank you. No Stripe API, no Google API. Do these in order.
 
-- [ ] Seed 15–20 fictional helpers with free/busy and payment eligibility
+- [x] Seed 15–20 fictional helpers with free/busy and payment eligibility
       Done when: `HELPERS` in `src/lib/ask/mock-data.ts` has 15–20 fictional Northfield helpers, each with `interests` (from: rides, moving stuff, US paperwork, cooking, language practice, course advice, been through OPT), seeded `busy` time ranges (free/busy only, no event titles), `weeklyLimit`, and `canAcceptPayment` (some false); the `Helper` type in `src/lib/ask/types.ts` has these fields; lint + typecheck pass.
 
 - [ ] Suggested price on Your ask
@@ -90,7 +90,7 @@ The PRD's demo path is board-first: Home → Clarify → Your ask with a price �
 
 ## PRD gaps: small fixes (see `docs/PRD.md`)
 
-- [ ] Rename the safe safety category from `ok` to `none`
+- [x] Rename the safe safety category from `ok` to `none`
       Done when: `SafetyCategory` in `src/lib/ask/types.ts` uses `"none"` instead of `"ok"` (matching the PRD's AI functions table), every usage and the safetyCheck zod enum/prompt are updated, and `rg '"ok"' src/lib/ask src/lib/ai/ask src/server/actions/ask.ts "src/app/(flow)"` finds no safety-category uses; lint + typecheck pass.
 
 - [ ] Add the extension-email option to the "write my essay" redirect

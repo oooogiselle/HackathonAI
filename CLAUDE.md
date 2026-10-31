@@ -46,6 +46,7 @@ src/lib/ask/               types, mock-data (fictional campus/people/groups), st
                            format (exact posted message, shared by preview + server)
 src/lib/groups/            postToGroup(group, text) + one adapter per platform (groupme, slack, mock)
 src/server/actions/ask.ts  server actions; re-checks safety + rate limit before any post
+docs/contract.md           backend ↔ frontend contract: every server action, its input/output, status
 ```
 
 The rest of the repo (`/app`, `/login`, items, chat, Supabase, Drizzle) is the original starter. Leave it alone unless a task says otherwise.

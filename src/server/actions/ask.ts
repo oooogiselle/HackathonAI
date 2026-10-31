@@ -60,7 +60,7 @@ export async function postAsk(input: z.input<typeof postAskSchema>): Promise<Pos
   if (!group) return { error: "That group isn't available." };
 
   const safety = await safetyCheck(parsed.data.text);
-  if (safety.category !== "ok") {
+  if (safety.category !== "none") {
     return { error: "This ask is better shared one-on-one, so we won't post it to a group." };
   }
 

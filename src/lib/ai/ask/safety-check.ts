@@ -11,7 +11,7 @@ import type { SafetyCategory, SafetyResult } from "@/lib/ask/types";
 import { withFallback } from "./fallback";
 
 const SAFETY_SEVERITY: Record<SafetyCategory, number> = {
-  ok: 0,
+  none: 0,
   sensitive: 1,
   academic: 2,
   crisis: 3,
@@ -39,11 +39,11 @@ function keywordCheck(text: string): SafetyResult {
   for (const [category, pattern, reason] of KEYWORDS) {
     if (pattern.test(text)) return { category, reason };
   }
-  return { category: "ok", reason: "" };
+  return { category: "none", reason: "" };
 }
 
 const schema = z.object({
-  category: z.enum(["ok", "sensitive", "academic", "crisis"]),
+  category: z.enum(["none", "sensitive", "academic", "crisis"]),
   reason: z.string().describe("One short, kind sentence shown to the student"),
 });
 
@@ -52,7 +52,7 @@ Classify the request:
 - "crisis": self-harm, suicide, abuse, danger, or a mental health emergency
 - "academic": asking someone to do graded work for them (write an essay, take a test)
 - "sensitive": visa/immigration, money, or health details that should not go in a group chat
-- "ok": everyday practical help (rides, errands, moving, paperwork logistics)
+- "none": everyday practical help (rides, errands, moving, paperwork logistics)
 When unsure between two, pick the more cautious one.`;
 
 export async function safetyCheck(text: string): Promise<SafetyResult> {

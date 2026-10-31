@@ -58,7 +58,7 @@ export async function suggestWhere(
           () => fallbackPicks(ask, helpers),
         );
 
-  const sensitive = category !== "ok";
+  const sensitive = category !== "none";
   return {
     helpers: picks,
     groups: sensitive ? [] : GROUPS,

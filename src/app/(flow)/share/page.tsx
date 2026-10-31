@@ -25,7 +25,7 @@ export default function SharePage() {
   const [undoScrub, setUndoScrub] = useState(false);
 
   const group = state.groupId ? findGroup(state.groupId) : undefined;
-  const canShare = state.category === "ok";
+  const canShare = state.category === "none";
   const useScrubbed = state.anonymous && state.scrub && !undoScrub;
   const text = useScrubbed ? state.scrub!.text : state.ask;
   const displayName = state.anonymous ? null : state.name.trim() || null;
