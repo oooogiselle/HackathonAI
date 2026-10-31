@@ -1,37 +1,32 @@
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 
-export const TOTAL_STEPS = 7;
-
+// Header for a flow screen: Back (or the DartAsk mark), an optional status
+// line ("✓ Everyday ask") and the big title.
 export function StepHeader({
-  step,
   title,
   subtitle,
+  eyebrow,
   backHref,
 }: {
-  step: number;
   title: string;
   subtitle?: string;
+  eyebrow?: React.ReactNode;
   backHref?: string;
 }) {
   return (
-    <header className="flex flex-col gap-3">
-      <div className="flex items-center justify-between text-sm text-muted-foreground">
-        {backHref ? (
-          <Link href={backHref} className="-ml-1 flex items-center gap-0.5 hover:text-foreground">
-            <ChevronLeft className="size-4" /> Back
-          </Link>
-        ) : (
-          <span className="font-semibold text-foreground">Ask</span>
-        )}
-        <span>
-          {step} / {TOTAL_STEPS}
-        </span>
-      </div>
-      <div className="h-1 overflow-hidden rounded-full bg-muted">
-        <div className="h-full bg-primary" style={{ width: `${(step / TOTAL_STEPS) * 100}%` }} />
-      </div>
-      <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+    <header className="flex flex-col gap-2 pt-2">
+      {backHref && (
+        <Link
+          href={backHref}
+          aria-label="Back"
+          className="-ml-1 flex size-9 items-center justify-center rounded-full bg-card shadow-sm"
+        >
+          <ChevronLeft className="size-5" />
+        </Link>
+      )}
+      {eyebrow && <div className="text-sm font-bold text-primary">{eyebrow}</div>}
+      <h1 className="text-[28px] leading-tight font-extrabold tracking-tight">{title}</h1>
       {subtitle && <p className="text-muted-foreground">{subtitle}</p>}
     </header>
   );

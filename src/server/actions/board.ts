@@ -240,6 +240,8 @@ export async function confirmHelper(cardToken: string): Promise<Result<{ card: P
   return toResult(t, user.id);
 }
 
+// "card" = card or Apple Pay through Stripe, the only method the screens offer.
+// "venmo" stays valid for rows already stored.
 const payMethod = z.enum(["venmo", "card"]);
 
 /**
@@ -250,7 +252,7 @@ const payMethod = z.enum(["venmo", "card"]);
  */
 export async function payToHold(
   cardToken: string,
-  method: z.infer<typeof payMethod> = "venmo",
+  method: z.infer<typeof payMethod> = "card",
 ): Promise<Result<{ card: PublicCard }>> {
   const user = await requireUser();
   if (!user) return { error: SIGN_IN_ERROR };

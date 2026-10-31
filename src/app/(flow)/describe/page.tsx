@@ -51,7 +51,6 @@ function Describe({ initialNeed }: { initialNeed: string }) {
   return (
     <>
       <StepHeader
-        step={1}
         title="Tell us in your own words"
         subtitle="Messy is fine. AI will turn it into clear, small asks you can edit."
         backHref="/ask"

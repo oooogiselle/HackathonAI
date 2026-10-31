@@ -112,8 +112,8 @@ describe("board store (Postgres)", () => {
     expect(await markCardDone(token, asker)).toEqual({ error: "Pay to hold the task first." });
 
     const pays = await Promise.all([
-      holdPayment(token, asker, "venmo"),
-      holdPayment(token, asker, "venmo"),
+      holdPayment(token, asker, "card"),
+      holdPayment(token, asker, "card"),
     ]);
     expect(pays.filter((r) => "card" in r)).toHaveLength(1);
     expect(pays.find((r) => "error" in r)).toEqual({ error: "Already paid." });
@@ -154,7 +154,7 @@ describe("board store (Postgres)", () => {
     const { token } = await card();
     await holdCard(token, helpers[4]);
     await confirmCard(token, asker);
-    await holdPayment(token, asker, "venmo");
+    await holdPayment(token, asker, "card");
     const t0 = Date.now();
     await markHelperDone(token, helpers[4], t0);
     expect("error" in (await reportProblem(token, helpers[4], "not me"))).toBe(true);
@@ -166,12 +166,12 @@ describe("board store (Postgres)", () => {
     expect(later?.payment?.status).toBe("held");
   });
 
-  it("matches the design's fee breakdown ($15 by Venmo → $16.81)", () => {
-    expect(paymentBreakdown(15, "venmo")).toEqual({
+  it("charges a $15 ask by card through Stripe as $17.28", () => {
+    expect(paymentBreakdown(15, "card")).toEqual({
       amountCents: 1500,
       platformFeeCents: 150,
-      processingFeeCents: 31,
-      totalCents: 1681,
+      processingFeeCents: 78,
+      totalCents: 1728,
     });
   });
 
@@ -199,7 +199,7 @@ describe("board store (Postgres)", () => {
     const finished = await card();
     await holdCard(finished.token, helpers[2]);
     await confirmCard(finished.token, asker);
-    await holdPayment(finished.token, asker, "venmo");
+    await holdPayment(finished.token, asker, "card");
     await markHelperDone(finished.token, helpers[2]);
     expect(await cancelCard(finished.token, asker)).toEqual({
       error: "Your helper already finished. Confirm it's done, or report a problem.",
@@ -303,7 +303,7 @@ describe("board store (Postgres)", () => {
     const { token } = await card();
     await holdCard(token, helpers[0]);
     await confirmCard(token, asker);
-    await holdPayment(token, asker, "venmo");
+    await holdPayment(token, asker, "card");
     const full = (await getBoardCard(token))!;
     const pub = toPublicCard(full, null);
     const json = JSON.stringify(pub);
@@ -313,7 +313,7 @@ describe("board store (Postgres)", () => {
     expect(json).not.toContain("Lin");
     expect(pub.payment).toBeUndefined();
     expect(pub.heldByFirstName).toBe("H0");
-    expect(toPublicCard(full, asker).payment?.totalCents).toBe(1681);
+    expect(toPublicCard(full, asker).payment?.totalCents).toBe(1728);
     expect(toPublicCard(full, helpers[0]).viewer).toBe("helper");
     expect(toPublicCard(full, helpers[1]).viewer).toBe("other");
   });

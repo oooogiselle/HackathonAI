@@ -117,6 +117,9 @@ export type AskPart = {
   text: string;
   // "none" or "sensitive"; academic and crisis parts are dropped.
   category: SafetyCategory;
+  // Board fields picked on Post a need. Left out on the AI path (guessed at post time).
+  askCategory?: AskCategory;
+  payType?: PayType;
 };
 
 // The form's optional AI help (assistAsk). Each item is applied only on a tap.

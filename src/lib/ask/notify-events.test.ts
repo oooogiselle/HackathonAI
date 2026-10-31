@@ -80,7 +80,7 @@ describe("email notifications", () => {
     const { token } = await card();
     await holdCard(token, helpers[2]);
     await confirmCard(token, asker);
-    await holdPayment(token, asker, "venmo");
+    await holdPayment(token, asker, "card");
     sent.length = 0;
 
     await Promise.all([markHelperDone(token, helpers[2]), markHelperDone(token, helpers[2])]);

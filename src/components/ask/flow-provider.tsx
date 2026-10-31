@@ -15,6 +15,9 @@ import type {
   WhereSuggestion,
 } from "@/lib/ask/types";
 
+// "deadline" = the Needed by time from Post a need ("Before ride" in the design).
+export type ExpiryChoice = "3h" | "deadline" | "24h" | "3d";
+
 export type AskFlowState = {
   // "form": Home is a form the student fills in. "ai": /describe → Clarify → Your ask.
   mode: "ai" | "form";
@@ -32,6 +35,11 @@ export type AskFlowState = {
   // matches: people for "Ask privately" (matchHelpers); groups/offices from suggestWhere.
   where?: WhereSuggestion & { category: SafetyCategory; matches?: MatchSuggestion[] };
   groupId?: string;
+  // Where it goes: post to the board, and when the ask comes down.
+  toBoard: boolean;
+  expiry: ExpiryChoice;
+  // "Keep it private" on Quick check: only picked helpers see it.
+  keepPrivate: boolean;
   anonymous: boolean;
   name: string;
   scrub?: ScrubResult;
@@ -47,7 +55,10 @@ const INITIAL: AskFlowState = {
   activePart: 0,
   sentParts: [],
   ask: "",
-  anonymous: false,
+  toBoard: true,
+  expiry: "deadline",
+  keepPrivate: false,
+  anonymous: true,
   name: "",
 };
 

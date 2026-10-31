@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { whenLabel } from "@/lib/ask/card-format";
 import { formatCents, paymentBreakdown } from "@/lib/ask/fees";
 import { findGroup } from "@/lib/ask/mock-data";
-import type { PaymentMethod, PublicCard, Result } from "@/lib/ask/types";
+import type { PublicCard, Result } from "@/lib/ask/types";
 import {
   cancelCard,
   claimCard,
@@ -362,15 +362,19 @@ function ClaimSection({
           </label>
           {canAcceptPayment && (
             <div className="flex flex-col gap-2">
-              <Label htmlFor="payout">Venmo for payouts</Label>
+              <Label htmlFor="payout">Payout account (connected with Stripe)</Label>
               <Input
                 id="payout"
                 value={payoutAccount}
                 onChange={(e) => setPayoutAccount(e.target.value)}
-                placeholder="@your-venmo"
+                placeholder="Last 4 digits of your bank account or debit card"
+                inputMode="numeric"
                 className="h-11"
                 maxLength={100}
               />
+              <p className="text-xs text-muted-foreground">
+                Demo: no real account is connected. Stripe pays you once the help is done.
+              </p>
             </div>
           )}
         </section>
@@ -385,7 +389,7 @@ function ClaimSection({
               claimCard({
                 token: card.token,
                 setup: needsSetup
-                  ? { canAcceptPayment, payoutMethod: "venmo", payoutAccount: payoutAccount.trim() }
+                  ? { canAcceptPayment, payoutMethod: "bank", payoutAccount: payoutAccount.trim() }
                   : undefined,
               }),
             "You offered to help",
@@ -404,12 +408,12 @@ function ClaimSection({
 }
 
 function PaySection({ card, pending, run }: { card: PublicCard; pending: boolean; run: Run }) {
-  const [method, setMethod] = useState<PaymentMethod>("venmo");
-  const fees = paymentBreakdown(card.price, method);
+  // Card or Apple Pay through Stripe (mocked, TODO(stripe)).
+  const fees = paymentBreakdown(card.price, "card");
   const rows: [string, number][] = [
     ["Task pay (goes to your helper)", fees.amountCents],
     ["Platform fee (10%)", fees.platformFeeCents],
-    ["Payment processing (est.)", fees.processingFeeCents],
+    ["Card processing (Stripe)", fees.processingFeeCents],
   ];
 
   return (
@@ -417,9 +421,9 @@ function PaySection({ card, pending, run }: { card: PublicCard; pending: boolean
       <div>
         <h2 className="font-medium">Pay to hold the task</h2>
         <p className="text-muted-foreground">
-          Your payment is held, not sent. It&apos;s released when you confirm the help is done, or
-          48 h after your helper marks it done unless you report a problem. Cancel before then for a
-          full refund.
+          Stripe holds your payment; it isn&apos;t sent yet. It&apos;s released to your helper
+          when you confirm the help is done, or 48 h after they mark it done unless you report a
+          problem. Cancel before then for a full refund.
         </p>
       </div>
       <dl className="flex flex-col gap-1">
@@ -434,28 +438,14 @@ function PaySection({ card, pending, run }: { card: PublicCard; pending: boolean
           <dd>{formatCents(fees.totalCents)}</dd>
         </div>
       </dl>
-      <div className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1">
-        {(["venmo", "card"] as const).map((m) => (
-          <button
-            key={m}
-            type="button"
-            aria-pressed={method === m}
-            onClick={() => setMethod(m)}
-            className={
-              method === m
-                ? "rounded-md bg-background py-2 font-medium shadow-sm"
-                : "rounded-md py-2 text-muted-foreground"
-            }
-          >
-            {m === "venmo" ? "Venmo" : "Card"}
-          </button>
-        ))}
-      </div>
+      <p className="rounded-lg bg-muted px-3 py-2 font-medium">
+        Card or Apple Pay · secured by Stripe
+      </p>
       <Button
         size="lg"
         className="h-12 text-base"
         disabled={pending}
-        onClick={() => run(() => payToHold(card.token, method), "Payment held")}
+        onClick={() => run(() => payToHold(card.token, "card"), "Payment held")}
       >
         Pay {formatCents(fees.totalCents)} and hold
       </Button>

@@ -46,7 +46,7 @@ export default function DraftPage() {
     const part = parts[activePart];
     if (!part) return;
     update({ ask: part.text.trim(), where: undefined, scrub: undefined, groupId: undefined });
-    router.push("/where");
+    router.push("/check");
   }
 
   const many = parts.length > 1;
@@ -55,7 +55,6 @@ export default function DraftPage() {
   return (
     <>
       <StepHeader
-        step={3}
         title={many ? `We broke this into ${parts.length} small asks` : "Your ask"}
         subtitle={
           many

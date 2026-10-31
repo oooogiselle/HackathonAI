@@ -24,11 +24,9 @@ test("the landing page is the needs board", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Needs board" })).toBeVisible();
   await expect(page.getByText("Ride to Lebanon airport")).toBeVisible();
-  await page.getByRole("link", { name: "Errands" }).click();
-  await expect(page.getByText("Lend me a warm coat for a weekend")).toHaveCount(0);
   await page.getByRole("link", { name: "Ask for help" }).click();
   await expect(page).toHaveURL(/\/ask$/);
-  await expect(page.getByLabel("Title")).toBeVisible();
+  await expect(page.getByLabel("What do you need?")).toBeVisible();
 });
 
 test("a posted ask is claimed by another student and closed with a thank-you", async ({
@@ -44,20 +42,27 @@ test("a posted ask is claimed by another student and closed with a thank-you", a
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page).toHaveURL(/\/ask$/);
 
-  await page.getByLabel("Title").fill("Ride to Manchester airport");
+  await page.getByLabel("What do you need?").fill("Ride to Manchester airport");
   await page.getByLabel("Details").fill("I have two suitcases and my flight is at 10am Saturday.");
   await page.getByLabel("Where").fill("From East Wheelock");
   await page.getByLabel("Price in dollars").fill("15");
   await page.getByRole("button", { name: "Continue" }).click();
 
-  await expect(page).toHaveURL(/\/where$/);
-  await page
-    .getByRole("button", { name: /Preview/ })
-    .first()
-    .click();
+  // Quick check runs the safety check on the final wording.
+  await expect(page).toHaveURL(/\/check$/);
+  await expect(page.getByRole("heading", { name: "Everyday ask" })).toBeVisible();
+  await page.getByRole("button", { name: "Continue" }).click();
 
+  // Where it goes: board + a GroupMe group, anonymous by default.
+  await expect(page).toHaveURL(/\/where$/);
+  await page.getByRole("link", { name: "Preview" }).click();
   await expect(page).toHaveURL(/\/share$/);
-  await page.getByRole("button", { name: "Post anonymously" }).click();
+  await page.getByRole("button", { name: "Use this group" }).click();
+  await expect(page).toHaveURL(/\/where$/);
+  await expect(page.getByRole("button", { name: /Post anonymously/ })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   await expect(
     page.getByText(/Removed identifying details|No identifying details found/),
   ).toBeVisible();
@@ -77,7 +82,7 @@ test("a posted ask is claimed by another student and closed with a thank-you", a
   await expect(helper).toHaveURL(new RegExp(`${taskPath}$`));
   // Paid ask: the mocked helper setup comes first.
   await helper.getByLabel("I can accept payment").check();
-  await helper.getByLabel("Venmo for payouts").fill("@rina");
+  await helper.getByLabel("Payout account (connected with Stripe)").fill("4242");
   await helper.getByRole("button", { name: "Claim this task" }).click();
   await expect(helper.getByText("Waiting for the asker to confirm.")).toBeVisible();
 
@@ -91,7 +96,7 @@ test("a posted ask is claimed by another student and closed with a thank-you", a
   await expect(page.getByText("Rina can help!")).toBeVisible();
   await page.getByRole("button", { name: "Confirm Rina" }).click();
   await expect(page.getByText("Meet at (public)")).toBeVisible();
-  await page.getByRole("button", { name: "Pay $16.81 and hold" }).click();
+  await page.getByRole("button", { name: "Pay $17.28 and hold" }).click();
   await expect(page.getByText("Rina is on it")).toBeVisible();
 
   // Helper: starts once it's held, then marks it done.
@@ -114,7 +119,7 @@ test("a posted ask is claimed by another student and closed with a thank-you", a
 
 test('"Write my essay" goes to tutoring, not the board', async ({ page }) => {
   await page.goto("/ask");
-  await page.getByLabel("Title").fill("Write my essay");
+  await page.getByLabel("What do you need?").fill("Write my essay");
   await page.getByLabel("Details").fill("History class, due Friday.");
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page).toHaveURL(/\/resources\?type=tutoring$/);
@@ -122,7 +127,7 @@ test('"Write my essay" goes to tutoring, not the board', async ({ page }) => {
 
 test("a crisis message shows professional resources only", async ({ page }) => {
   await page.goto("/ask");
-  await page.getByLabel("Title").fill("I want to die");
+  await page.getByLabel("What do you need?").fill("I want to die");
   await page.getByLabel("Details").fill("I don't know who to talk to.");
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page).toHaveURL(/\/resources\?type=crisis$/);

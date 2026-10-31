@@ -6,7 +6,8 @@ import { defineConfig, devices } from "@playwright/test";
 // bot on the mock adapter even when .env.local has real ones; a blank
 // ANTHROPIC_API_KEY makes every AI step use the canned fallback, so runs are
 // fast and repeatable. Existing env vars win over .env.local in Next.
-const PORT = 3100;
+// E2E_PORT lets a second run go next to one already on 3100 (own build folder).
+const PORT = Number(process.env.E2E_PORT ?? 3100);
 const baseURL = `http://localhost:${PORT}`;
 
 export default defineConfig({
@@ -28,7 +29,7 @@ export default defineConfig({
     reuseExistingServer: false,
     timeout: 120_000,
     env: {
-      NEXT_DIST_DIR: ".next-e2e",
+      NEXT_DIST_DIR: PORT === 3100 ? ".next-e2e" : `.next-e2e-${PORT}`,
       // Local PGlite, never the shared Supabase database (even if .env.local sets ASK_DB).
       ASK_DB: "",
       NEXT_PUBLIC_SITE_URL: baseURL,
