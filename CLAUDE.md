@@ -29,7 +29,7 @@ pnpm dev                     # http://localhost:3000
 
 ## Flow
 
-**Target demo path (PRD):** Home → Clarify (≤2 chip questions) → Your ask (editable, with price; $0 = favor) → public board (anonymous, privacy-checked) → bot shares the same card to GroupMe → helper claims in the browser → board shows "Already taken", bot posts "Covered" → Matched (public meeting spot) → mocked "Pay $15" → Thank you. Private route (matched helpers → mock inbox) ships as a simple mock and is told, not demoed. Matching uses seeded free/busy and payment eligibility.
+**Target demo path (PRD):** Home → Clarify (≤2 chip questions) → Your ask (AI breaks the need into 1–4 small asks, each editable with who to ask and a suggested price; $0 = favor; send one now, the rest after Thank you) → public board (anonymous, privacy-checked) → bot shares the same card to GroupMe → helper claims in the browser → board shows "Already taken", bot posts "Covered" → Matched (public meeting spot) → mocked "Pay $15" → Thank you. Private route (matched helpers → mock inbox) ships as a simple mock and is told, not demoed. Matching uses seeded free/busy and payment eligibility.
 
 **Built today:** `/` Home → `/clarify` → `/draft` → `/where` (helpers + partner groups) → `/share` (preview + "Post to group") → `/matched/[token]` → `/thanks`.
 Side routes: `/resources?type=crisis|tutoring` (safety redirects), `/h/[token]` (public claim page for helpers).

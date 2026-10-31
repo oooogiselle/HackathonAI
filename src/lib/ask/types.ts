@@ -62,11 +62,50 @@ export type ScrubResult = { text: string; removed: string[] };
 // Whole US dollars. 0 = a favor.
 export type PriceRange = { min: number; max: number };
 
-export type DraftResult = {
-  ask: string;
-  minutes: number;
-  suggestedPrice: PriceRange;
+// Who'd be a good fit for one ask. Only what the need implies: never gender,
+// nationality or religion; a language only when the student asked for it.
+export type HelperPrefs = {
+  interests: Interest[];
+  // Must-haves, matched against Helper.tags (e.g. "car", "korean").
+  needs: string[];
+  // Nice-to-haves, shown to the student only (e.g. "fits luggage").
+  nice: string[];
+  // One line: "Someone with a car who's free Saturday morning".
+  why: string;
+  // Seeded helpers that fit (a preview; matchHelpers adds free/busy + limits).
+  fits: number;
+  // Of those, how many can accept payment.
+  fitsPaid: number;
 };
+
+export type PriceSuggestion = PriceRange & {
+  // Pre-filled value. 0 = a favor.
+  suggested: number;
+  // "About 45 min of driving × ~$20/hr, gas included → $15"
+  reason: string;
+  favorHint?: string;
+};
+
+// One small ask out of a bigger need. The student edits these on Your ask.
+export type AskPart = {
+  what: string;
+  when?: string;
+  // ISO time if the need gave one; used by matching and expiry later.
+  startsAt?: string;
+  where?: string;
+  minutes: number;
+  helper: HelperPrefs;
+  price: PriceSuggestion;
+  // What the student picked. 0 = a favor.
+  priceSet: number;
+  // The friendly ask that gets posted.
+  text: string;
+  // "none" or "sensitive"; academic and crisis parts are dropped.
+  category: SafetyCategory;
+};
+
+// draftAsk breaks one need into 1–4 small asks. Empty for academic/crisis needs.
+export type DraftResult = { parts: AskPart[] };
 
 // One ask = one card, whether seen on the board or opened from a GroupMe link.
 // open → held (first "I can help") → confirmed (asker picks them) → done.

@@ -14,7 +14,7 @@ import { suggestWhere as suggestWhereAI } from "@/lib/ai/ask/suggest-where";
 import { COVERED_MESSAGE, formatPostMessage } from "@/lib/ask/format";
 import { findGroup, HELPERS, MEETING_SPOTS } from "@/lib/ask/mock-data";
 import { getPost, MAX_POSTS_PER_GROUP_PER_DAY, savePost, takeRateLimit } from "@/lib/ask/store";
-import type { ClarifyAnswer, Post } from "@/lib/ask/types";
+import type { ClarifyAnswer, DraftResult, Post } from "@/lib/ask/types";
 import { postToGroup } from "@/lib/groups";
 import { siteUrl } from "@/lib/site-url";
 
@@ -28,8 +28,16 @@ export async function getClarifyQuestions(need: string) {
   return clarify(text.parse(need));
 }
 
-export async function draftAsk(need: string, answers: ClarifyAnswer[]) {
-  return draftAskAI(text.parse(need), answers.slice(0, 2));
+const answersSchema = z
+  .array(z.object({ question: z.string().max(300), answer: z.string().max(300) }))
+  .max(2);
+
+export async function draftAsk(need: string, answers: ClarifyAnswer[]): Promise<DraftResult> {
+  const cleanNeed = text.parse(need);
+  // Home already redirects these; never break them into asks or price them.
+  const { category } = await safetyCheck(cleanNeed);
+  if (category === "academic" || category === "crisis") return { parts: [] };
+  return draftAskAI(cleanNeed, answersSchema.parse(answers));
 }
 
 export async function suggestWhere(ask: string) {
