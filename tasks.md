@@ -57,15 +57,18 @@ The PRD's demo path is board-first: Home → Clarify → Your ask with a price �
 
 - [ ] Postgres store for asks and claims, with atomic updates
       Done when: `asks` and `claims` tables exist in `src/db/schema/` (plus a group/day post counter) with a generated migration (do not run it against the shared DB; a human applies it); `src/lib/ask/store.ts` uses Drizzle when `DATABASE_URL` is set and the in-memory store otherwise; claim, confirm, pay and the rate limit are each one guarded `UPDATE … WHERE <expected state> RETURNING` (or `INSERT … ON CONFLICT … WHERE n < 3 RETURNING` for the counter), never read-then-write; two browsers see the same card state; lint + typecheck pass.
+      Done (backend): tables in `src/db/schema/ask.ts`, migration `drizzle/0002_ask_tables.sql` (not applied to the shared DB; a human runs `pnpm db:migrate`, then sets `ASK_DB=postgres`). Local dev uses in-process PGlite with the same SQL. Every transition is a guarded UPDATE/INSERT … RETURNING.
 
 - [ ] Save the card before posting its link
       Done when: `postAsk` in `src/server/actions/ask.ts` saves the card (status open) before calling `postToGroup`, and marks it failed/removed if the post fails, so a helper who taps the GroupMe link instantly never sees "expired"; a failed post gives back its rate-limit slot; lint + typecheck pass.
 
 - [ ] Concurrency tests
       Done when: a test fires 10 parallel `claimAsk` calls on one card and exactly 1 succeeds, 9 get "Already taken", and exactly one "Covered" is posted (mock adapter); repeated confirm and pay calls are no-ops after the first; 4 parallel posts to one group yield exactly 3 successes; runs against the in-memory store, and against Postgres when `DATABASE_URL` is set; `pnpm test` passes. Depends on "Add a test runner and safety tests".
+      Done against PGlite (`src/lib/ask/board-store.test.ts`, `src/server/actions/board.test.ts`): 10 parallel claims → 1, one confirm/pay/Covered, 4 parallel posts → 3. Not yet run against Supabase Postgres.
 
 - [ ] Ask deadline and expiry
       Done when: every ask has `expiresAt` (from the drafted time, default 24 h); expired cards are hidden from `/board`, the claim page shows "This ask has expired", and the claim's atomic update includes `expires_at > now()`; lint + typecheck pass.
+      Backend done: `expiresAt` on every ask (3 h / today / 24 h / 3 d or exact), expired asks leave the board, claims check `expires_at > now`, `extendCard` (Extend 24 h). The claim page's "This ask has expired" UI is still to do.
 
 - [ ] Mocked school-email sign-up + helper setup on the claim page
       Backend done: `mockSignIn` / `getMe` / `mockSignOut` in `src/server/actions/session.ts`; `claimCard` takes the name and email from the session and checks the mocked setup for paid cards. Only the claim-page UI is left.
@@ -86,12 +89,15 @@ The PRD's demo path is board-first: Home → Clarify → Your ask with a price �
 
 - [ ] Matched, mocked "Pay $15", Thank you
       Done when: after the asker confirms a helper, Matched shows the helper's first name and a public meeting spot; for paid asks a "Pay $X" mock screen (explicit tap, no payment API, clearly labeled demo) marks the card paid; $0 asks skip it; Thank you still has the user write their own note; lint + typecheck pass.
+      Backend done: `markDone`, then `markPaid` (mocked, after done, with the fee breakdown), `saveCardThanks`. UI still to do.
 
 - [ ] Private inbox mock (told in the story, not demoed)
       Done when: from Your ask, "Ask privately" lists `matchHelpers` results; tapping "Ask {firstName}" (explicit tap) adds a request to that helper's mock inbox at `/inbox?helper=<id>` (no auth; TODO(auth)); the inbox shows text, minutes and price with "I can help" / "Not this time" (no reason field); no group post happens; lint + typecheck pass.
+      Backend done: `createPrivateAsk`, `sendPrivately`, `listMyRequests`, `respondToRequest` (private.ts). UI still to do.
 
 - [ ] Contact info only after both say yes
       Done when: neither side's contact details are returned by any read until the helper has said yes and the asker has confirmed; lint + typecheck pass.
+      Backend: `PublicCard` never has emails or user ids; payment details only for the two parties; an anonymous asker shows as "The asker" in messages until they confirm.
 
 ## PRD gaps: small fixes (see `docs/PRD.md`)
 

@@ -15,6 +15,13 @@
       "when": 1793315623391,
       "tag": "0001_init_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793412554109,
+      "tag": "0002_ask_tables",
+      "breakpoints": true
     }
   ]
 }

@@ -103,13 +103,13 @@ export function useAskFlow() {
   return ctx;
 }
 
-/** Sends the user back to Home if they land mid-flow with no ask started. */
+/** Sends the user back to the ask form if they land mid-flow with no ask started. */
 export function useRequireNeed() {
   const flow = useAskFlow();
   const router = useRouter();
   const missing = flow.ready && !flow.state.need;
   useEffect(() => {
-    if (missing) router.replace("/");
+    if (missing) router.replace("/ask");
   }, [missing, router]);
   return flow;
 }

@@ -69,7 +69,7 @@ export default function DraftPage() {
       ) : empty ? (
         <p className="text-sm text-muted-foreground">
           This isn&apos;t something to ask a peer for.{" "}
-          <Link href="/" className="underline">
+          <Link href="/ask" className="underline">
             Start over
           </Link>
         </p>
@@ -91,7 +91,7 @@ export default function DraftPage() {
       )}
       <div className="mt-auto flex flex-col gap-2">
         {empty ? (
-          <Link href="/" className={buttonVariants({ size: "lg", className: "h-12 text-base" })}>
+          <Link href="/ask" className={buttonVariants({ size: "lg", className: "h-12 text-base" })}>
             Start over
           </Link>
         ) : (
