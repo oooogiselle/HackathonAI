@@ -16,9 +16,13 @@ import { WhoToAsk } from "@/components/ask/who-to-ask";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { CategoryPicker } from "@/components/ask/category-picker";
-import { guessCategory } from "@/lib/ask/card-format";
-import { guessCategoryFromText, normalizeCategory } from "@/lib/ask/categories";
+import {
+  categoryForInterest,
+  DEFAULT_CATEGORY,
+  guessCategoryFromText,
+  interestForCategory,
+  normalizeCategory,
+} from "@/lib/ask/categories";
 import { INTEREST_LABELS, toHelperPrefs } from "@/lib/ask/helper-fit";
 import { suggestPrice } from "@/lib/ask/price";
 import {
@@ -62,7 +66,9 @@ function formatWhen(local: string) {
 
 type Form = {
   what: string;
-  category: string; // "" = not picked; Continue falls back to a keyword guess
+  // Typed under Who to ask > Other; "" = none. Without it, the first interest
+  // picked is the category, else Continue falls back to a keyword guess.
+  category: string;
   details: string;
   payType: PayType;
   when: string; // datetime-local value, "" = flexible
@@ -82,7 +88,10 @@ function initialForm(state: AskFlowState): Form {
   if (part) {
     return {
       what: part.what,
-      category: part.askCategory ?? guessCategory(part),
+      category:
+        part.askCategory && part.askCategory !== DEFAULT_CATEGORY && !interestForCategory(part.askCategory)
+          ? part.askCategory
+          : "",
       details: part.text,
       payType: part.payType ?? (part.priceSet > 0 ? "pay" : "free"),
       when: part.startsAt ? toLocalInput(new Date(part.startsAt)) : "",
@@ -212,7 +221,9 @@ function WriteForm({ initial }: { initial: Form }) {
       category: "none",
       askCategory: form.category.trim()
         ? normalizeCategory(form.category)
-        : guessCategoryFromText(`${what} ${details}`),
+        : form.helper.interests[0]
+          ? categoryForInterest(form.helper.interests[0])
+          : guessCategoryFromText(`${what} ${details}`),
       payType: form.payType,
     };
     reset({ mode: "form", need: `${what}. ${details}`, parts: [part], activePart: 0, ask: details });
@@ -239,11 +250,6 @@ function WriteForm({ initial }: { initial: Form }) {
             onChange={(e) => set({ what: e.target.value })}
           />
         </Field>
-        <CategoryPicker
-          value={form.category}
-          onChange={(category) => set({ category })}
-          askText={`${form.what} ${form.details}`}
-        />
         <Field label="Details" id={FIELD_IDS.details} hint="This is what helpers will read.">
           <Textarea
             id={FIELD_IDS.details}
@@ -334,7 +340,15 @@ function WriteForm({ initial }: { initial: Form }) {
       </Section>
 
       <section className="rounded-3xl bg-card p-4">
-        <WhoToAsk helper={form.helper} onChange={(helper) => set({ helper })} pickInterests />
+        <WhoToAsk
+          helper={form.helper}
+          onChange={(helper) => set({ helper })}
+          pickInterests={{
+            askText: `${form.what} ${form.details}`,
+            custom: form.category,
+            onCustom: (category) => set({ category }),
+          }}
+        />
       </section>
 
       {suggestions ? (
