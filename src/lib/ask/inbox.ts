@@ -5,6 +5,7 @@ import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 
 import { asks, claims, messages, notifications, users } from "@/db/schema";
 
+import { settleDue } from "./board-store";
 import { getAskDb } from "./db";
 import type { InboxItem, InboxKind, InboxTopic, Message } from "./types";
 import { isBlockedBetween } from "./users";
@@ -16,6 +17,8 @@ export async function listInbox(
   limit = 50,
 ): Promise<InboxItem[]> {
   const db = await getAskDb();
+  // Settle any 48 h auto-confirms first, so "released" shows up here.
+  await settleDue(db, Date.now());
   const conditions = [eq(notifications.userId, userId)];
   if (filter.kind) conditions.push(eq(notifications.kind, filter.kind));
   if (filter.topic) conditions.push(eq(notifications.topic, filter.topic));

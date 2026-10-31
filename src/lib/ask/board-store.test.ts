@@ -12,7 +12,10 @@ import {
   listMine,
   listOpenCards,
   markCardDone,
-  markCardPaid,
+  holdPayment,
+  markHelperDone,
+  reportProblem,
+  AUTO_CONFIRM_MS,
   type NewCard,
   paymentBreakdown,
   sendPrivately,
@@ -94,7 +97,7 @@ describe("board store (Postgres)", () => {
     expect((await getBoardCard(token))?.status).toBe("open");
   });
 
-  it("runs confirm → done → pay once each, only for the asker", async () => {
+  it("runs confirm → hold pay → helper done → confirm done, each once", async () => {
     const { token } = await card();
     await holdCard(token, helpers[0]);
 
@@ -102,22 +105,65 @@ describe("board store (Postgres)", () => {
     const confirms = await Promise.all([confirmCard(token, asker), confirmCard(token, asker)]);
     expect(confirms.filter((r) => "card" in r)).toHaveLength(1);
 
-    // Pay comes after done.
-    expect(await markCardPaid(token, asker, "venmo")).toEqual({
-      error: "Mark the help as done before paying.",
+    // Paid asks: no "Done" from either side until the money is held.
+    expect(await markHelperDone(token, helpers[0])).toEqual({
+      error: "Wait for the asker to pay before starting.",
     });
-    expect("error" in (await markCardDone(token, helpers[0]))).toBe(true);
-    expect("card" in (await markCardDone(token, asker))).toBe(true);
-    expect("error" in (await markCardDone(token, asker))).toBe(true);
+    expect(await markCardDone(token, asker)).toEqual({ error: "Pay to hold the task first." });
 
     const pays = await Promise.all([
-      markCardPaid(token, asker, "venmo"),
-      markCardPaid(token, asker, "venmo"),
+      holdPayment(token, asker, "venmo"),
+      holdPayment(token, asker, "venmo"),
     ]);
     expect(pays.filter((r) => "card" in r)).toHaveLength(1);
     expect(pays.find((r) => "error" in r)).toEqual({ error: "Already paid." });
-    const paid = pays.find((r) => "card" in r);
-    expect(paid && "card" in paid && paid.card.payment?.status).toBe("released");
+
+    expect("error" in (await markHelperDone(token, helpers[1]))).toBe(true);
+    const helperDone = await markHelperDone(token, helpers[0]);
+    expect("card" in helperDone && helperDone.card.autoConfirmAt).toBe(
+      "card" in helperDone ? helperDone.card.helperDoneAt! + AUTO_CONFIRM_MS : 0,
+    );
+    expect(await markHelperDone(token, helpers[0])).toEqual({ error: "Already marked done." });
+
+    expect("error" in (await markCardDone(token, helpers[0]))).toBe(true);
+    const done = await markCardDone(token, asker);
+    expect("card" in done && done.card.payment?.status).toBe("released");
+    expect("error" in (await markCardDone(token, asker))).toBe(true);
+  });
+
+  it("auto-confirms 48 h after the helper's Done and releases the payment once", async () => {
+    const { token } = await card();
+    await holdCard(token, helpers[3]);
+    await confirmCard(token, asker);
+    await holdPayment(token, asker, "card");
+    const t0 = Date.now();
+    await markHelperDone(token, helpers[3], t0);
+
+    expect((await getBoardCard(token, t0 + AUTO_CONFIRM_MS - 60_000))?.status).toBe("confirmed");
+    const later = t0 + AUTO_CONFIRM_MS + 60_000;
+    const [a, b] = await Promise.all([getBoardCard(token, later), getBoardCard(token, later)]);
+    expect(a?.status).toBe("done");
+    expect(b?.payment?.status).toBe("released");
+    const released = (await listInbox(helpers[3], { topic: "payments" })).filter(
+      (n) => n.token === token && n.title.endsWith("released to you"),
+    );
+    expect(released).toHaveLength(1);
+  });
+
+  it("pauses the auto-confirm when the asker reports a problem", async () => {
+    const { token } = await card();
+    await holdCard(token, helpers[4]);
+    await confirmCard(token, asker);
+    await holdPayment(token, asker, "venmo");
+    const t0 = Date.now();
+    await markHelperDone(token, helpers[4], t0);
+    expect("error" in (await reportProblem(token, helpers[4], "not me"))).toBe(true);
+    expect("card" in (await reportProblem(token, asker, "They never showed up"))).toBe(true);
+    expect("error" in (await reportProblem(token, asker, "again"))).toBe(true);
+
+    const later = await getBoardCard(token, t0 + 3 * AUTO_CONFIRM_MS);
+    expect(later?.status).toBe("confirmed");
+    expect(later?.payment?.status).toBe("held");
   });
 
   it("matches the design's fee breakdown ($15 by Venmo → $16.81)", () => {
@@ -129,27 +175,35 @@ describe("board store (Postgres)", () => {
     });
   });
 
-  it("never charges for a favor, and favors finish without paying", async () => {
+  it("never charges for a favor; favors finish without paying", async () => {
     const { token } = await card({ payType: "free", price: 0 });
     await holdCard(token, helpers[1]);
     await confirmCard(token, asker);
+    expect("error" in (await holdPayment(token, asker, "card"))).toBe(true);
+    expect("card" in (await markHelperDone(token, helpers[1]))).toBe(true);
     expect("card" in (await markCardDone(token, asker))).toBe(true);
-    expect("error" in (await markCardPaid(token, asker, "card"))).toBe(true);
   });
 
-  it("cancels open or held asks only, and only by the asker", async () => {
+  it("cancels before the helper's Done, refunding a held payment", async () => {
     const { token } = await card();
     await holdCard(token, helpers[2]);
     expect("error" in (await cancelCard(token, helpers[2]))).toBe(true);
+    await confirmCard(token, asker);
+    await holdPayment(token, asker, "card");
     const cancelled = await cancelCard(token, asker);
-    expect("card" in cancelled && cancelled.card.status).toBe("cancelled");
+    expect("card" in cancelled && cancelled.card.payment?.status).toBe("refunded");
     expect("error" in (await cancelCard(token, asker))).toBe(true);
     expect((await listOpenCards(null)).some((c) => c.token === token)).toBe(false);
 
-    const confirmed = await card();
-    await holdCard(confirmed.token, helpers[2]);
-    await confirmCard(confirmed.token, asker);
-    expect("error" in (await cancelCard(confirmed.token, asker))).toBe(true);
+    // After the helper's Done it can't be cancelled; confirm or report instead.
+    const finished = await card();
+    await holdCard(finished.token, helpers[2]);
+    await confirmCard(finished.token, asker);
+    await holdPayment(finished.token, asker, "venmo");
+    await markHelperDone(finished.token, helpers[2]);
+    expect(await cancelCard(finished.token, asker)).toEqual({
+      error: "Your helper already finished. Confirm it's done, or report a problem.",
+    });
   });
 
   it("extends open asks by 24 h, capped at 7 days", async () => {
@@ -249,8 +303,7 @@ describe("board store (Postgres)", () => {
     const { token } = await card();
     await holdCard(token, helpers[0]);
     await confirmCard(token, asker);
-    await markCardDone(token, asker);
-    await markCardPaid(token, asker, "venmo");
+    await holdPayment(token, asker, "venmo");
     const full = (await getBoardCard(token))!;
     const pub = toPublicCard(full, null);
     const json = JSON.stringify(pub);

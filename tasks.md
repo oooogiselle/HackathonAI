@@ -88,7 +88,7 @@ The PRD's demo path is board-first: Home → Clarify → Your ask with a price �
 
 - [ ] Matched, mocked "Pay $15", Thank you
       Done when: after the asker confirms a helper, Matched shows the helper's first name and a public meeting spot; for paid asks a "Pay $X" mock screen (explicit tap, no payment API, clearly labeled demo) marks the card paid; $0 asks skip it; Thank you still has the user write their own note; lint + typecheck pass.
-      Backend done: `markDone`, then `markPaid` (mocked, after done, with the fee breakdown), `saveCardThanks`. UI still to do.
+      Backend done: `payToHold` (mocked hold after confirm, fee breakdown), helper `markHelperDone`, asker `markDone` (release) or 48 h auto-release, `reportProblem`, refund on cancel, `saveCardThanks`. UI still to do.
 
 - [ ] Private inbox mock (told in the story, not demoed)
       Done when: from Your ask, "Ask privately" lists `matchHelpers` results; tapping "Ask {firstName}" (explicit tap) adds a request to that helper's mock inbox at `/inbox?helper=<id>` (no auth; TODO(auth)); the inbox shows text, minutes and price with "I can help" / "Not this time" (no reason field); no group post happens; lint + typecheck pass.

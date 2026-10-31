@@ -137,11 +137,17 @@ describe("board actions", () => {
     const covered = vi.mocked(postToGroup).mock.calls.filter(([, msg]) => msg === COVERED_MESSAGE);
     expect(covered).toHaveLength(1);
 
-    expect("error" in (await board.markPaid(token))).toBe(true); // done first
-    expect("ok" in (await board.markDone(token))).toBe(true);
-    const paid = await board.markPaid(token, "venmo");
+    expect("error" in (await board.markDone(token))).toBe(true); // pay to hold first
+    const paid = await board.payToHold(token, "venmo");
     expect("ok" in paid && paid.card.payment?.totalCents).toBe(1681);
-    expect("error" in (await board.markPaid(token))).toBe(true);
+    expect("ok" in paid && paid.card.payment?.status).toBe("held");
+    expect("error" in (await board.payToHold(token))).toBe(true);
+
+    currentUser = helpers[1];
+    expect("ok" in (await board.markHelperDone(token))).toBe(true);
+    currentUser = asker;
+    const done = await board.markDone(token);
+    expect("ok" in done && done.card.payment?.status).toBe("released");
     const thanked = await board.saveCardThanks(token, "Thank you so much!");
     expect("ok" in thanked && thanked.card.thanks).toBe("Thank you so much!");
 
@@ -151,10 +157,10 @@ describe("board actions", () => {
     expect(card?.heldByFirstName).toBe("H2");
     expect(JSON.stringify(card)).not.toContain("northfield.edu");
 
-    // The helper's inbox shows the payment.
+    // The helper's inbox shows the released payment.
     currentUser = helpers[1];
     const updates = await inbox.listInbox({ topic: "payments" });
-    expect(updates[0]?.title).toBe("$15 paid to you");
+    expect(updates[0]?.title).toBe("$15 released to you");
   });
 
   it("gives the rate-limit slot back when the bot post fails", async () => {

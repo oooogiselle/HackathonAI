@@ -20,7 +20,9 @@ import {
   listMine,
   listOpenCards,
   markCardDone,
-  markCardPaid,
+  holdPayment,
+  markHelperDone as markHelperDoneInStore,
+  reportProblem as reportProblemInStore,
   MAX_POSTS_PER_GROUP_PER_DAY,
   refundRateLimit,
   removeSharedGroup,
@@ -238,22 +240,15 @@ export async function confirmHelper(cardToken: string): Promise<Result<{ card: P
   return toResult(t, user.id);
 }
 
-/** Asker confirms the help is done. Paid asks go to the Pay screen next. */
-export async function markDone(cardToken: string): Promise<Result<{ card: PublicCard }>> {
-  const user = await requireUser();
-  if (!user) return { error: SIGN_IN_ERROR };
-  const tok = parseToken(cardToken);
-  if (!tok) return NOT_FOUND;
-  return toResult(await markCardDone(tok, user.id), user.id);
-}
-
 const payMethod = z.enum(["venmo", "card"]);
 
 /**
- * The mocked "Pay $X" button, after done. Free favors skip it. No payment API
- * (TODO(stripe)). `card.payment` has the fee breakdown for the receipt.
+ * The mocked "Pay $X and hold" button, right after confirming a helper (paid
+ * asks only; favors skip it). The money is held until the asker confirms done,
+ * or 48 h after the helper's "Done". `card.payment` has the fee breakdown.
+ * No payment API (TODO(stripe)).
  */
-export async function markPaid(
+export async function payToHold(
   cardToken: string,
   method: z.infer<typeof payMethod> = "venmo",
 ): Promise<Result<{ card: PublicCard }>> {
@@ -262,10 +257,41 @@ export async function markPaid(
   const tok = parseToken(cardToken);
   const parsedMethod = payMethod.safeParse(method);
   if (!tok || !parsedMethod.success) return NOT_FOUND;
-  return toResult(await markCardPaid(tok, user.id, parsedMethod.data), user.id);
+  return toResult(await holdPayment(tok, user.id, parsedMethod.data), user.id);
 }
 
-/** "Cancel ask" while waiting (open or held). */
+/** Helper's "Done" button. Starts the asker's 48 h to confirm or report a problem. */
+export async function markHelperDone(cardToken: string): Promise<Result<{ card: PublicCard }>> {
+  const user = await requireUser();
+  if (!user) return { error: SIGN_IN_ERROR };
+  const tok = parseToken(cardToken);
+  if (!tok) return NOT_FOUND;
+  return toResult(await markHelperDoneInStore(tok, user.id), user.id);
+}
+
+/** Asker's "Confirm done". Releases the held payment to the helper. */
+export async function markDone(cardToken: string): Promise<Result<{ card: PublicCard }>> {
+  const user = await requireUser();
+  if (!user) return { error: SIGN_IN_ERROR };
+  const tok = parseToken(cardToken);
+  if (!tok) return NOT_FOUND;
+  return toResult(await markCardDone(tok, user.id), user.id);
+}
+
+/** Asker's "Report a problem": pauses the 48 h auto-confirm; payment stays held. */
+export async function reportProblem(
+  cardToken: string,
+  note = "",
+): Promise<Result<{ card: PublicCard }>> {
+  const user = await requireUser();
+  if (!user) return { error: SIGN_IN_ERROR };
+  const tok = parseToken(cardToken);
+  const parsedNote = z.string().trim().max(1000).safeParse(note);
+  if (!tok || !parsedNote.success) return NOT_FOUND;
+  return toResult(await reportProblemInStore(tok, user.id, parsedNote.data), user.id);
+}
+
+/** "Cancel ask" before the helper's "Done". Refunds a held payment. */
 export async function cancelCard(cardToken: string): Promise<Result<{ card: PublicCard }>> {
   const user = await requireUser();
   if (!user) return { error: SIGN_IN_ERROR };
