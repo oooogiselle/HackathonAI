@@ -170,12 +170,14 @@ export default function PrivatePage() {
                     aria-hidden
                     className="flex size-11 shrink-0 items-center justify-center rounded-full bg-secondary font-bold text-secondary-foreground"
                   >
-                    {helper.firstName[0]}
+                    {helper.alias[0]}
                   </span>
                   <span className="flex flex-1 flex-col">
                     <span className="font-semibold">
-                      {helper.firstName}{" "}
-                      <span className="font-normal text-muted-foreground">· {helper.year}</span>
+                      {helper.alias}{" "}
+                      {helper.year && (
+                        <span className="font-normal text-muted-foreground">· {helper.year}</span>
+                      )}
                     </span>
                     <span className="text-sm text-muted-foreground">{why}</span>
                   </span>
@@ -203,8 +205,8 @@ export default function PrivatePage() {
 
       <p className="text-xs text-muted-foreground">
         Suggestions use interests and free/busy times only, never calendar details.
-        {paid ? " Everyone listed can accept payment." : ""} Contact details stay hidden until you
-        both say yes.
+        {paid ? " Everyone listed can accept payment." : ""} Everyone shows up by alias. Names and
+        contact details stay private.
       </p>
 
       <div className="mt-auto flex flex-col gap-2">

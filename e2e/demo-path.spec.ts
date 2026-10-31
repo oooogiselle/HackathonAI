@@ -70,19 +70,18 @@ test("a posted ask is claimed by another student and closed with a thank-you", a
   await expect(commonNeed).toContainText(
     "students asked about rides to the airport at break last term",
   );
-  await expect(commonNeed).toContainText("Mei, Junior · helper");
+  // Helpers show up by alias, never by name.
+  await expect(commonNeed).toContainText(/[A-Z][a-z]+ [A-Z][a-z]+ \d{2}, Junior · helper/);
+  await expect(commonNeed).not.toContainText("Mei");
   await page.getByRole("button", { name: "Continue" }).click();
 
-  // Where it goes: board + a GroupMe group, anonymous by default.
+  // Where it goes: board + a GroupMe group. Every ask is anonymous.
   await expect(page).toHaveURL(/\/where$/);
   await page.getByRole("link", { name: "Preview" }).click();
   await expect(page).toHaveURL(/\/share$/);
   await page.getByRole("button", { name: "Use this group" }).click();
   await expect(page).toHaveURL(/\/where$/);
-  await expect(page.getByRole("button", { name: /Post anonymously/ })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
+  await expect(page.getByText("Posted anonymously")).toBeVisible();
   await expect(
     page.getByText(/Removed identifying details|No identifying details found/),
   ).toBeVisible();
@@ -112,24 +111,31 @@ test("a posted ask is claimed by another student and closed with a thank-you", a
   await expect(late.getByText("Already taken")).toBeVisible();
   await expect(late.getByRole("link", { name: "Claim this task" })).toHaveCount(0);
 
-  // Asker: the page refreshes on its own and shows who said yes.
-  await expect(page.getByText("Rina can help!")).toBeVisible();
-  await page.getByRole("button", { name: "Confirm Rina" }).click();
+  // Asker: the page refreshes on its own and shows who said yes, by alias only.
+  const canHelp = page.getByText(/ can help!$/);
+  await expect(canHelp).toBeVisible();
+  const helperAlias = (await canHelp.textContent())!.replace(" can help!", "");
+  expect(helperAlias).toMatch(/^[A-Z][a-z]+ [A-Z][a-z]+ \d{2}$/);
+  await expect(page.getByText(/\bRina\b/)).toHaveCount(0);
+  await page.getByRole("button", { name: `Confirm ${helperAlias}` }).click();
   await expect(page.getByText("Meet at (public)")).toBeVisible();
 
   // Both said yes, so messages open: asker writes first, helper replies.
-  await page.getByRole("link", { name: /^Rina/ }).click();
+  await page.getByRole("link", { name: new RegExp(`^${helperAlias}`) }).click();
   await expect(page).toHaveURL(new RegExp(`${taskPath}/messages$`));
   await expect(page.getByText("You both said yes. Plan the details here.")).toBeVisible();
-  await page.getByLabel("Message Rina").fill("I'm at the Collis porch");
+  await page.getByLabel(`Message ${helperAlias}`).fill("I'm at the Collis porch");
   await page.getByRole("button", { name: "Send" }).click();
   await expect(page.getByText("I'm at the Collis porch")).toBeVisible();
-  await expect(page.getByLabel("Message Rina")).toHaveValue("");
+  await expect(page.getByLabel(`Message ${helperAlias}`)).toHaveValue("");
+  await expect(page.getByText(/\bRina\b/)).toHaveCount(0);
 
+  // The helper never sees the asker's name either.
   await helper.reload();
-  await helper.getByRole("link", { name: /^Lin/ }).click();
+  await helper.locator(`a[href="${taskPath}/messages"]`).click();
   await expect(helper.getByText("I'm at the Collis porch")).toBeVisible();
-  await helper.getByLabel("Message Lin").fill("On my way");
+  await expect(helper.getByText(/\bLin\b/)).toHaveCount(0);
+  await helper.getByLabel(/^Message /).fill("On my way");
   await helper.keyboard.press("Enter");
   await expect(helper.getByText("On my way")).toBeVisible();
   // The asker's thread picks up the reply on its own.
@@ -137,10 +143,12 @@ test("a posted ask is claimed by another student and closed with a thank-you", a
 
   await page.getByRole("link", { name: "Task" }).click();
   await expect(page).toHaveURL(new RegExp(`${taskPath}$`));
-  await expect(page.getByRole("link", { name: /^Rina/ })).toContainText("On my way");
+  await expect(page.getByRole("link", { name: new RegExp(`^${helperAlias}`) })).toContainText(
+    "On my way",
+  );
   await helper.getByRole("link", { name: "Task" }).click();
   await page.getByRole("button", { name: "Pay $17.28 and hold" }).click();
-  await expect(page.getByText("Rina is on it")).toBeVisible();
+  await expect(page.getByText(`${helperAlias} is on it`)).toBeVisible();
 
   // Helper: starts once it's held, then marks it done.
   await expect(helper.getByText("$15.00 is held for you.")).toBeVisible();
@@ -148,14 +156,14 @@ test("a posted ask is claimed by another student and closed with a thank-you", a
   await expect(helper.getByText("Marked done")).toBeVisible();
 
   // Asker: confirms, which releases the payment.
-  await expect(page.getByText("Rina marked it done")).toBeVisible();
+  await expect(page.getByText(`${helperAlias} marked it done`)).toBeVisible();
   await page.getByRole("button", { name: "Confirm done" }).click();
-  await expect(page.getByText("$15.00 released to Rina.")).toBeVisible();
+  await expect(page.getByText(`$15.00 released to ${helperAlias}.`)).toBeVisible();
   await expect(helper.getByText("$15.00 released to you.")).toBeVisible();
 
   await page.getByRole("link", { name: "Write a thank-you" }).click();
   await expect(page).toHaveURL(/\/thanks\?token=/);
-  await page.getByPlaceholder("Thank you so much for the ride!").fill("Thanks for the ride, Rina!");
+  await page.getByPlaceholder("Thank you so much for the ride!").fill("Thanks for the ride!");
   await page.getByRole("button", { name: "Send thank-you" }).click();
   await expect(page.getByRole("heading", { name: /Thank-you sent/ })).toBeVisible();
 });

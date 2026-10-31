@@ -23,6 +23,7 @@ import {
   refundRateLimit,
   toPublicCard,
 } from "./board-store";
+import { aliasFor } from "./alias";
 import { openTestDb } from "./db";
 import { listInbox, listMessages, sendMessage } from "./inbox";
 import { SEED_CARDS } from "./mock-data";
@@ -45,7 +46,7 @@ beforeAll(async () => {
   asker = (await signInUser("Lin", "lin@dartmouth.edu")).user.id;
   helpers = [];
   for (let i = 0; i < 10; i++) {
-    const { user } = await signInUser(`H${i}`, `h${i}@dartmouth.edu`);
+    const { user } = await signInUser(`Helperina${i}`, `h${i}@dartmouth.edu`);
     await saveHelperSetup(user.id, { canAcceptPayment: true, payoutAccount: `@h${i}` });
     helpers.push(user.id);
   }
@@ -277,7 +278,9 @@ describe("board store (Postgres)", () => {
     await holdCard(token, helpers[7]);
 
     const inbox = await listInbox(asker, { kind: "action" });
-    expect(inbox.some((n) => n.token === token && n.title === "H7 can help")).toBe(true);
+    expect(
+      inbox.some((n) => n.token === token && n.title === `${aliasFor(helpers[7])} can help`),
+    ).toBe(true);
 
     // Claimed but not confirmed: still closed for both sides.
     expect(await listMessages(token, helpers[7])).toEqual(closed);
@@ -289,17 +292,20 @@ describe("board store (Postgres)", () => {
     await sendMessage(token, asker, "Terminal 1, thanks!");
 
     const thread = await listMessages(token, helpers[7]);
-    expect("messages" in thread && thread.otherFirstName).toBe("Lin");
+    // Aliases only: neither side sees the other's name.
+    expect("messages" in thread && thread.otherAlias).toBe(aliasFor(asker));
     expect(
-      "messages" in thread && thread.messages.map((m) => [m.fromMe, m.senderFirstName, m.body]),
+      "messages" in thread && thread.messages.map((m) => [m.fromMe, m.senderAlias, m.body]),
     ).toEqual([
-      [true, "H7", "Which terminal?"],
-      [false, "Lin", "Terminal 1, thanks!"],
+      [true, aliasFor(helpers[7]), "Which terminal?"],
+      [false, aliasFor(asker), "Terminal 1, thanks!"],
     ]);
+    expect(JSON.stringify(thread)).not.toContain("Lin");
     const mine = await listMessages(token, asker);
-    expect("messages" in mine && mine.otherFirstName).toBe("H7");
+    expect("messages" in mine && mine.otherAlias).toBe(aliasFor(helpers[7]));
     const replies = await listInbox(asker, { kind: "action" });
-    expect(replies.some((n) => n.text === "H7: “Which terminal?”")).toBe(true);
+    expect(replies.some((n) => n.text === `${aliasFor(helpers[7])}: “Which terminal?”`)).toBe(true);
+    expect(JSON.stringify(replies)).not.toContain("Helperina7");
 
     // Cancelled: the thread stays readable but closed.
     expect("error" in (await cancelCard(token, asker))).toBe(false);
@@ -317,7 +323,7 @@ describe("board store (Postgres)", () => {
     expect((await listMine(helpers[9])).helping.some((c) => c.token === token)).toBe(true);
   });
 
-  it("public cards hide user ids, emails, payments and anonymous names", async () => {
+  it("public cards hide user ids, emails, payments and names", async () => {
     const { token } = await card();
     await holdCard(token, helpers[0]);
     await confirmCard(token, asker);
@@ -330,7 +336,11 @@ describe("board store (Postgres)", () => {
     expect(json).not.toContain(helpers[0]);
     expect(json).not.toContain("Lin");
     expect(pub.payment).toBeUndefined();
-    expect(pub.heldByFirstName).toBe("H0");
+    expect(json).not.toContain("Helperina0");
+    // Only the asker sees who's holding it, and only by alias.
+    expect(pub.heldByAlias).toBeUndefined();
+    expect(toPublicCard(full, asker).heldByAlias).toBe(aliasFor(helpers[0]));
+    expect(JSON.stringify(toPublicCard(full, asker))).not.toContain("Helperina0");
     expect(toPublicCard(full, asker).payment?.totalCents).toBe(1728);
     expect(toPublicCard(full, helpers[0]).viewer).toBe("helper");
     expect(toPublicCard(full, helpers[1]).viewer).toBe("other");

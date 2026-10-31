@@ -22,12 +22,12 @@ function timeLabel(ms: number) {
 
 export function Thread({
   token,
-  otherFirstName,
+  otherAlias,
   initial,
   closed,
 }: {
   token: string;
-  otherFirstName: string;
+  otherAlias: string;
   initial: Message[];
   closed: boolean;
 }) {
@@ -72,7 +72,7 @@ export function Thread({
   return (
     <>
       <ol
-        aria-label={`Messages with ${otherFirstName}`}
+        aria-label={`Messages with ${otherAlias}`}
         className="flex flex-1 flex-col justify-end gap-1.5 px-4 pt-3 pb-4"
       >
         {messages.map((m, i) => {
@@ -100,7 +100,7 @@ export function Thread({
                     "animate-in duration-150 fade-in slide-in-from-bottom-1 motion-reduce:animate-none",
                 )}
               >
-                <span className="sr-only">{m.fromMe ? "You" : m.senderFirstName}: </span>
+                <span className="sr-only">{m.fromMe ? "You" : m.senderAlias}: </span>
                 {m.body}
               </p>
             </li>
@@ -123,14 +123,14 @@ export function Thread({
             }}
           >
             <label htmlFor="reply" className="sr-only">
-              Message {otherFirstName}
+              Message {otherAlias}
             </label>
             <textarea
               id="reply"
               rows={1}
               value={draft}
               maxLength={MAX_LENGTH}
-              placeholder={`Message ${otherFirstName}`}
+              placeholder={`Message ${otherAlias}`}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => {
                 // Enter sends; Shift+Enter is a new line. Never mid-IME composition.

@@ -14,6 +14,7 @@ import { privacyScrub } from "@/lib/ai/ask/privacy-scrub";
 import { keywordCheck, safetyCheck } from "@/lib/ai/ask/safety-check";
 import { suggestCategories as suggestCategoriesAI } from "@/lib/ai/ask/suggest-category";
 import { suggestWhere as suggestWhereAI } from "@/lib/ai/ask/suggest-where";
+import { aliasFor } from "@/lib/ask/alias";
 import { COVERED_MESSAGE, formatPostMessage } from "@/lib/ask/format";
 import { findGroup, HELPERS, MEETING_SPOTS } from "@/lib/ask/mock-data";
 import {
@@ -97,13 +98,22 @@ export async function findCommonNeed(need: string): Promise<CommonNeedMatch | nu
     label: match.label,
     askedLastTerm: match.askedLastTerm,
     tip: match.tip,
-    from: { id: helper.id, firstName: helper.firstName, year: helper.year },
+    from: { id: helper.id, alias: aliasFor(helper.id), year: helper.year },
   };
 }
 
 export async function suggestWhere(ask: string) {
   const { category } = await safetyCheck(text.parse(ask));
-  return { category, ...(await suggestWhereAI(ask, category, HELPERS)) };
+  const { helpers, ...rest } = await suggestWhereAI(ask, category, HELPERS);
+  // Aliases only: never a helper's name, tags or free/busy.
+  return {
+    category,
+    ...rest,
+    helpers: helpers.map(({ helper, why }) => ({
+      helper: { id: helper.id, alias: aliasFor(helper.id), year: helper.year },
+      why,
+    })),
+  };
 }
 
 export async function scrubForAnonymous(ask: string) {
@@ -123,7 +133,7 @@ const postAskSchema = z.object({
 export async function postAsk(input: z.input<typeof postAskSchema>): Promise<PostAskResult> {
   const parsed = postAskSchema.safeParse(input);
   if (!parsed.success) return { error: "Something's missing from your ask." };
-  const { groupId, anonymous, name } = parsed.data;
+  const { groupId } = parsed.data;
 
   const group = findGroup(groupId);
   if (!group) return { error: "That group isn't available." };
@@ -140,11 +150,7 @@ export async function postAsk(input: z.input<typeof postAskSchema>): Promise<Pos
   }
 
   const token = randomBytes(9).toString("base64url");
-  const message = formatPostMessage(
-    parsed.data.text,
-    anonymous ? null : name || null,
-    `${siteUrl()}/h/${token}`,
-  );
+  const message = formatPostMessage(parsed.data.text, `${siteUrl()}/h/${token}`);
 
   try {
     await postToGroup(group, message);
@@ -153,7 +159,7 @@ export async function postAsk(input: z.input<typeof postAskSchema>): Promise<Pos
     return { error: "Couldn't reach the group chat. Please try again." };
   }
 
-  savePost({ token, groupId, text: parsed.data.text, anonymous, createdAt: Date.now() });
+  savePost({ token, groupId, text: parsed.data.text, anonymous: true, createdAt: Date.now() });
   return { token };
 }
 
@@ -196,8 +202,7 @@ export async function claimAsk(input: z.input<typeof claimSchema>): Promise<Clai
 
   // TODO(auth): verify the school email (magic link) before trusting a claim.
   post.claim = {
-    firstName: parsed.data.firstName,
-    email: parsed.data.email,
+    alias: aliasFor(parsed.data.email),
     meetingSpot: MEETING_SPOTS[Math.floor(Math.random() * MEETING_SPOTS.length)],
     claimedAt: Date.now(),
   };

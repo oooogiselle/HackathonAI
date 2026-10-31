@@ -1,6 +1,6 @@
 // notify(event, to, data): the only way Ask emails anyone. Exactly the three PRD
 // events. Call it only after the request that won the state update has
-// committed, so each event sends once. Messages never name the asker.
+// committed, so each event sends once. Messages name no one: aliases at most.
 // To add a channel (e.g. Gmail SMTP): write an adapter and put it first below.
 import "server-only";
 
@@ -22,8 +22,8 @@ export type NotifyEvent =
 export type NotifyData = {
   askToken: string;
   title: string;
-  // Only the helper's first name, and only in emails to the asker.
-  helperFirstName?: string;
+  // Only the helper's alias (never a name), and only in emails to the asker.
+  helperAlias?: string;
   // "done" emails: who marked it done.
   by?: "asker" | "helper";
 };
@@ -40,8 +40,8 @@ function compose(event: NotifyEvent, to: string, data: NotifyData): Email {
     case "claimed":
       return {
         to,
-        subject: `${data.helperFirstName ?? "Someone"} can help`,
-        text: `${data.helperFirstName ?? "A helper"} said yes to ${ask}.\nConfirm to lock it in: ${siteUrl()}/matched/${data.askToken}`,
+        subject: `${data.helperAlias ?? "Someone"} can help`,
+        text: `${data.helperAlias ?? "A helper"} said yes to ${ask}.\nConfirm to lock it in: ${siteUrl()}/matched/${data.askToken}`,
       };
     case "done":
       return data.by === "helper"

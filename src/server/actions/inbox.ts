@@ -48,7 +48,7 @@ export async function markInboxRead(ids?: string[]): Promise<Result> {
 
 export async function listMessages(
   cardToken: string,
-): Promise<Result<{ messages: Message[]; otherFirstName: string }>> {
+): Promise<Result<{ messages: Message[]; otherAlias: string }>> {
   const user = await getCurrentUser();
   if (!user) return { error: SIGN_IN_ERROR };
   const tok = token.safeParse(cardToken);
