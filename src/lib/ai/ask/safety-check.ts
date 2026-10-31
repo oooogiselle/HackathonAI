@@ -35,7 +35,7 @@ const KEYWORDS: [SafetyCategory, RegExp, string][] = [
   ],
 ];
 
-function keywordCheck(text: string): SafetyResult {
+export function keywordCheck(text: string): SafetyResult {
   for (const [category, pattern, reason] of KEYWORDS) {
     if (pattern.test(text)) return { category, reason };
   }

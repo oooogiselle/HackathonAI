@@ -47,7 +47,8 @@ The PRD's demo path is board-first: Home → Clarify → Your ask with a price �
 - [x] Seed 15–20 fictional helpers with free/busy and payment eligibility
       Done when: `HELPERS` in `src/lib/ask/mock-data.ts` has 15–20 fictional Northfield helpers, each with `interests` (from: rides, moving stuff, US paperwork, cooking, language practice, course advice, been through OPT), seeded `busy` time ranges (free/busy only, no event titles), `weeklyLimit`, and `canAcceptPayment` (some false); the `Helper` type in `src/lib/ask/types.ts` has these fields; lint + typecheck pass.
 
-- [ ] Suggested price on Your ask
+- [x] Suggested price on Your ask
+      Done (expanded): `draftAsk` now breaks a need into 1–4 `AskPart`s, each with minutes, helper preferences (with seeded fit counts) and a deterministic `PriceSuggestion`; see `docs/contract.md`.
       Done when: `draftAsk` also returns `minutes` and `suggestedPrice` (`{ min, max }` in whole dollars, from the time needed); `/draft` shows a price field pre-filled from it with a "$0 = favor" option; the price is stored in flow state; academic asks never show a price; lint + typecheck pass.
 
 - [ ] Public board: one ask, one card

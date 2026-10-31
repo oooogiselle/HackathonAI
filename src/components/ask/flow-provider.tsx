@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 
 import type {
+  AskPart,
   ClarifyAnswer,
   ClarifyQuestion,
   SafetyCategory,
@@ -14,10 +15,18 @@ import type {
 } from "@/lib/ask/types";
 
 export type AskFlowState = {
+  // "form": Home is a form the student fills in. "ai": /describe → Clarify → Your ask.
+  mode: "ai" | "form";
   need: string;
   category: SafetyCategory;
   questions?: ClarifyQuestion[];
   answers: ClarifyAnswer[];
+  // Small asks the AI broke the need into; the student sends one at a time.
+  parts: AskPart[];
+  activePart: number;
+  // Parts already sent (thank-you written); shown as done on Your ask.
+  sentParts: number[];
+  // The active part's text, used by Where / Share.
   ask: string;
   where?: WhereSuggestion & { category: SafetyCategory };
   groupId?: string;
@@ -28,9 +37,13 @@ export type AskFlowState = {
 };
 
 const INITIAL: AskFlowState = {
+  mode: "form",
   need: "",
   category: "none",
   answers: [],
+  parts: [],
+  activePart: 0,
+  sentParts: [],
   ask: "",
   anonymous: false,
   name: "",
