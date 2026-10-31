@@ -67,7 +67,7 @@ The PRD's demo path is board-first: Home → Clarify → Your ask with a price �
       Done when: every ask has `expiresAt` (from the drafted time, default 24 h); expired cards are hidden from `/board`, the claim page shows "This ask has expired", and the claim's atomic update includes `expires_at > now()`; lint + typecheck pass.
 
 - [ ] Mocked school-email sign-up + helper setup on the claim page
-      Update: sign-up is now real Supabase sign-in (`/login`); `claimCard` takes the email from the account. Only the claim-page UI (sign-in prompt + mocked helper setup for paid cards) is left.
+      Backend done: `mockSignIn` / `getMe` / `mockSignOut` in `src/server/actions/session.ts`; `claimCard` takes the name and email from the session and checks the mocked setup for paid cards. Only the claim-page UI is left.
       Done when: `/h/[token]` first asks for first name + school (.edu) email (mocked sign-up, no verification; TODO(auth)); for a paid card it then shows a mocked helper setup ("I can accept payment" toggle + payout account field) and refuses to claim if they can't accept payment; free cards skip the setup; lint + typecheck pass.
 
 - [ ] Email notifications (console only tonight)

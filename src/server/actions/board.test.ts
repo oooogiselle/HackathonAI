@@ -3,9 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { COVERED_MESSAGE } from "@/lib/ask/format";
 
 // Who's signed in for the next action call. null = signed out.
-let currentUser: { id: string; email: string } | null = null;
+let currentUser: { id: string; firstName: string; email: string } | null = null;
 
-vi.mock("@/lib/supabase/server", () => ({ getUser: async () => currentUser }));
+vi.mock("@/lib/ask/mock-session", () => ({ getCurrentUser: async () => currentUser }));
 vi.mock("@/lib/groups", () => ({ postToGroup: vi.fn(async () => {}) }));
 // Keyword check only, no API calls.
 vi.stubEnv("ANTHROPIC_API_KEY", "");
@@ -13,8 +13,12 @@ vi.stubEnv("ANTHROPIC_API_KEY", "");
 const { postToGroup } = await import("@/lib/groups");
 const board = await import("./board");
 
-const asker = { id: "asker-1", email: "lin@northfield.edu" };
-const helper = (n: number) => ({ id: `helper-${n}`, email: `h${n}@northfield.edu` });
+const asker = { id: "asker-1", firstName: "Lin", email: "lin@northfield.edu" };
+const helper = (n: number) => ({
+  id: `helper-${n}`,
+  firstName: `H${n}`,
+  email: `h${n}@northfield.edu`,
+});
 const setup = { canAcceptPayment: true, payoutAccount: "acct_demo" };
 
 async function postDemoCard(price = 15) {
@@ -46,7 +50,7 @@ describe("board actions", () => {
     const token = await postDemoCard();
     currentUser = null;
     expect((await board.getCard(token))?.viewer).toBe("signed-out");
-    expect(await board.claimCard({ token, firstName: "Sam", setup })).toEqual({
+    expect(await board.claimCard({ token, setup })).toEqual({
       error: "Sign in to post or help.",
     });
   });
@@ -65,7 +69,7 @@ describe("board actions", () => {
   it("refuses paid claims from helpers who can't accept payment", async () => {
     const token = await postDemoCard();
     currentUser = helper(1);
-    expect(await board.claimCard({ token, firstName: "Sam" })).toEqual({
+    expect(await board.claimCard({ token })).toEqual({
       error: "This ask needs a helper who can accept payment",
     });
   });
@@ -77,9 +81,9 @@ describe("board actions", () => {
     expect(vi.mocked(postToGroup).mock.calls[0][1]).toContain(`/h/${token}`);
 
     currentUser = helper(1);
-    expect(await board.claimCard({ token, firstName: "Sam", setup })).toEqual({ ok: true });
+    expect(await board.claimCard({ token, setup })).toEqual({ ok: true });
     currentUser = helper(2);
-    expect(await board.claimCard({ token, firstName: "Ana", setup })).toEqual({
+    expect(await board.claimCard({ token, setup })).toEqual({
       error: "Already taken",
     });
 
@@ -101,6 +105,7 @@ describe("board actions", () => {
 
     const card = await board.getCard(token);
     expect(card?.status).toBe("done");
+    expect(card?.heldByFirstName).toBe("H1");
     expect(card?.viewer).toBe("asker");
     expect(JSON.stringify(card)).not.toContain("northfield.edu");
   });

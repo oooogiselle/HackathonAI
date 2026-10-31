@@ -1,6 +1,6 @@
 // Server actions for the public board: one ask, one card. Anyone can view the
-// board and a card; posting, claiming and every asker step need a signed-in
-// Supabase user. Server actions are public endpoints, so each one re-checks
+// board and a card; posting, claiming and every asker step need the mocked
+// sign-in (src/server/actions/session.ts). Server actions are public endpoints, so each one re-checks
 // sign-in, ownership and safety here, never trusting the UI.
 "use server";
 
@@ -24,28 +24,24 @@ import {
 } from "@/lib/ask/board-store";
 import { COVERED_MESSAGE, formatPostMessage } from "@/lib/ask/format";
 import { findGroup, HELPERS } from "@/lib/ask/mock-data";
+import { getCurrentUser, type MockUser } from "@/lib/ask/mock-session";
 import { MAX_POSTS_PER_GROUP_PER_DAY, refundRateLimit, takeRateLimit } from "@/lib/ask/store";
 import type { PublicCard, Result } from "@/lib/ask/types";
 import { postToGroup } from "@/lib/groups";
 import { siteUrl } from "@/lib/site-url";
-import { getUser } from "@/lib/supabase/server";
 
 const SIGN_IN_ERROR = "Sign in to post or help.";
 const HOUR = 3_600_000;
 
 const text = z.string().trim().min(1).max(1000);
 const token = z.string().min(1).max(64);
-const firstName = z.string().trim().min(1, "Add your first name.").max(40);
 
-type SignedIn = { id: string; email: string };
-
-async function requireUser(): Promise<SignedIn | null> {
-  const user = await getUser();
-  return user?.email ? { id: user.id, email: user.email } : null;
+async function requireUser(): Promise<MockUser | null> {
+  return getCurrentUser();
 }
 
 async function viewerId() {
-  return (await getUser())?.id ?? null;
+  return (await getCurrentUser())?.id ?? null;
 }
 
 const NOT_FOUND = { error: "We couldn't find that ask." };
@@ -83,7 +79,6 @@ const postSchema = z.object({
   minutes: z.number().int().min(5).max(480),
   price: z.number().int().min(0).max(500),
   anonymous: z.boolean(),
-  firstName: firstName.optional(),
   expiresAt: z.number().int().optional(),
 });
 
@@ -117,7 +112,7 @@ export async function postToBoard(
     minutes,
     price,
     anonymous,
-    askerFirstName: anonymous ? undefined : parsed.data.firstName,
+    askerFirstName: anonymous ? undefined : user.firstName,
     status: "open",
     createdAt: now,
     expiresAt,
@@ -128,7 +123,6 @@ export async function postToBoard(
 
 const claimSchema = z.object({
   token,
-  firstName,
   setup: z
     .object({ canAcceptPayment: z.boolean(), payoutAccount: z.string().trim().max(100) })
     .optional(),
@@ -151,10 +145,10 @@ export async function claimCard(input: z.input<typeof claimSchema>): Promise<Res
     return { error: "This ask needs a helper who can accept payment" };
   }
 
-  // The email comes from the signed-in account, never from the form.
+  // Name and email come from the signed-in account, never from the form.
   const held = holdCard(parsed.data.token, {
     userId: user.id,
-    firstName: parsed.data.firstName,
+    firstName: user.firstName,
     email: user.email,
   });
   return "error" in held ? held : { ok: true };

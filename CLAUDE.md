@@ -10,7 +10,7 @@ Full product spec: `docs/PRD.md` (loaded below). It wins on product questions.
 
 @docs/PRD.md
 
-Hackathon demo: one ask, start to finish. **Auth:** Supabase sign-in (magic link + Google at `/login`). Anyone can view the board and a card; posting, claiming and every asker step need sign-in, checked inside each server action. Supabase's built-in magic-link email is rate-limited (a few per hour), so for the demo sign in with Google or sign the phones in beforehand. Asks and claims move to a small Postgres store (the existing Drizzle + Supabase setup in `src/db/`) so two phones see the same card; until that lands, state is in memory. Payments, calendar and school-email verification are mocked.
+Hackathon demo: one ask, start to finish. **Sign-in is mocked:** first name + school (.edu) email, no verification (`src/server/actions/session.ts`, TODO(auth)). Anyone can view the board and a card; posting, claiming and every asker step need the mock sign-in, checked inside each server action. Asks and claims move to a small Postgres store (the existing Drizzle + Supabase setup in `src/db/`) so two phones see the same card; until that lands, state is in memory. Payments, calendar and school-email sign-up are mocked.
 
 ## Run
 
@@ -50,6 +50,7 @@ src/lib/groups/            postToGroup(group, text) + one adapter per platform (
 src/server/actions/ask.ts  server actions for the ask flow; re-checks safety + rate limit before any post
 src/server/actions/board.ts board card lifecycle: listBoard, getCard, postToBoard, claimCard, confirmHelper,
                            markDone, markPaid, saveCardThanks, shareCardToGroup (sign-in + ownership checked)
+src/server/actions/session.ts mocked sign-in: mockSignIn, mockSignOut, getMe (cookie → in-memory session)
 src/lib/ask/board-store.ts in-memory cards; every transition is a synchronous check-and-set
 docs/contract.md           backend ↔ frontend contract: every server action, its input/output, status
 ```
@@ -85,4 +86,4 @@ The rest of the repo (`/app`, `/login`, items, chat, Supabase, Drizzle) is the o
 
 ## Not now (leave TODOs)
 
-Real school-email (.edu) verification, push notifications, an iOS app, reading group messages, the Stripe API and Stripe Connect, the Google Calendar API and OAuth, Slack interactive buttons. Search for `TODO(` to find the spots.
+Real auth and real school-email verification (sign-up is mocked), push notifications, an iOS app, reading group messages, the Stripe API and Stripe Connect, the Google Calendar API and OAuth, Slack interactive buttons. Search for `TODO(` to find the spots.
