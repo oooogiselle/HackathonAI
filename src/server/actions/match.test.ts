@@ -12,6 +12,7 @@ vi.mock("@/lib/ask/mock-session", () => ({ getCurrentUser: async () => currentUs
 vi.mock("@/lib/groups", () => ({ postToGroup: vi.fn(async () => {}) }));
 // Keyword safety check and rule-order picks, no API calls.
 vi.stubEnv("ANTHROPIC_API_KEY", "");
+vi.stubEnv("OPENAI_API_KEY", "");
 
 const board = await import("./board");
 const { matchHelpers } = await import("./private");

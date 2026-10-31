@@ -36,6 +36,7 @@ const ids = (helpers: { id: string }[]) => helpers.map((h) => h.id);
 
 beforeEach(() => {
   vi.stubEnv("ANTHROPIC_API_KEY", "");
+  vi.stubEnv("OPENAI_API_KEY", "");
 });
 
 describe("isBusyAt", () => {
@@ -94,6 +95,46 @@ describe("eligibleHelpers", () => {
     const helpers = [makeHelper("a"), makeHelper("b"), makeHelper("c")];
     const input = ride({ activeMatches: { a: 2, b: 1 } });
     expect(ids(eligibleHelpers(input, helpers))).toEqual(["c", "b", "a"]);
+  });
+
+  it("matches tags as whole words: 'carry' is not 'car'", () => {
+    const helpers = [makeHelper("driver", { tags: ["car"], interests: ["rides"] })];
+    const input = ride({ text: "Help me carry boxes", interests: [], needs: [] });
+    expect(eligibleHelpers(input, helpers)).toEqual([]);
+  });
+
+  it("reads Dartmouth words: a Dartmouth Coach ask finds the airport driver", () => {
+    const helpers = [
+      makeHelper("cook", { tags: ["cooking"], interests: ["cooking"] }),
+      makeHelper("driver", { tags: ["airport", "luggage"], interests: ["rides"] }),
+    ];
+    const input = ride({ text: "Get me to the Dartmouth Coach stop", interests: [], needs: [] });
+    expect(ids(eligibleHelpers(input, helpers))).toEqual(["driver"]);
+  });
+
+  it("puts someone who's done this exact thing ahead of a less busy generalist", () => {
+    const helpers = [
+      makeHelper("general", { tags: ["errand"] }),
+      makeHelper("expert", { tags: ["airport", "luggage"] }),
+    ];
+    const input = ride({ needs: [], activeMatches: { expert: 1 } });
+    expect(ids(eligibleHelpers(input, helpers))).toEqual(["expert", "general"]);
+  });
+
+  it("boosts a shared house community but never filters on it", () => {
+    const helpers = [
+      makeHelper("far", { tags: ["airport", "car"] }),
+      makeHelper("near", { tags: ["airport", "car", "west house"] }),
+    ];
+    const input = ride({ askerCommunities: ["west house"] });
+    expect(ids(eligibleHelpers(input, helpers))).toEqual(["near", "far"]);
+    expect(ids(eligibleHelpers(ride(), helpers))).toHaveLength(2);
+  });
+
+  it("counts close embeddings as experience when they're there", () => {
+    const helpers = [makeHelper("a", { tags: ["errand"] }), makeHelper("b", { tags: ["errand"] })];
+    const input = ride({ needs: [], activeMatches: { b: 1 }, similarity: { b: 0.6, a: 0.1 } });
+    expect(ids(eligibleHelpers(input, helpers))).toEqual(["b", "a"]);
   });
 
   it("needs the ask's words to point at a helper when there are no preferences", () => {

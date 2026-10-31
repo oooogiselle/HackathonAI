@@ -40,6 +40,7 @@ import {
 import { type NotifyData, type NotifyEvent, notify } from "@/lib/notify";
 
 import { aliasFor } from "./alias";
+import { findHouseByTag, stripGreek } from "./dartmouth";
 import { type AskDb, getAskDb } from "./db";
 import { paymentBreakdown } from "./fees";
 import { MEETING_SPOTS } from "./mock-data";
@@ -87,18 +88,31 @@ function effectiveStatus(row: { status: string; expiresAt: Date }, now: number):
 
 const ms = (d: Date | null | undefined) => (d ? d.getTime() : undefined);
 
+/** The house community both people put on their profile. Never a Greek house. */
+function sharedHouse(helperTags: string[], askerTags: string[]) {
+  return helperTags
+    .filter((t) => askerTags.includes(t))
+    .map(findHouseByTag)
+    .find(Boolean)?.name;
+}
+
 /** Turns ask rows into cards with their asker, holder, shares and payment. */
 async function hydrate(db: AskDb, rows: AskRow[], now: number): Promise<BoardCard[]> {
   if (!rows.length) return [];
   const tokens = rows.map((r) => r.token);
 
-  const [held, shares, pays] = await Promise.all([
+  // Askers of claimed asks: their house tag, for "Also in West House".
+  const claimedAskers = [...new Set(rows.filter((r) => r.status !== "open").map((r) => r.askerId))];
+
+  const [held, shares, pays, askerTags] = await Promise.all([
     db
       .select({
         token: claims.askToken,
         userId: users.id,
         year: users.classYear,
         showYear: users.showClassYear,
+        blurb: users.blurb,
+        tags: users.tags,
         heldAt: claims.heldAt,
       })
       .from(claims)
@@ -106,8 +120,15 @@ async function hydrate(db: AskDb, rows: AskRow[], now: number): Promise<BoardCar
       .where(inArray(claims.askToken, tokens)),
     db.select().from(askShares).where(inArray(askShares.askToken, tokens)),
     db.select().from(payments).where(inArray(payments.askToken, tokens)),
+    claimedAskers.length
+      ? db
+          .select({ id: users.id, tags: users.tags })
+          .from(users)
+          .where(inArray(users.id, claimedAskers))
+      : Promise.resolve([]),
   ]);
 
+  const tagsByAsker = new Map(askerTags.map((u) => [u.id, u.tags]));
   const heldByToken = new Map(held.map((h) => [h.token, h]));
   const payByToken = new Map(pays.map((p) => [p.askToken, p]));
 
@@ -148,6 +169,9 @@ async function hydrate(db: AskDb, rows: AskRow[], now: number): Promise<BoardCar
         userId: holder.userId,
         alias: aliasFor(holder.userId),
         year: holder.showYear ? (holder.year ?? undefined) : undefined,
+        // Already privacy-scrubbed when the helper saved it.
+        blurb: holder.blurb?.trim() || undefined,
+        sharedHouse: sharedHouse(holder.tags, tagsByAsker.get(row.askerId) ?? []),
         heldAt: holder.heldAt.getTime(),
       },
       meetingSpot: row.meetingSpot ?? undefined,
@@ -259,7 +283,14 @@ export function toPublicCard(
   return {
     ...rest,
     shares: rest.shares.map((s) => ({ ...s })),
-    ...(viewer === "asker" && heldBy ? { heldByAlias: heldBy.alias, heldByYear: heldBy.year } : {}),
+    ...(viewer === "asker" && heldBy
+      ? {
+          heldByAlias: heldBy.alias,
+          heldByYear: heldBy.year,
+          heldByBlurb: heldBy.blurb && stripGreek(heldBy.blurb),
+          heldBySharedHouse: heldBy.sharedHouse,
+        }
+      : {}),
     ...(party && payment ? { payment } : {}),
     viewer,
   };

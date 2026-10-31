@@ -9,6 +9,7 @@ import { asks, blocks, claims, sessions, users } from "@/db/schema";
 
 import { aliasFor } from "./alias";
 import type { ViewerPrefs } from "./board-rank";
+import { isCommunityTag } from "./dartmouth";
 import { getAskDb } from "./db";
 import type { BlockedEntry, HelperSetup, Profile, ThanksNote } from "./types";
 
@@ -81,6 +82,13 @@ export async function getViewerPrefs(userId: string): Promise<ViewerPrefs | null
     .from(users)
     .where(eq(users.id, userId));
   return u && u.interests.length > 0 ? u : null;
+}
+
+/** The house community / Greek house tags on someone's own profile, for the matching boost. */
+export async function communityTagsOf(userId: string): Promise<string[]> {
+  const db = await getAskDb();
+  const [u] = await db.select({ tags: users.tags }).from(users).where(eq(users.id, userId));
+  return (u?.tags ?? []).filter(isCommunityTag);
 }
 
 export type ProfileUpdate = Partial<Omit<Profile, "email" | "alias">>;

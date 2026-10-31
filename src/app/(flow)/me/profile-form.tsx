@@ -12,6 +12,12 @@ import { ScrubNotice } from "@/components/ask/scrub-notice";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  findGreekByTag,
+  findHouseByTag,
+  HOUSE_COMMUNITIES,
+  isCommunityTag,
+} from "@/lib/ask/dartmouth";
 import { cleanTags, INTEREST_LABELS, MAX_TAGS, type SkillSuggestion } from "@/lib/ask/helper-fit";
 import {
   type BlockedEntry,
@@ -116,7 +122,10 @@ function HelperPreview({
   free,
   weeklyLimit,
   canAcceptPayment,
+  action,
 }: {
+  // Shown at the end of the heading line (save status, Edit).
+  action?: React.ReactNode;
   alias: string;
   classYear: string;
   showClassYear: boolean;
@@ -128,11 +137,16 @@ function HelperPreview({
   canAcceptPayment: boolean;
 }) {
   const paused = weeklyLimit === 0;
+  // House and Greek tags are only for matching; they're never on your card.
+  const skills = tags.filter((t) => !isCommunityTag(t));
   return (
     <section aria-labelledby="preview-title" className="flex flex-col gap-2">
-      <h2 id="preview-title" className="px-1 text-[13px] font-semibold text-muted-foreground">
-        How others see you
-      </h2>
+      <div className="flex min-h-7 items-center justify-between gap-3 px-1">
+        <h2 id="preview-title" className="text-[13px] font-semibold text-muted-foreground">
+          How others see you
+        </h2>
+        {action}
+      </div>
       <div
         className={`relative overflow-hidden rounded-[28px] bg-primary text-primary-foreground transition-opacity ${
           paused ? "opacity-75" : ""
@@ -166,7 +180,7 @@ function HelperPreview({
             {blurb.trim() || "Add a line about you so askers know who's coming, without your name."}
           </p>
 
-          {interests.length + tags.length > 0 && (
+          {interests.length + skills.length > 0 && (
             <ul aria-label="Helps with" className="flex flex-wrap gap-1.5">
               {interests.map((i) => (
                 <li
@@ -176,7 +190,7 @@ function HelperPreview({
                   {INTEREST_LABELS[i]}
                 </li>
               ))}
-              {tags.map((t) => (
+              {skills.map((t) => (
                 <li key={t} className="rounded-full bg-white/15 px-2.5 py-1 text-xs font-semibold">
                   {t}
                 </li>
@@ -312,6 +326,15 @@ export function ProfileForm({
     });
   }
 
+  const house = form.tags.find((t) => findHouseByTag(t));
+  // Only for matching: shown here to you, never on your helper card.
+  const greek = form.tags.flatMap((t) => findGreekByTag(t)?.name ?? []);
+
+  // One house community, kept first so the tag limit never drops it.
+  function setHouse(tag: string | undefined) {
+    set({ tags: [...(tag ? [tag] : []), ...form.tags.filter((t) => !findHouseByTag(t))] });
+  }
+
   function addTypedTag() {
     const next = cleanTags([...form.tags, newTag]);
     if (next.length === form.tags.length) return;
@@ -427,15 +450,20 @@ export function ProfileForm({
         ? "Saved"
         : "";
 
+  // Sits on the preview's heading line, so it doesn't take a row of its own.
   const header = (
-    <div className="flex items-center justify-end gap-3">
-      <p aria-live="polite" className="text-sm text-muted-foreground">
+    <div className="flex items-center gap-3">
+      <p aria-live="polite" className="text-[13px] text-muted-foreground">
         {status}
       </p>
       {!editing && (
-        <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="text-[13px] font-semibold text-primary underline-offset-4 hover:underline"
+        >
           Edit
-        </Button>
+        </button>
       )}
     </div>
   );
@@ -511,8 +539,7 @@ export function ProfileForm({
   if (!editing) {
     return (
       <>
-        {header}
-        <HelperPreview {...form} alias={profile.alias} free={free} />
+        <HelperPreview {...form} alias={profile.alias} free={free} action={header} />
         {scrubNotice}
 
         <Card title="Private" note="Only you see this.">
@@ -525,6 +552,8 @@ export function ProfileForm({
               : "Favors only"}
           </Row>
           <Row label="Email me updates">{form.emailNotifications ? "On" : "Off"}</Row>
+          <Row label="House">{findHouseByTag(house ?? "")?.name ?? "Not picked"}</Row>
+          {greek.length > 0 && <Row label="Greek house">{greek.join(", ")}</Row>}
         </Card>
 
         <Card title="Calendar">{calendarSwitch}</Card>
@@ -537,8 +566,7 @@ export function ProfileForm({
 
   return (
     <>
-      {header}
-      <HelperPreview {...form} alias={profile.alias} free={free} />
+      <HelperPreview {...form} alias={profile.alias} free={free} action={header} />
 
       <Card
         title="Your helper card"
@@ -556,6 +584,23 @@ export function ProfileForm({
               />
             ))}
           </div>
+        </div>
+        <div className="flex flex-col gap-2">
+          <span className="text-[13px] font-semibold text-muted-foreground">Your house</span>
+          <div role="group" aria-label="Your house" className="flex flex-wrap gap-2">
+            {HOUSE_COMMUNITIES.map((h) => (
+              <ToggleChip
+                key={h.tag}
+                label={h.name.replace(/ House$/, "")}
+                pressed={house === h.tag}
+                onClick={() => setHouse(house === h.tag ? undefined : h.tag)}
+              />
+            ))}
+          </div>
+          <span className="text-xs text-muted-foreground">
+            Helps match you with neighbors. An asker only sees &ldquo;Also in{" "}
+            {findHouseByTag(house ?? "")?.name ?? "your house"}&rdquo; if they&apos;re in it too.
+          </span>
         </div>
         <SwitchRow
           title="Show my year"
@@ -597,17 +642,19 @@ export function ProfileForm({
         </div>
         <div className="flex flex-col gap-2">
           <span className="text-[13px] font-semibold text-muted-foreground">Specifics</span>
-          {form.tags.length > 0 && (
+          {form.tags.some((t) => !findHouseByTag(t)) && (
             <ul aria-label="Specifics" className="flex flex-wrap gap-2">
-              {form.tags.map((t) => (
-                <li key={t}>
-                  <RemovableChip
-                    label={t}
-                    strong
-                    onRemove={() => set({ tags: form.tags.filter((x) => x !== t) })}
-                  />
-                </li>
-              ))}
+              {form.tags
+                .filter((t) => !findHouseByTag(t))
+                .map((t) => (
+                  <li key={t}>
+                    <RemovableChip
+                      label={t}
+                      strong
+                      onRemove={() => set({ tags: form.tags.filter((x) => x !== t) })}
+                    />
+                  </li>
+                ))}
             </ul>
           )}
           {form.tags.length < MAX_TAGS && (

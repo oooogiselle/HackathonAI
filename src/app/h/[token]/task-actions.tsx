@@ -128,6 +128,15 @@ export function TaskActions({
   }
 
   const helperName = card.heldByAlias ?? "Your helper";
+  // Why they fit: their own line about what they've done, and a shared house.
+  const helperFit = (card.heldByBlurb || card.heldBySharedHouse) && (
+    <div aria-label="Why they fit" className="flex flex-col gap-0.5">
+      {card.heldByBlurb && <p>&ldquo;{card.heldByBlurb}&rdquo;</p>}
+      {card.heldBySharedHouse && (
+        <p className="text-muted-foreground">Also in {card.heldBySharedHouse}</p>
+      )}
+    </div>
+  );
   const paidAsk = card.price > 0;
   const held = card.payment?.status === "held";
   const meeting = card.meetingSpot && (
@@ -263,6 +272,7 @@ export function TaskActions({
       <>
         <Note>
           <p className="font-medium">{helperName} can help!</p>
+          {helperFit}
           <p className="text-muted-foreground">
             Confirm to lock it in. You&apos;ll talk in the thread; names and contact details stay
             private.

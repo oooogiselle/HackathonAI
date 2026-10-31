@@ -5,7 +5,7 @@
 // this browser). Free/busy only, never event titles.
 // TODO(calendar): real Google OAuth + freeBusy API, saved on the profile.
 import { CalendarCheck } from "lucide-react";
-import { useState } from "react";
+import { useSyncExternalStore } from "react";
 
 import { toLocalInput } from "@/components/ask/time-picker";
 import { freeSlots } from "@/lib/ask/free-busy";
@@ -15,22 +15,42 @@ import { cn } from "cn";
 
 const STORAGE_KEY = "ask.gcal";
 
-// Remembered per browser; the page works the same without storage. Only call
-// it from a component that mounts on the client (the form waits for `ready`).
+// Remembered per browser; the page works the same without storage (it falls
+// back to memory). The server always renders "not connected" and the browser
+// switches to the saved value after hydrating, so the HTML never mismatches.
+const listeners = new Set<() => void>();
+// Set when storage is blocked, so the switch still works for this page view.
+let memory: boolean | null = null;
+
+function readConnected() {
+  if (memory !== null) return memory;
+  try {
+    return localStorage.getItem(STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function subscribe(onChange: () => void) {
+  listeners.add(onChange);
+  window.addEventListener("storage", onChange);
+  return () => {
+    listeners.delete(onChange);
+    window.removeEventListener("storage", onChange);
+  };
+}
+
 export function useCalendarConnection() {
-  const [connected, setConnected] = useState(() => {
-    try {
-      return localStorage.getItem(STORAGE_KEY) === "1";
-    } catch {
-      return false;
-    }
-  });
+  const connected = useSyncExternalStore(subscribe, readConnected, () => false);
   function set(next: boolean) {
-    setConnected(next);
     try {
       if (next) localStorage.setItem(STORAGE_KEY, "1");
       else localStorage.removeItem(STORAGE_KEY);
-    } catch {}
+      memory = null;
+    } catch {
+      memory = next;
+    }
+    listeners.forEach((l) => l());
   }
   return { connected, busy: connected ? ASKER_BUSY : undefined, setConnected: set };
 }

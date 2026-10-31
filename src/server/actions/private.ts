@@ -26,7 +26,7 @@ import {
   type PublicCard,
   type Result,
 } from "@/lib/ask/types";
-import { canUserAcceptPayment } from "@/lib/ask/users";
+import { canUserAcceptPayment, communityTagsOf } from "@/lib/ask/users";
 
 const SIGN_IN_ERROR = "Sign in to post or help.";
 const token = z.string().min(1).max(64);
@@ -62,12 +62,17 @@ export async function matchHelpers(input: z.input<typeof matchSchema>): Promise<
 
   const viewer = await getCurrentUser();
   const helpers = await listHelperProfiles(viewer?.id ?? null);
-  const load = await recentLoad(helpers.map((h) => h.id));
+  const [load, askerCommunities] = await Promise.all([
+    recentLoad(helpers.map((h) => h.id)),
+    viewer ? communityTagsOf(viewer.id) : Promise.resolve([]),
+  ]);
   const picks = await matchHelpersAI(
     {
       ...ask,
       startsAt: startsAt === undefined ? undefined : new Date(startsAt).toISOString(),
       activeMatches: Object.fromEntries(load),
+      // Same house or Greek house as the asker: a boost, never a filter.
+      askerCommunities,
     },
     helpers,
   );
