@@ -14,6 +14,16 @@ export const INTERESTS: Interest[] = [
   "opt",
 ];
 
+export const INTEREST_LABELS: Record<Interest, string> = {
+  rides: "Rides",
+  moving: "Moving stuff",
+  "us-paperwork": "US paperwork",
+  cooking: "Cooking",
+  language: "Language practice",
+  "course-advice": "Course advice",
+  opt: "Been through OPT",
+};
+
 // Every tag a seeded helper has; "needs" must come from this list.
 export const KNOWN_TAGS = [...new Set(HELPERS.flatMap((h) => h.tags))].sort();
 

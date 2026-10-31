@@ -18,6 +18,19 @@ import { keywordCheck } from "./safety-check";
 const MAX_PARTS = 4;
 const FALLBACK_MINUTES = 30;
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// Who'd fit, as the model returns it. Shared with assist-ask.ts.
+export const helperSchema = z.object({
+  interests: z.array(z.enum(INTERESTS as [string, ...string[]])),
+  needs: z.array(z.string()).describe("Must-haves, only from the allowed tag list"),
+  nice: z.array(z.string()).describe("Up to 3 short nice-to-haves"),
+  why: z.string().describe('One line: "Someone with a car who\'s free Saturday morning"'),
+});
+
+export const HELPER_RULE = `helper: what kind of helper fits, using only what the need implies (e.g. airport + luggage → needs "car").
+  interests from the allowed list. needs only from the allowed tag list. Never prefer a gender, nationality or religion; name a language only if the student asked for one.`;
+
 const schema = z.object({
   parts: z
     .array(
@@ -28,12 +41,7 @@ const schema = z.object({
         where: z.string().optional().describe('Place if given, e.g. "from East Hall"'),
         minutes: z.number().int().describe("Realistic minutes the helper spends, 5–240"),
         text: z.string().describe("The friendly ask, under 280 characters"),
-        helper: z.object({
-          interests: z.array(z.enum(INTERESTS as [string, ...string[]])),
-          needs: z.array(z.string()).describe("Must-haves, only from the allowed tag list"),
-          nice: z.array(z.string()).describe("Up to 3 short nice-to-haves"),
-          why: z.string().describe('One line: "Someone with a car who\'s free Saturday morning"'),
-        }),
+        helper: helperSchema,
       }),
     )
     .min(1),
@@ -46,8 +54,7 @@ For each ask:
 - startsAt: ISO 8601, only if the student gave a day or time; resolve relative days from today's date.
 - minutes: realistic time the helper spends.
 - text: under 280 characters, first person, friendly and polite; says what, when and roughly how long. Small and specific. No hashtags, no emojis, no prices or offers of money (price is set separately).
-- helper: what kind of helper fits, using only what the need implies (e.g. airport + luggage → needs "car").
-  interests from the allowed list. needs only from the allowed tag list. Never prefer a gender, nationality or religion; name a language only if the student asked for one.`;
+- ${HELPER_RULE}`;
 
 type RawPart = z.infer<typeof schema>["parts"][number];
 
@@ -63,6 +70,7 @@ function toPart(raw: Omit<RawPart, "helper">, helper: HelperPrefs): AskPart | nu
     when: raw.when?.trim() || undefined,
     startsAt,
     where: raw.where?.trim() || undefined,
+    deadline: startsAt ?? new Date(Date.now() + DAY_MS).toISOString(),
     minutes,
     helper,
     price,

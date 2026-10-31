@@ -6,6 +6,7 @@
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
 
+import { assistAsk as assistAskAI } from "@/lib/ai/ask/assist-ask";
 import { clarify } from "@/lib/ai/ask/clarify";
 import { draftAsk as draftAskAI } from "@/lib/ai/ask/draft-ask";
 import { privacyScrub } from "@/lib/ai/ask/privacy-scrub";
@@ -14,7 +15,7 @@ import { suggestWhere as suggestWhereAI } from "@/lib/ai/ask/suggest-where";
 import { COVERED_MESSAGE, formatPostMessage } from "@/lib/ask/format";
 import { findGroup, HELPERS, MEETING_SPOTS } from "@/lib/ask/mock-data";
 import { getPost, MAX_POSTS_PER_GROUP_PER_DAY, savePost, takeRateLimit } from "@/lib/ask/store";
-import type { ClarifyAnswer, DraftResult, Post } from "@/lib/ask/types";
+import type { AssistSuggestions, ClarifyAnswer, DraftResult, Post } from "@/lib/ask/types";
 import { postToGroup } from "@/lib/groups";
 import { siteUrl } from "@/lib/site-url";
 
@@ -38,6 +39,26 @@ export async function draftAsk(need: string, answers: ClarifyAnswer[]): Promise<
   const { category } = await safetyCheck(cleanNeed);
   if (category === "academic" || category === "crisis") return { parts: [] };
   return draftAskAI(cleanNeed, answersSchema.parse(answers));
+}
+
+const assistInput = z.object({
+  what: z.string().trim().max(120),
+  details: z.string().trim().max(1000),
+  when: z.string().trim().max(80).optional(),
+  where: z.string().trim().max(80).optional(),
+  minutes: z.number().int().min(5).max(240),
+});
+
+export type AssistAskResult =
+  { suggestions: AssistSuggestions } | { redirect: "crisis" | "tutoring" };
+
+// The form's "Get suggestions" button. Safety runs first, same as Home.
+export async function assistAsk(input: z.input<typeof assistInput>): Promise<AssistAskResult> {
+  const fields = assistInput.parse(input);
+  const { category } = await safetyCheck(text.parse(`${fields.what}. ${fields.details}`));
+  if (category === "crisis") return { redirect: "crisis" };
+  if (category === "academic") return { redirect: "tutoring" };
+  return { suggestions: await assistAskAI(fields) };
 }
 
 export async function suggestWhere(ask: string) {

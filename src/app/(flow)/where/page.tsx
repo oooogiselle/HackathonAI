@@ -27,7 +27,11 @@ export default function WherePage() {
 
   return (
     <>
-      <StepHeader step={4} title="Where to ask" backHref="/draft" />
+      <StepHeader
+        step={4}
+        title="Where to ask"
+        backHref={state.mode === "form" ? "/write" : "/draft"}
+      />
       <blockquote className="rounded-xl bg-muted px-4 py-3 text-sm">{state.ask}</blockquote>
 
       {!where ? (

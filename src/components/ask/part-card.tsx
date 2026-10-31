@@ -2,18 +2,16 @@
 
 // One small ask on the Your ask screen: editable fields, who'd be a good fit,
 // and the suggested price with what it means for who can see it.
-import { X } from "lucide-react";
-
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { composeAskText } from "@/lib/ask/format";
-import { countFits } from "@/lib/ask/helper-fit";
 import { suggestPrice } from "@/lib/ask/price";
 import type { AskPart } from "@/lib/ask/types";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { cn } from "cn";
 
-const MAX_PRICE = 200;
+import { Field } from "./form-bits";
+import { PriceField } from "./price-field";
+import { WhoToAsk } from "./who-to-ask";
 
 export function PartCard({
   part,
@@ -44,30 +42,6 @@ export function PartCard({
     onChange({ ...next, text: composeAskText(next) });
   }
 
-  function removeNeed(need: string) {
-    const needs = part.helper.needs.filter((n) => n !== need);
-    onChange({
-      ...part,
-      helper: { ...part.helper, needs, ...countFits(part.helper.interests, needs) },
-    });
-  }
-
-  function removeNice(nice: string) {
-    onChange({
-      ...part,
-      helper: { ...part.helper, nice: part.helper.nice.filter((n) => n !== nice) },
-    });
-  }
-
-  function setPrice(value: number) {
-    const priceSet = Number.isFinite(value)
-      ? Math.min(MAX_PRICE, Math.max(0, Math.round(value)))
-      : 0;
-    onChange({ ...part, priceSet });
-  }
-
-  const { fits, fitsPaid } = part.helper;
-
   return (
     <section
       className={cn(
@@ -87,7 +61,7 @@ export function PartCard({
               onChange={onSelect}
               className="size-4 accent-primary"
             />
-            {sent ? "Sent ✓" : "Send this one first"}
+            {sent ? "Sent" : "Send this one first"}
           </label>
         ) : (
           <span />
@@ -145,82 +119,23 @@ export function PartCard({
         </Field>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <h3 className="text-sm font-semibold">Who to ask</h3>
-        {part.helper.why && <p className="text-sm text-muted-foreground">{part.helper.why}</p>}
-        {(part.helper.needs.length > 0 || part.helper.nice.length > 0) && (
-          <div className="flex flex-wrap gap-2">
-            {part.helper.needs.map((need) => (
-              <RemovableChip
-                key={need}
-                label={`Needs: ${need}`}
-                onRemove={() => removeNeed(need)}
-                strong
-              />
-            ))}
-            {part.helper.nice.map((nice) => (
-              <RemovableChip key={nice} label={nice} onRemove={() => removeNice(nice)} />
-            ))}
-          </div>
-        )}
-        <p className="text-sm">
-          {fits === 0
-            ? "No helper fits all of these yet. Try removing a must-have."
-            : `${fits} helper${fits === 1 ? "" : "s"} fit`}
-        </p>
-      </div>
+      <WhoToAsk
+        helper={part.helper}
+        onChange={(helper) => {
+          // New interests can change the rate; follow the suggestion unless the student set a price.
+          const price = suggestPrice(part.minutes, helper.interests);
+          const priceSet = part.priceSet === part.price.suggested ? price.suggested : part.priceSet;
+          onChange({ ...part, helper, price, priceSet });
+        }}
+      />
 
-      <div className="flex flex-col gap-2">
-        <h3 className="text-sm font-semibold">Price</h3>
-        <div className="flex items-center gap-2">
-          <span className="text-lg">$</span>
-          <Input
-            aria-label="Price in dollars"
-            type="number"
-            inputMode="numeric"
-            min={0}
-            max={MAX_PRICE}
-            value={part.priceSet}
-            onChange={(e) => setPrice(Number(e.target.value))}
-            className="w-24 text-lg"
-          />
-          <button
-            type="button"
-            aria-pressed={part.priceSet === 0}
-            onClick={() => setPrice(0)}
-            className={cn(
-              "rounded-full border px-3 py-1.5 text-sm",
-              part.priceSet === 0
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-border hover:bg-muted",
-            )}
-          >
-            $0 = favor
-          </button>
-          {part.priceSet !== part.price.suggested && (
-            <button
-              type="button"
-              onClick={() => setPrice(part.price.suggested)}
-              className="text-sm text-muted-foreground underline"
-            >
-              Use ${part.price.suggested}
-            </button>
-          )}
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Suggested ${part.price.min}–${part.price.max}. {part.price.reason}
-        </p>
-        {part.price.favorHint && (
-          <p className="text-sm text-muted-foreground">{part.price.favorHint}</p>
-        )}
-        {fits > 0 && (
-          <p className="text-sm">
-            {part.priceSet > 0
-              ? `$${part.priceSet} reaches ${fitsPaid} of ${fits} helpers who fit (the others can't accept payment). $0 reaches all ${fits}.`
-              : `A favor reaches all ${fits} helpers who fit.`}
-          </p>
-        )}
-      </div>
+      <PriceField
+        price={part.price}
+        value={part.priceSet}
+        fits={part.helper.fits}
+        fitsPaid={part.helper.fitsPaid}
+        onChange={(priceSet) => onChange({ ...part, priceSet })}
+      />
 
       <Field label="Wording" id={`${id}-text`}>
         <Textarea
@@ -232,45 +147,5 @@ export function PartCard({
         />
       </Field>
     </section>
-  );
-}
-
-function Field({ label, id, children }: { label: string; id: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <Label htmlFor={id} className="text-xs text-muted-foreground">
-        {label}
-      </Label>
-      {children}
-    </div>
-  );
-}
-
-function RemovableChip({
-  label,
-  onRemove,
-  strong,
-}: {
-  label: string;
-  onRemove: () => void;
-  strong?: boolean;
-}) {
-  return (
-    <span
-      className={cn(
-        "flex items-center gap-1 rounded-full border py-1 pr-1 pl-3 text-sm",
-        strong ? "border-primary/40 bg-primary/10" : "border-border",
-      )}
-    >
-      {label}
-      <button
-        type="button"
-        aria-label={`Remove ${label}`}
-        onClick={onRemove}
-        className="rounded-full p-0.5 hover:bg-muted"
-      >
-        <X className="size-3.5" />
-      </button>
-    </span>
   );
 }

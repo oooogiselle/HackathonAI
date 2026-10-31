@@ -93,6 +93,8 @@ export type AskPart = {
   // ISO time if the need gave one; used by matching and expiry later.
   startsAt?: string;
   where?: string;
+  // ISO. The ask leaves the board after this (Phase 2 expiry uses it as expiresAt).
+  deadline?: string;
   minutes: number;
   helper: HelperPrefs;
   price: PriceSuggestion;
@@ -102,6 +104,16 @@ export type AskPart = {
   text: string;
   // "none" or "sensitive"; academic and crisis parts are dropped.
   category: SafetyCategory;
+};
+
+// The form's optional AI help (assistAsk). Each item is applied only on a tap.
+export type AssistField = "when" | "where" | "details";
+export type AssistSuggestions = {
+  text: string;
+  minutes: number;
+  helper: HelperPrefs;
+  // Up to 2 nudges about empty fields.
+  missing: { field: AssistField; hint: string }[];
 };
 
 // draftAsk breaks one need into 1–4 small asks. Empty for academic/crisis needs.

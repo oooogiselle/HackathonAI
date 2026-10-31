@@ -35,6 +35,12 @@ export default function Home() {
     });
   }
 
+  // The form path; anything typed so far carries over into Details.
+  function writeMyself() {
+    reset({ mode: "form", need: need.trim() });
+    router.push("/write");
+  }
+
   return (
     <>
       <StepHeader
@@ -61,6 +67,9 @@ export default function Home() {
         onClick={submit}
       >
         {pending ? "Thinking…" : "Continue"}
+      </Button>
+      <Button variant="ghost" disabled={pending} onClick={writeMyself}>
+        I&apos;d rather fill in a form
       </Button>
       <p className="text-center text-xs text-muted-foreground">
         Real people do the helping. Nothing is sent without your OK.
