@@ -80,7 +80,7 @@ const postAskSchema = z.object({
   name: z.string().trim().max(40).optional(),
 });
 
-/** Called only from the "Post to group" button on the Share preview. */
+/** @deprecated Old group-first flow ("Post to group"); no screen calls it. Use board.ts. */
 export async function postAsk(input: z.input<typeof postAskSchema>): Promise<PostAskResult> {
   const parsed = postAskSchema.safeParse(input);
   if (!parsed.success) return { error: "Something's missing from your ask." };
@@ -120,6 +120,7 @@ export async function postAsk(input: z.input<typeof postAskSchema>): Promise<Pos
 
 export type PublicPost = Pick<Post, "token" | "text" | "claim" | "thanks"> & { groupName: string };
 
+/** @deprecated Old group-first flow; no screen calls it. Use board.ts. */
 export async function getPostStatus(token: string): Promise<PublicPost | null> {
   const post = getPost(token);
   if (!post) return null;
@@ -145,7 +146,7 @@ const claimSchema = z.object({
     .refine((e) => e.endsWith(".edu"), "Please use your school (.edu) email."),
 });
 
-/** Called only from the "I can help" button on /h/[token]. */
+/** @deprecated Old group-first flow ("I can help"); no screen calls it. Use board.ts. */
 export async function claimAsk(input: z.input<typeof claimSchema>): Promise<ClaimResult> {
   const parsed = claimSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
@@ -173,6 +174,7 @@ export async function claimAsk(input: z.input<typeof claimSchema>): Promise<Clai
   return { ok: true };
 }
 
+/** @deprecated Old group-first flow; no screen calls it. Use board.ts. */
 export async function saveThanks(token: string, note: string) {
   const post = getPost(token);
   if (!post?.claim) return;

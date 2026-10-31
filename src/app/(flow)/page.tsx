@@ -1,45 +1,29 @@
-// Landing page: the public needs board. Anyone can browse open asks; the
-// button at the bottom starts a new ask (/ask). Data comes straight from
+// Landing page: the public needs board. Anyone can browse open asks; tapping a
+// card opens the task page (/h/[token]), and the button at the bottom starts a
+// new ask (/ask). Data comes straight from
 // listBoard, so it's always the live board (paid asks hidden from people who
 // can't accept payment, blocked people hidden both ways).
 import Link from "next/link";
 import { Plus } from "lucide-react";
 
+import { AccountLink } from "@/components/ask/account-link";
 import { buttonVariants } from "@/components/ui/button";
+import {
+  askerLabel,
+  CATEGORY_LABELS,
+  durationLabel,
+  expiresLabel,
+  priceLabel,
+} from "@/lib/ask/card-format";
 import { CAMPUS } from "@/lib/ask/mock-data";
-import { ASK_CATEGORIES, type AskCategory, type PublicCard } from "@/lib/ask/types";
+import { ASK_CATEGORIES } from "@/lib/ask/types";
 import { listBoard } from "@/server/actions/board";
-
-const CATEGORY_LABELS: Record<AskCategory, string> = {
-  writing: "Writing",
-  coding: "Coding",
-  lab: "Lab",
-  errands: "Errands",
-  other: "Other",
-};
-
-function priceLabel(card: PublicCard) {
-  if (card.payType === "trade") return "Trade";
-  if (card.price === 0) return "Favor";
-  return `$${card.price}`;
-}
-
-function durationLabel(minutes: number) {
-  return minutes >= 60 ? `~${Math.round((minutes / 60) * 10) / 10} h` : `~${minutes} min`;
-}
-
-function expiresLabel(expiresAt: number, now: number) {
-  const hours = (expiresAt - now) / 3_600_000;
-  if (hours < 1) return "Expires soon";
-  if (hours < 24) return `Expires in ${Math.floor(hours)} h`;
-  const days = Math.floor(hours / 24);
-  return `Expires in ${days} day${days === 1 ? "" : "s"}`;
-}
+import { getMe } from "@/server/actions/session";
 
 export default async function BoardPage({ searchParams }: PageProps<"/">) {
   const { c } = await searchParams;
   const active = ASK_CATEGORIES.find((cat) => cat === c);
-  const all = await listBoard();
+  const [all, me] = await Promise.all([listBoard(), getMe()]);
   const cards = active ? all.filter((card) => card.category === active) : all;
   // Rendered per request (listBoard reads the session cookie), so this is "now".
   // eslint-disable-next-line react-hooks/purity
@@ -48,7 +32,10 @@ export default async function BoardPage({ searchParams }: PageProps<"/">) {
   return (
     <>
       <header className="flex flex-col gap-1">
-        <p className="text-sm text-muted-foreground">{CAMPUS}</p>
+        <div className="flex items-center justify-between gap-2 text-sm">
+          <span className="text-muted-foreground">{CAMPUS}</span>
+          <AccountLink firstName={me?.firstName} next="/" />
+        </div>
         <h1 className="text-2xl font-semibold tracking-tight">Needs board</h1>
         <p className="text-muted-foreground">
           Small asks from classmates. Posts are anonymous unless the asker adds their name.
@@ -86,7 +73,7 @@ export default async function BoardPage({ searchParams }: PageProps<"/">) {
           {cards.map((card) => (
             <li
               key={card.token}
-              className="flex flex-col gap-2 rounded-xl bg-card p-4 text-sm ring-1 ring-foreground/10"
+              className="relative flex flex-col gap-2 rounded-xl bg-card p-4 text-sm ring-1 ring-foreground/10"
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
@@ -94,16 +81,30 @@ export default async function BoardPage({ searchParams }: PageProps<"/">) {
                 </span>
                 <span className="font-semibold">{priceLabel(card)}</span>
               </div>
-              <h2 className="text-base font-semibold leading-snug">{card.title}</h2>
+              <h2 className="text-base font-semibold leading-snug">
+                {/* The whole card opens the task (same page as the GroupMe link). */}
+                <Link href={`/h/${card.token}`} className="after:absolute after:inset-0">
+                  {card.title}
+                </Link>
+              </h2>
               <p className="text-muted-foreground">{card.text}</p>
-              <p className="text-xs text-muted-foreground">
-                {[
-                  card.askerFirstName ?? card.askerYear ?? "A classmate",
-                  durationLabel(card.minutes),
-                  expiresLabel(card.expiresAt, now),
-                ].join(" · ")}
-              </p>
-              {/* TODO(board): "Claim" button → sign-in, helper setup for paid asks, claimCard. */}
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs text-muted-foreground">
+                  {[
+                    askerLabel(card),
+                    durationLabel(card.minutes),
+                    expiresLabel(card.expiresAt, now),
+                  ].join(" · ")}
+                </p>
+                {card.viewer !== "asker" && (
+                  <span
+                    aria-hidden
+                    className={buttonVariants({ size: "sm", className: "shrink-0" })}
+                  >
+                    Claim
+                  </span>
+                )}
+              </div>
             </li>
           ))}
         </ul>

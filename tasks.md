@@ -45,15 +45,16 @@ claude -p "Do the next unchecked task in tasks.md following AGENTS.md" --max-tur
 The PRD's demo path is board-first: Home → Clarify → Your ask with a price → public board → bot posts the same card to GroupMe → claim in the browser → "Already taken" + "Covered" → Matched → mocked "Pay $15" → Thank you. No Stripe API, no Google API. Do these in order.
 
 - [x] Seed 15–20 fictional helpers with free/busy and payment eligibility
-      Done when: `HELPERS` in `src/lib/ask/mock-data.ts` has 15–20 fictional Northfield helpers, each with `interests` (from: rides, moving stuff, US paperwork, cooking, language practice, course advice, been through OPT), seeded `busy` time ranges (free/busy only, no event titles), `weeklyLimit`, and `canAcceptPayment` (some false); the `Helper` type in `src/lib/ask/types.ts` has these fields; lint + typecheck pass.
+      Done when: `HELPERS` in `src/lib/ask/mock-data.ts` has 15–20 fictional helpers, each with `interests` (from: rides, moving stuff, US paperwork, cooking, language practice, course advice, been through OPT), seeded `busy` time ranges (free/busy only, no event titles), `weeklyLimit`, and `canAcceptPayment` (some false); the `Helper` type in `src/lib/ask/types.ts` has these fields; lint + typecheck pass.
 
 - [x] Suggested price on Your ask
       Done (expanded): `draftAsk` now breaks a need into 1–4 `AskPart`s, each with minutes, helper preferences (with seeded fit counts) and a deterministic `PriceSuggestion`; see `docs/contract.md`.
       Done when: `draftAsk` also returns `minutes` and `suggestedPrice` (`{ min, max }` in whole dollars, from the time needed); `/draft` shows a price field pre-filled from it with a "$0 = favor" option; the price is stored in flow state; academic asks never show a price; lint + typecheck pass.
 
-- [ ] Public board: one ask, one card
+- [x] Public board: one ask, one card
       Backend done (`src/server/actions/board.ts`, `src/lib/ask/board-store.ts`, tests): post, list, claim/hold, confirm, done, mocked pay, thanks, share, expiry, sign-in gating. Still needed: the `/board` landing UI and the privacy-scrub Undo on the post screen.
       Done when: posting from the flow (explicit tap) creates a board card in the store (ask, minutes, price, anonymous by default, run through `privacyScrub` with the removed list + Undo); `/board` lists open cards; the first "I can help" holds the card and everyone else sees "Already taken"; the asker confirms the helper (explicit tap); the server rejects crisis, sensitive and academic asks for the board; paid cards are hidden from helpers with `canAcceptPayment: false`; lint + typecheck pass.
+      Done: the Share step posts to the board (`postToBoard`); the board at `/` lists open cards; each opens the task page `/h/[token]` where the first Claim holds it and everyone else sees "Already taken"; the asker confirms there. Covered by `e2e/demo-path.spec.ts`.
 
 - [ ] Postgres store for asks and claims, with atomic updates
       Done when: `asks` and `claims` tables exist in `src/db/schema/` (plus a group/day post counter) with a generated migration (do not run it against the shared DB; a human applies it); `src/lib/ask/store.ts` uses Drizzle when `DATABASE_URL` is set and the in-memory store otherwise; claim, confirm, pay and the rate limit are each one guarded `UPDATE … WHERE <expected state> RETURNING` (or `INSERT … ON CONFLICT … WHERE n < 3 RETURNING` for the counter), never read-then-write; two browsers see the same card state; lint + typecheck pass.
@@ -70,9 +71,10 @@ The PRD's demo path is board-first: Home → Clarify → Your ask with a price �
       Done when: every ask has `expiresAt` (from the drafted time, default 24 h); expired cards are hidden from `/board`, the claim page shows "This ask has expired", and the claim's atomic update includes `expires_at > now()`; lint + typecheck pass.
       Backend done: `expiresAt` on every ask (3 h / today / 24 h / 3 d or exact), expired asks leave the board, claims check `expires_at > now`, `extendCard` (Extend 24 h). The claim page's "This ask has expired" UI is still to do.
 
-- [ ] Mocked school-email sign-up + helper setup on the claim page
+- [x] Mocked school-email sign-up + helper setup on the claim page
       Backend done: `mockSignIn` / `getMe` / `mockSignOut` in `src/server/actions/session.ts`; `claimCard` takes the name and email from the session and checks the mocked setup for paid cards. Only the claim-page UI is left.
       Done when: `/h/[token]` first asks for first name + school (.edu) email (mocked sign-up, no verification; TODO(auth)); for a paid card it then shows a mocked helper setup ("I can accept payment" toggle + payout account field) and refuses to claim if they can't accept payment; free cards skip the setup; lint + typecheck pass.
+      Done as a mocked "Sign in with Dartmouth" step (`/signin`, @dartmouth.edu only, TODO(auth) real SSO) plus the inline helper setup for paid asks on `/h/[token]`.
 
 - [ ] Email notifications (console only tonight)
       Done when: `src/lib/notify/` has a `notify(event, to, data)` interface with a console adapter (same adapter pattern as `src/lib/groups/`), called for exactly three events: matched ask → helper, ask claimed → asker, other side marked done → both (with a confirm link); only the request that won the state update sends; no message reveals an anonymous asker; lint + typecheck pass.
@@ -80,16 +82,18 @@ The PRD's demo path is board-first: Home → Clarify → Your ask with a price �
 - [ ] Bot intro message
       Done when: a one-time action or script (`pnpm bot:intro <groupId>`) posts "I post asks from Ask. I can't read your messages. Remove me anytime." through `postToGroup`; it is never sent with regular posts; lint + typecheck pass.
 
-- [ ] Bot shares the board card to GroupMe
+- [x] Bot shares the board card to GroupMe
       Done when: "Share to GroupMe" (explicit tap) calls `postToGroup` with the card's text and a link that opens that same card (reuse `/h/[token]` as the card page); claiming from the link and from `/board` hit the same hold, so a card can't be taken twice; the demo card is $15, so the link goes through the mocked sign-up and helper setup before claiming (free cards need only sign-up); after the asker confirms, the bot posts "Covered" without naming an anonymous asker; existing guards (safety re-check, rate limit) still apply; lint + typecheck pass.
+      Done: picking a group on Share calls `shareCardToGroup` after `postToBoard`; the post links to `/h/[token]`, the same card as the board; "Covered" posts once on confirm.
 
 - [x] `matchHelpers` on seeded data replaces `suggestWhere`
       Done: lib `src/lib/ai/ask/match-helpers.ts`; server action `matchHelpers` in `src/server/actions/private.ts` (helper profiles from the `users` table, weekly load from `recentLoad`, no self or blocked people, public fields only). `/where` lists its picks under "People who might help"; `suggestWhere` still supplies the group chats and offices there. No send button yet (`createPrivateAsk` + `sendPrivately` are ready).
       Done when: `src/lib/ai/ask/match-helpers.ts` returns 2–3 helpers with a one-line why; excludes helpers busy at the ask's time (seeded free/busy; asks with no time skip this), at their weekly limit, or with `canAcceptPayment: false` when price > 0; prefers helpers with fewer active matches; returns an empty list (no throw) when nobody fits; has a no-key fallback; lint + typecheck pass.
 
-- [ ] Matched, mocked "Pay $15", Thank you
+- [x] Matched, mocked "Pay $15", Thank you
       Done when: after the asker confirms a helper, Matched shows the helper's first name and a public meeting spot; for paid asks a "Pay $X" mock screen (explicit tap, no payment API, clearly labeled demo) marks the card paid; $0 asks skip it; Thank you still has the user write their own note; lint + typecheck pass.
       Backend done: `payToHold` (mocked hold after confirm, fee breakdown), helper `markHelperDone`, asker `markDone` (release) or 48 h auto-release, `reportProblem`, refund on cancel, `saveCardThanks`. UI still to do.
+      Done on the task page: meeting spot after confirm, "Pay $X and hold" (mocked fee breakdown), helper Done, asker Confirm done (or 48 h auto-confirm), then `/thanks?token=`.
 
 - [ ] Private inbox mock (told in the story, not demoed)
       Done when: from Your ask, "Ask privately" lists `matchHelpers` results; tapping "Ask {firstName}" (explicit tap) adds a request to that helper's mock inbox at `/inbox?helper=<id>` (no auth; TODO(auth)); the inbox shows text, minutes and price with "I can help" / "Not this time" (no reason field); no group post happens; lint + typecheck pass.

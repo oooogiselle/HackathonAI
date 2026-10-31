@@ -1,20 +1,35 @@
 "use client";
 
 // Step 5: share preview. The only place an ask can be posted, and only on tap.
+// "Post" puts it on the needs board; if a group is picked, the bot also shares
+// the same card there (one ask, one card). Then the asker lands on the task page.
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { useRequireNeed } from "@/components/ask/flow-provider";
 import { MessagePreview } from "@/components/ask/message-preview";
 import { StepHeader } from "@/components/ask/step-header";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { formatPostMessage } from "@/lib/ask/format";
 import { findGroup, GROUPS } from "@/lib/ask/mock-data";
 import { siteUrl } from "@/lib/site-url";
-import { postAsk, scrubForAnonymous } from "@/server/actions/ask";
+import type { AskCategory, AskPart } from "@/lib/ask/types";
+import { scrubForAnonymous } from "@/server/actions/ask";
+import { postToBoard, shareCardToGroup } from "@/server/actions/board";
+import { getMe, type Me } from "@/server/actions/session";
+
+function boardCategory(part: AskPart | undefined): AskCategory {
+  const interests = part?.helper.interests ?? [];
+  return interests.includes("rides") || interests.includes("moving") ? "errands" : "other";
+}
+
+function toMs(iso: string | undefined) {
+  const ms = iso ? Date.parse(iso) : NaN;
+  return Number.isFinite(ms) ? ms : undefined;
+}
 
 export default function SharePage() {
   const router = useRouter();
@@ -23,12 +38,19 @@ export default function SharePage() {
   const [posting, startPost] = useTransition();
   // Undo keeps the user anonymous but posts their original wording.
   const [undoScrub, setUndoScrub] = useState(false);
+  // undefined while loading; null = signed out.
+  const [me, setMe] = useState<Me | null>();
+
+  useEffect(() => {
+    getMe().then(setMe);
+  }, []);
 
   const group = state.groupId ? findGroup(state.groupId) : undefined;
   const canShare = state.category === "none";
   const useScrubbed = state.anonymous && state.scrub && !undoScrub;
   const text = useScrubbed ? state.scrub!.text : state.ask;
-  const displayName = state.anonymous ? null : state.name.trim() || null;
+  const displayName = state.anonymous ? null : (me?.firstName ?? null);
+  const part = state.parts[state.activePart];
   const preview = formatPostMessage(text, displayName, `${siteUrl()}/h/••••••`);
 
   function setAnonymous(anonymous: boolean) {
@@ -40,17 +62,27 @@ export default function SharePage() {
   }
 
   function post() {
-    if (!group) return;
+    if (!me) return;
     startPost(async () => {
-      const result = await postAsk({
-        groupId: group.id,
+      const posted = await postToBoard({
+        title: part?.what || text.slice(0, 80),
         text,
+        category: boardCategory(part),
+        minutes: part?.minutes ?? 30,
+        price: part?.priceSet ?? 0,
         anonymous: state.anonymous,
-        name: displayName ?? undefined,
+        startsAt: toMs(part?.startsAt),
+        expiresAt: toMs(part?.deadline),
       });
-      if ("error" in result) return void toast.error(result.error);
-      update({ token: result.token });
-      router.push(`/matched/${result.token}`);
+      if ("error" in posted) return void toast.error(posted.error);
+      update({ token: posted.token });
+
+      if (group) {
+        const shared = await shareCardToGroup({ token: posted.token, groupId: group.id });
+        // The card is already on the board, so go on either way.
+        if ("error" in shared) toast.error(`Posted to the board, but: ${shared.error}`);
+      }
+      router.push(`/h/${posted.token}`);
     });
   }
 
@@ -78,9 +110,7 @@ export default function SharePage() {
           onChange={(e) => update({ groupId: e.target.value })}
           className="h-11 rounded-lg border border-input bg-transparent px-3 text-base"
         >
-          <option value="" disabled>
-            Pick a group
-          </option>
+          <option value="">Board only (no group)</option>
           {GROUPS.map((g) => (
             <option key={g.id} value={g.id}>
               {g.name} ({g.platform === "groupme" ? "GroupMe" : "Slack"})
@@ -110,14 +140,8 @@ export default function SharePage() {
             </button>
           ))}
         </div>
-        {!state.anonymous && (
-          <Input
-            value={state.name}
-            onChange={(e) => update({ name: e.target.value })}
-            placeholder="Your first name"
-            className="h-11"
-            maxLength={40}
-          />
+        {!state.anonymous && me && (
+          <p className="text-sm text-muted-foreground">Shown as {me.firstName}.</p>
         )}
       </section>
 
@@ -127,7 +151,7 @@ export default function SharePage() {
         <p>
           {state.anonymous
             ? "✓ Your name is hidden. The group won't be told who helped you"
-            : `• ${displayName ?? "Add your first name"} will be shown to ${group?.members ?? "the"} members`}
+            : `• ${displayName ?? "Your first name"} will be shown on the board${group ? ` and to ${group.members} ${group.name} members` : ""}`}
         </p>
         {state.anonymous &&
           (scrubbing ? (
@@ -157,16 +181,29 @@ export default function SharePage() {
 
       {group && <MessagePreview groupName={group.name} message={preview} />}
 
-      <Button
-        size="lg"
-        className="mt-auto h-12 text-base"
-        disabled={!group || posting || scrubbing}
-        onClick={post}
-      >
-        {posting ? "Posting…" : group ? `Post to ${group.name}` : "Pick a group"}
-      </Button>
+      {me === null ? (
+        <Link
+          href="/signin?next=/share"
+          className={buttonVariants({ size: "lg", className: "mt-auto h-12 text-base" })}
+        >
+          Sign in to post
+        </Link>
+      ) : (
+        <Button
+          size="lg"
+          className="mt-auto h-12 text-base"
+          disabled={!me || posting || scrubbing}
+          onClick={post}
+        >
+          {posting
+            ? "Posting…"
+            : group
+              ? `Post to the board and ${group.name}`
+              : "Post to the board"}
+        </Button>
+      )}
       <p className="text-center text-xs text-muted-foreground">
-        Posts once, as shown. The Ask bot can&apos;t read the group.
+        Posts once, as shown. The Ask bot can&apos;t read any group.
       </p>
     </>
   );

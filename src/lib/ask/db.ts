@@ -31,7 +31,7 @@ async function open(): Promise<AskDb> {
   if (usingSharedPostgres()) {
     const { db } = await import("@/db");
     const shared = db as unknown as AskDb;
-    // Idempotent: seed users and demo cards (fictional, Northfield only).
+    // Idempotent: seed users and demo cards (fictional people, Dartmouth campus).
     await seedAskData(shared);
     return shared;
   }

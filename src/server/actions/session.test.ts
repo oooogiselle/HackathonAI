@@ -21,21 +21,22 @@ beforeAll(async () => {
 
 describe("mocked sign-in", () => {
   it("needs a first name and a school email", async () => {
-    expect("error" in (await mockSignIn({ firstName: "", email: "sam@northfield.edu" }))).toBe(
-      true,
-    );
+    expect("error" in (await mockSignIn({ firstName: "", email: "sam@dartmouth.edu" }))).toBe(true);
     expect(await mockSignIn({ firstName: "Sam", email: "sam@gmail.com" })).toEqual({
-      error: "Please use your school (.edu) email.",
+      error: "Use your @dartmouth.edu account.",
+    });
+    expect(await mockSignIn({ firstName: "Sam", email: "sam@harvard.edu" })).toEqual({
+      error: "Use your @dartmouth.edu account.",
     });
     expect(await getMe()).toBeNull();
   });
 
   it("signs in, keeps the same account for the same email, and signs out", async () => {
-    await mockSignIn({ firstName: "Sam", email: "Sam@Northfield.edu" });
-    expect(await getMe()).toEqual({ firstName: "Sam", email: "sam@northfield.edu" });
+    await mockSignIn({ firstName: "Sam", email: "Sam@Dartmouth.edu" });
+    expect(await getMe()).toEqual({ firstName: "Sam", email: "sam@dartmouth.edu" });
     const first = await getCurrentUser();
 
-    await mockSignIn({ firstName: "Sammy", email: "sam@northfield.edu" });
+    await mockSignIn({ firstName: "Sammy", email: "sam@dartmouth.edu" });
     const again = await getCurrentUser();
     expect(again?.id).toBe(first?.id);
     expect(again?.firstName).toBe("Sammy");

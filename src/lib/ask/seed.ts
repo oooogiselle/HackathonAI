@@ -1,5 +1,5 @@
-// Seeds the fictional Northfield helpers and the demo board cards.
-// Safe to run on every start: users are inserted once, and demo cards that
+// Seeds the fictional Dartmouth helpers and the demo board cards.
+// Safe to run on every start: seed users are upserted by id, and demo cards that
 // expired unclaimed (or expired while held) are reopened with fresh times.
 import "server-only";
 
@@ -28,7 +28,11 @@ export async function seedAskData(db: AskDb, now = Date.now()) {
         canAcceptPayment: h.canAcceptPayment,
       })),
     ])
-    .onConflictDoNothing();
+    .onConflictDoUpdate({
+      // Seed accounts only (fixed ids): keeps their email on the current campus domain.
+      target: users.id,
+      set: { email: sql`excluded.email`, blurb: sql`excluded.blurb` },
+    });
 
   const reopened: string[] = [];
   for (const card of SEED_CARDS) {
@@ -61,6 +65,13 @@ export async function seedAskData(db: AskDb, now = Date.now()) {
       })
       .returning({ token: asks.token });
     if (written) reopened.push(written.token);
+  }
+  // Keep demo card wording current (seed-owned cards only).
+  for (const card of SEED_CARDS) {
+    await db
+      .update(asks)
+      .set({ title: card.title, details: card.text })
+      .where(and(eq(asks.token, card.token), eq(asks.askerId, SEED_ASKER.id)));
   }
   if (reopened.length) {
     await db.delete(claims).where(inArray(claims.askToken, reopened));

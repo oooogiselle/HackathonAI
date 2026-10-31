@@ -6,7 +6,7 @@ Status: **✅ exists** means you can call it today. **🟡 planned** means the s
 
 ## Who can call what
 
-The landing page is the public board. **Anyone can view it**: `listBoard` and `getCard` need no account. **Posting and taking an ask need the mocked sign-in**: `mockSignIn({ firstName, email })` with a school `.edu` email, no verification. It sets a session cookie on that browser. An asker step (confirm, done, pay, thanks, share) works only for the person who posted the card. Every one of these is checked on the server.
+The landing page is the public board. **Anyone can view it**: `listBoard` and `getCard` need no account. **Posting and taking an ask need the mocked sign-in**: `mockSignIn({ firstName, email })` with an `@dartmouth.edu` email (the `/signin` page's mocked "Sign in with Dartmouth" step), no verification. It sets a session cookie on that browser. An asker step (confirm, done, pay, thanks, share) works only for the person who posted the card. Every one of these is checked on the server.
 
 - Signed out → `{ error: "Sign in to post or help." }`. Show the sign-in form (first name + school email), then retry.
 - `getMe()` → `{ firstName, email } | null` tells you who's signed in on this browser; `mockSignOut()` clears it. All three are in `src/server/actions/session.ts`.
@@ -22,28 +22,28 @@ How the flows connect:
 - **Helper:** Needs board → Task detail → Claim → Payouts (mock).
 - **Everywhere:** bottom bar with Feed, Claimed, Ask, Inbox, Me. Claimed lists my asks and what I'm helping with. Inbox has All, Actions (needs a tap) and Updates (info only).
 
-| Screen                       | Design file                                | Actions                                                                        | Status                 |
-| ---------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------ | ---------------------- |
-| Sign in, Verify              | SignIn, Verify                             | `mockSignIn` (first name + `.edu`); phone + codes not built                    | ✅ mocked (TODO(auth)) |
-| Needs board                  | original/Main                              | `listBoard` (cards show `minutes` and `expiresAt`)                             | ✅ board.ts            |
-| Post a need                  | original/Post                              | `checkSafety`, `draftAsk`                                                      | ✅                     |
-| Quick check                  | original/SafetyCheck                       | `checkSafety` = `none`; option to keep it private                              | ✅                     |
-| Quick check: can't post      | original/SafetyCheckRejected               | `checkSafety` = `blocked` with `reason` + `suggestedRewrite`                   | 🟡                     |
-| Where it goes                | original/Route                             | `postToBoard` (sets `expiresAt`)                                               | ✅ board.ts            |
-| Kept private                 | original/PrivateRoute                      | `checkSafety` = `sensitive`; board and GroupMe locked                          | ✅                     |
-| Ask privately                | original/MatchHelpers                      | `matchHelpers` (pick 2–3), then `createPrivateAsk` + `sendPrivately` ✅        | ✅                     |
-| Share to GroupMe             | Share                                      | `shareCardToGroup` (3 per group per day)                                       | ✅ board.ts            |
-| Waiting for a helper         | original/Waiting                           | `getCard`, `confirmHelper`; `extendCard`, `cancelCard`                         | ✅ board.ts            |
-| Ask expired                  | original/Expired                           | `getCard` (`status: "expired"`)                                                | ✅ board.ts            |
-| Task detail (helper)         | original/Task                              | `getCard`, `claimCard`                                                         | ✅ board.ts            |
-| Claimed task                 | original/ClaimedTask                       | `getCard`, `payToHold`, `markHelperDone` (helper), `markDone`, `reportProblem` | ✅ board.ts            |
-| Claimed tab                  | original/Claimed                           | `listMyCards`                                                                  | ✅ board.ts            |
-| Pay                          | original/Payment                           | `payToHold` (mocked hold after confirm; `card.payment` has the fee breakdown)  | ✅ board.ts            |
-| Payouts                      | original/Payout                            | Part of `claimCard` `setup` (mocked)                                           | ✅ mocked              |
-| Inbox: All, Actions, Updates | original/Inbox, InboxActions, InboxUpdates | `listInbox`                                                                    | ✅ inbox.ts            |
-| Thank you (was "Rate")       | Review                                     | `saveCardThanks` (a note only, no rating)                                      | ✅ board.ts            |
-| Profile                      | Profile                                    | `getMe`, `mockSignOut`                                                         | ✅ session.ts          |
-| Support resources            | Resources                                  | `CRISIS_RESOURCES`, `TUTORING_RESOURCES`                                       | ✅ data                |
+| Screen                       | Design file                                | Actions                                                                                                                 | Status                 |
+| ---------------------------- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| Sign in, Verify              | SignIn, Verify                             | `/signin`: mocked "Sign in with Dartmouth" → `mockSignIn` (first name + `@dartmouth.edu` only); phone + codes not built | ✅ mocked (TODO(auth)) |
+| Needs board                  | original/Main                              | `listBoard` (cards show `minutes` and `expiresAt`)                                                                      | ✅ board.ts            |
+| Post a need                  | original/Post                              | `checkSafety`, `draftAsk`                                                                                               | ✅                     |
+| Quick check                  | original/SafetyCheck                       | `checkSafety` = `none`; option to keep it private                                                                       | ✅                     |
+| Quick check: can't post      | original/SafetyCheckRejected               | `checkSafety` = `blocked` with `reason` + `suggestedRewrite`                                                            | 🟡                     |
+| Where it goes                | original/Route                             | `postToBoard` (sets `expiresAt`)                                                                                        | ✅ board.ts            |
+| Kept private                 | original/PrivateRoute                      | `checkSafety` = `sensitive`; board and GroupMe locked                                                                   | ✅                     |
+| Ask privately                | original/MatchHelpers                      | `matchHelpers` (pick 2–3), then `createPrivateAsk` + `sendPrivately` ✅                                                 | ✅                     |
+| Share to GroupMe             | Share                                      | `shareCardToGroup` (3 per group per day)                                                                                | ✅ board.ts            |
+| Waiting for a helper         | original/Waiting                           | `getCard`, `confirmHelper`; `extendCard`, `cancelCard`                                                                  | ✅ board.ts            |
+| Ask expired                  | original/Expired                           | `getCard` (`status: "expired"`)                                                                                         | ✅ board.ts            |
+| Task detail (helper)         | original/Task                              | `/h/[token]`: `getCard`, `claimCard` (+ mocked helper setup for paid asks)                                              | ✅ board.ts            |
+| Claimed task                 | original/ClaimedTask                       | `getCard`, `payToHold`, `markHelperDone` (helper), `markDone`, `reportProblem`                                          | ✅ board.ts            |
+| Claimed tab                  | original/Claimed                           | `listMyCards`                                                                                                           | ✅ board.ts            |
+| Pay                          | original/Payment                           | `payToHold` (mocked hold after confirm; `card.payment` has the fee breakdown)                                           | ✅ board.ts            |
+| Payouts                      | original/Payout                            | Part of `claimCard` `setup` (mocked)                                                                                    | ✅ mocked              |
+| Inbox: All, Actions, Updates | original/Inbox, InboxActions, InboxUpdates | `listInbox`                                                                                                             | ✅ inbox.ts            |
+| Thank you (was "Rate")       | Review                                     | `saveCardThanks` (a note only, no rating)                                                                               | ✅ board.ts            |
+| Profile                      | Profile                                    | `getMe`, `mockSignOut`                                                                                                  | ✅ session.ts          |
+| Support resources            | Resources                                  | `CRISIS_RESOURCES`, `TUTORING_RESOURCES`                                                                                | ✅ data                |
 
 ## Rules every screen follows
 
@@ -91,12 +91,12 @@ How the flows connect:
 
 ## Helper flow (claim page `/h/[token]` and board)
 
-| Step                            | Action                | Input                                  | Returns                                                                                                                                                                                                        | Status        |
-| ------------------------------- | --------------------- | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-| Open link                       | `getCard`             | `token`                                | `PublicCard \| null` (`status: "expired"` / `"held"` → show "Already taken")                                                                                                                                   | ✅ board.ts   |
-| Sign in (mocked)                | `mockSignIn`          | `{ firstName, email }` (school `.edu`) | `Result<{ me: { firstName, email } }>`. Viewing the card needs no account; claiming does                                                                                                                       | ✅ session.ts |
-| Setup (paid cards only, mocked) | (part of `claimCard`) | `HelperSetup`                          | Needs `canAcceptPayment: true` and a non-empty `payoutAccount`                                                                                                                                                 | ✅            |
-| I can help                      | `claimCard`           | `{ token, setup?: HelperSetup }`       | `Result` — or `{ error: "Already taken" }` / `"This ask has expired"` / `"This ask needs a helper who can accept payment"` / `"You can't take your own ask."`. Name and email come from the signed-in account. | ✅ board.ts   |
+| Step                            | Action                | Input                                          | Returns                                                                                                                                                                                                        | Status        |
+| ------------------------------- | --------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| Open link                       | `getCard`             | `token`                                        | `PublicCard \| null` (`status: "expired"` / `"held"` → show "Already taken")                                                                                                                                   | ✅ board.ts   |
+| Sign in (mocked)                | `mockSignIn`          | `{ firstName, email }` (`@dartmouth.edu` only) | `Result<{ me: { firstName, email } }>`. Viewing the card needs no account; claiming does                                                                                                                       | ✅ session.ts |
+| Setup (paid cards only, mocked) | (part of `claimCard`) | `HelperSetup`                                  | Needs `canAcceptPayment: true` and a non-empty `payoutAccount`                                                                                                                                                 | ✅            |
+| I can help                      | `claimCard`           | `{ token, setup?: HelperSetup }`               | `Result` — or `{ error: "Already taken" }` / `"This ask has expired"` / `"This ask needs a helper who can accept payment"` / `"You can't take your own ask."`. Name and email come from the signed-in account. | ✅ board.ts   |
 
 ## Private requests, inbox and messages
 
@@ -129,7 +129,7 @@ No ratings, reviews, stars or points (PRD). The thank-you note is the only feedb
 
 ## Seed data (`src/lib/ask/mock-data.ts`)
 
-- `HELPERS`: 16 fictional Northfield helpers. Five can't accept payment: Tomás, Aiko, Yuna, Samir and Nadia.
+- `HELPERS`: 16 fictional helpers (Dartmouth campus; the people are made up). Five can't accept payment: Tomás, Aiko, Yuna, Samir and Nadia.
 - `GROUPS`: 3 partner groups (2 GroupMe, 1 Slack). `OFFICES`, `MEETING_SPOTS`, `CRISIS_RESOURCES`, `TUTORING_RESOURCES`.
 - Demo ask: a $15 ride to the airport, about 45 minutes.
 
@@ -141,7 +141,7 @@ Until it lands, write a stub with the same name and signature in your component 
 
 - **Payment (revised Oct 30, late):** hold, then release. The asker taps "Pay $X and hold" right after confirming the helper (`payToHold`). The helper taps Done (`markHelperDone`); the asker confirms (`markDone`) to release it, or it auto-releases 48 h after the helper's Done unless the asker reports a problem (`reportProblem`). Cancelling before the helper's Done refunds it. Replaces the earlier "pay after done" note, which left helpers unpaid if the asker never tapped Pay. All mocked; no money moves.
 - **No ratings:** the design's "Rate your helper" screen is the thank-you note (`saveCardThanks`), with no stars or score.
-- **Sign-in:** mocked for now (`mockSignIn`: first name + school `.edu` email, no codes). The design's phone + two-code Verify screen is not built (TODO(auth)).
+- **Sign-in:** mocked for now (`mockSignIn` behind a mocked "Sign in with Dartmouth" button: first name + `@dartmouth.edu` email only, no codes). The design's phone + two-code Verify screen is not built (TODO(auth)).
 
 ## Storage
 
