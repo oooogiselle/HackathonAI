@@ -6,6 +6,7 @@ import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { asks, claims, messages, notifications, users } from "@/db/schema";
 
 import { settleDue } from "./board-store";
+import { findContactInfo } from "./contact-info";
 import { getAskDb } from "./db";
 import type { InboxItem, InboxKind, InboxTopic, Message } from "./types";
 import { isBlockedBetween } from "./users";
@@ -80,6 +81,9 @@ async function threadFor(token: string): Promise<Thread | null> {
 
 const NO_THREAD = { error: "Messages open once a helper says yes." };
 
+export type ContactWarning = { warning: string; found: string[] };
+const CONTACT_WARNING = "This shares contact info before you've both said yes. Send anyway?";
+
 export async function listMessages(
   token: string,
   userId: string,
@@ -114,10 +118,17 @@ export async function sendMessage(
   token: string,
   userId: string,
   body: string,
-): Promise<{ error: string } | null> {
+  confirmed = false,
+): Promise<{ error: string } | ContactWarning | null> {
   const thread = await threadFor(token);
   if (!thread || (userId !== thread.askerId && userId !== thread.helperId)) return NO_THREAD;
   if (thread.status === "cancelled") return { error: "This ask was cancelled." };
+  // Contact info is shared only after both say yes: until the asker confirms,
+  // a message with an email or phone number needs a second "Send anyway" tap.
+  if (thread.status === "held" && !confirmed) {
+    const found = findContactInfo(body);
+    if (found.length > 0) return { warning: CONTACT_WARNING, found };
+  }
   const other = userId === thread.askerId ? thread.helperId : thread.askerId;
   if (await isBlockedBetween(userId, other)) return { error: "You can't message this person." };
 

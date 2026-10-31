@@ -4,6 +4,7 @@
 import { z } from "zod";
 
 import {
+  type ContactWarning,
   listInbox as listInboxInStore,
   listMessages as listMessagesInStore,
   markRead,
@@ -55,16 +56,28 @@ export async function listMessages(cardToken: string): Promise<Result<{ messages
   return "error" in result ? result : { ok: true, messages: result };
 }
 
-/** Called only from the message box's Send button. */
-export async function sendMessage(input: { token: string; body: string }): Promise<Result> {
+/**
+ * Called only from the message box's Send button. Before the asker confirms, a
+ * message with an email or phone number comes back as `{ warning, found }`
+ * unsent; send again with `confirmed: true` ("Send anyway") to send it.
+ */
+export async function sendMessage(input: {
+  token: string;
+  body: string;
+  confirmed?: boolean;
+}): Promise<Result | ContactWarning> {
   const user = await getCurrentUser();
   if (!user) return { error: SIGN_IN_ERROR };
   const parsed = z
-    .object({ token, body: z.string().trim().min(1, "Write a message first.").max(1000) })
+    .object({
+      token,
+      body: z.string().trim().min(1, "Write a message first.").max(1000),
+      confirmed: z.boolean().optional(),
+    })
     .safeParse(input);
   if (!parsed.success)
     return { error: parsed.error.issues[0]?.message ?? "Write a message first." };
-  // TODO(privacy): warn when a message includes a phone number or email before both say yes.
-  const error = await sendMessageInStore(parsed.data.token, user.id, parsed.data.body);
-  return error ?? { ok: true };
+  const { token: cardToken, body, confirmed } = parsed.data;
+  const result = await sendMessageInStore(cardToken, user.id, body, confirmed);
+  return result ?? { ok: true };
 }
