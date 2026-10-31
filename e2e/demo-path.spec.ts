@@ -54,11 +54,23 @@ test("a posted ask is claimed by another student and closed with a thank-you", a
   await whoToAsk.getByRole("button", { name: "Other", exact: true }).click();
   await page.getByLabel("Your category").fill("Airport pickup");
   await page.getByText("Similar:").locator("..").getByRole("button", { name: "Rides" }).click();
-  await expect(whoToAsk.getByRole("button", { name: "Rides" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
+  await expect(whoToAsk.getByRole("button", { name: "Rides" })).toHaveAttribute("aria-pressed", "true");
+  // When: the calendar is connected on Me (mocked); the draft survives the trip.
+  await page.getByRole("button", { name: /See when you're free/ }).click();
+  await expect(page).toHaveURL(/\/me\?next=/);
+  await page.getByRole("switch", { name: /Connect Google Calendar/ }).click();
+  await page.getByRole("link", { name: "Back to your ask" }).click();
+  await expect(page).toHaveURL(/\/ask$/);
+  await expect(page.getByLabel("What do you need?")).toHaveValue("Ride to Manchester airport");
+  await expect(whoToAsk.getByRole("button", { name: "Rides" })).toHaveAttribute("aria-pressed", "true");
+  // A free time from the calendar makes it a set time.
+  const freeTimes = page.getByRole("radiogroup", { name: "Free times from your calendar" });
+  await freeTimes.getByRole("radio").first().click();
+  await expect(freeTimes.getByRole("radio").first()).toHaveAttribute("aria-checked", "true");
+  await expect(page.getByRole("button", { name: "At a set time" })).toHaveAttribute("aria-pressed", "true");
   await page.getByLabel("Where").fill("From East Wheelock");
+  await page.getByRole("button", { name: "1 h", exact: true }).click();
+  await expect(page.getByRole("button", { name: "1 h", exact: true })).toHaveAttribute("aria-pressed", "true");
   await page.getByLabel("Price in dollars").fill("15");
   await page.getByRole("button", { name: "Continue" }).click();
 

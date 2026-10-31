@@ -15,7 +15,7 @@ import type {
   WhereSuggestion,
 } from "@/lib/ask/types";
 
-// "deadline" = the Needed by time from Post a need ("Before ride" in the design).
+// "deadline" = the time picked on Post a need (set time or "Any time before") ("Before ride" in the design).
 export type ExpiryChoice = "3h" | "deadline" | "24h" | "3d";
 
 export type AskFlowState = {
