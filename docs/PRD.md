@@ -155,7 +155,7 @@ Ask is a web app, so email is how people hear back when they're not looking at i
 
 ### Stack
 
-Next.js (App Router) + TypeScript + Tailwind; Anthropic SDK with the model set by `ANTHROPIC_MODEL`; a small Postgres database for asks and claims, so two phones see the same card in the demo; payments, calendar and school-email sign-up mocked tonight.
+Next.js (App Router) + TypeScript + Tailwind; Anthropic SDK with the model set by `ANTHROPIC_MODEL`; a small Postgres database for asks and claims, so two phones see the same card in the demo; Supabase auth (magic link + Google): anyone can view the board, only signed-in users can post or take an ask; payments, calendar and school-email verification mocked tonight.
 
 ### Assumptions and open questions
 
@@ -170,13 +170,13 @@ Tonight we ship one ask end to end: privately to matched helpers, on the public 
 
 **In the MVP:** the demo path (Home → Clarify → Your ask with a price → public board → bot posts to GroupMe → claim in the browser → Matched → mocked Pay + Thank you), safety check, matching on seeded helpers (with seeded free/busy), "Already taken" across board and GroupMe. The private inbox ships as a simple mock and is told in the story, not demoed.
 
-**Not now:** the Stripe API and Stripe Connect (payment is a mock screen), the Google Calendar API and OAuth (free/busy is seeded), real school-email verification (sign-up is mocked), push notifications, an iOS app, reading group messages.
+**Not now:** the Stripe API and Stripe Connect (payment is a mock screen), the Google Calendar API and OAuth (free/busy is seeded), real school-email (.edu) verification (sign-in is Supabase magic link or Google), push notifications, an iOS app, reading group messages.
 
 **Our differentiator: the group chat bot (built second).** It gets an ask into the right chat and reaches people beyond the asker's own circle, which also answers cold start. We build it only after the core flow works end to end.
 
 - **Post-only by construction:** GroupMe bots post messages through GroupMe's bot API, and a bot only receives group messages if a callback URL is registered. We register none, so the bot never receives group messages ([GroupMe bot docs](https://dev.groupme.com/tutorials/bots)).
 - **Permission:** a group member creates the bot for that group, ideally with the admin's OK. On joining, the bot posts a short intro: "I post asks from Ask. I can't read your messages. Remove me anytime." For the demo, our own test GroupMe covers this. Slack needs a workspace admin to approve the app.
-- **No app download:** each post ends with a link to the ask's board card. Helpers tap it in GroupMe and finish in their browser: a quick account sign-up with their school email (mocked tonight), then, for a paid ask, the helper setup (can you accept payment, plus a payout account) so the payout and visa rules still hold. Tonight's demo uses a $15 ask in GroupMe, so the claim page shows the mocked helper setup before accepting.
+- **No app download:** each post ends with a link to the ask's board card. Helpers tap it in GroupMe and finish in their browser: a quick sign-in (Supabase magic link or Google; viewing the card needs no account), then, for a paid ask, the helper setup (can you accept payment, plus a payout account) so the payout and visa rules still hold. Tonight's demo uses a $15 ask in GroupMe, so the claim page shows the mocked helper setup before accepting.
 - **Anonymous posts** go through a privacy check that shows what was removed, with Undo; after a claim the bot posts "Covered" and never names an anonymous asker.
 - **Fallback for any other chat:** if a group hasn't added the bot, Ask offers Copy or the phone's share sheet so the user pastes the polished ask themselves. No bot permission needed, and it works in any group on day one.
 

@@ -13,6 +13,7 @@ claude -p "Do the next unchecked task in tasks.md following AGENTS.md" --max-tur
 ## Tasks
 
 - [ ] Add a test runner and safety tests
+      Runner done: `pnpm test` runs Vitest (`vitest.config.mts`). The safety `keywordCheck` tests are still to write.
       Done when: `pnpm test` runs Vitest; tests cover `keywordCheck` in `src/lib/ai/ask/safety-check.ts` (crisis, academic, sensitive, ok, and "option" is not sensitive) with AI disabled; lint + typecheck + test pass.
 
 - [ ] Unit-test the fallback privacy scrub
@@ -50,6 +51,7 @@ The PRD's demo path is board-first: Home → Clarify → Your ask with a price �
       Done when: `draftAsk` also returns `minutes` and `suggestedPrice` (`{ min, max }` in whole dollars, from the time needed); `/draft` shows a price field pre-filled from it with a "$0 = favor" option; the price is stored in flow state; academic asks never show a price; lint + typecheck pass.
 
 - [ ] Public board: one ask, one card
+      Backend done (`src/server/actions/board.ts`, `src/lib/ask/board-store.ts`, tests): post, list, claim/hold, confirm, done, mocked pay, thanks, share, expiry, sign-in gating. Still needed: the `/board` landing UI and the privacy-scrub Undo on the post screen.
       Done when: posting from the flow (explicit tap) creates a board card in the store (ask, minutes, price, anonymous by default, run through `privacyScrub` with the removed list + Undo); `/board` lists open cards; the first "I can help" holds the card and everyone else sees "Already taken"; the asker confirms the helper (explicit tap); the server rejects crisis, sensitive and academic asks for the board; paid cards are hidden from helpers with `canAcceptPayment: false`; lint + typecheck pass.
 
 - [ ] Postgres store for asks and claims, with atomic updates
@@ -65,6 +67,7 @@ The PRD's demo path is board-first: Home → Clarify → Your ask with a price �
       Done when: every ask has `expiresAt` (from the drafted time, default 24 h); expired cards are hidden from `/board`, the claim page shows "This ask has expired", and the claim's atomic update includes `expires_at > now()`; lint + typecheck pass.
 
 - [ ] Mocked school-email sign-up + helper setup on the claim page
+      Update: sign-up is now real Supabase sign-in (`/login`); `claimCard` takes the email from the account. Only the claim-page UI (sign-in prompt + mocked helper setup for paid cards) is left.
       Done when: `/h/[token]` first asks for first name + school (.edu) email (mocked sign-up, no verification; TODO(auth)); for a paid card it then shows a mocked helper setup ("I can accept payment" toggle + payout account field) and refuses to claim if they can't accept payment; free cards skip the setup; lint + typecheck pass.
 
 - [ ] Email notifications (console only tonight)

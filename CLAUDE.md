@@ -10,7 +10,7 @@ Full product spec: `docs/PRD.md` (loaded below). It wins on product questions.
 
 @docs/PRD.md
 
-Hackathon demo: one ask, start to finish. No auth yet. Asks and claims move to a small Postgres store (the existing Drizzle + Supabase setup in `src/db/`) so two phones see the same card; until that lands, state is in memory. Payments, calendar and school-email sign-up are mocked.
+Hackathon demo: one ask, start to finish. **Auth:** Supabase sign-in (magic link + Google at `/login`). Anyone can view the board and a card; posting, claiming and every asker step need sign-in, checked inside each server action. Supabase's built-in magic-link email is rate-limited (a few per hour), so for the demo sign in with Google or sign the phones in beforehand. Asks and claims move to a small Postgres store (the existing Drizzle + Supabase setup in `src/db/`) so two phones see the same card; until that lands, state is in memory. Payments, calendar and school-email verification are mocked.
 
 ## Run
 
@@ -23,13 +23,15 @@ pnpm dev                     # http://localhost:3000
 - No `ANTHROPIC_API_KEY` → every AI step uses a canned fallback (`src/lib/ai/ask/fallback.ts`).
 - No `GROUPME_BOT_ID` / `SLACK_WEBHOOK_URL` → posts are logged to the server console as `[mock:<platform>]`.
 - `ANTHROPIC_MODEL` picks the model for the Ask steps (default `claude-sonnet-5-5`).
-- Gate before committing: `pnpm lint` and `pnpm typecheck`.
+- Gate before committing: `pnpm lint`, `pnpm typecheck` and `pnpm test` (Vitest).
 - Demo tip: after posting, the Matched page links to the helper's claim page (`/h/<token>`). Open it in another tab to claim.
 - In-memory data resets when the dev server restarts.
 
 ## Flow
 
 **Target demo path (PRD):** Home → Clarify (≤2 chip questions) → Your ask (editable, with price; $0 = favor) → public board (anonymous, privacy-checked) → bot shares the same card to GroupMe → helper claims in the browser → board shows "Already taken", bot posts "Covered" → Matched (public meeting spot) → mocked "Pay $15" → Thank you. Private route (matched helpers → mock inbox) ships as a simple mock and is told, not demoed. Matching uses seeded free/busy and payment eligibility.
+
+**Landing (target):** the public board (open cards from `listBoard`), with a button at the bottom that starts the publish flow below.
 
 **Built today:** `/` Home → `/clarify` → `/draft` → `/where` (helpers + partner groups) → `/share` (preview + "Post to group") → `/matched/[token]` → `/thanks`.
 Side routes: `/resources?type=crisis|tutoring` (safety redirects), `/h/[token]` (public claim page for helpers).
@@ -45,7 +47,10 @@ src/lib/ai/ask/            one small AI function per step: safety-check, clarify
 src/lib/ask/               types, mock-data (fictional campus/people/groups), store (in-memory),
                            format (exact posted message, shared by preview + server)
 src/lib/groups/            postToGroup(group, text) + one adapter per platform (groupme, slack, mock)
-src/server/actions/ask.ts  server actions; re-checks safety + rate limit before any post
+src/server/actions/ask.ts  server actions for the ask flow; re-checks safety + rate limit before any post
+src/server/actions/board.ts board card lifecycle: listBoard, getCard, postToBoard, claimCard, confirmHelper,
+                           markDone, markPaid, saveCardThanks, shareCardToGroup (sign-in + ownership checked)
+src/lib/ask/board-store.ts in-memory cards; every transition is a synchronous check-and-set
 docs/contract.md           backend ↔ frontend contract: every server action, its input/output, status
 ```
 
@@ -80,4 +85,4 @@ The rest of the repo (`/app`, `/login`, items, chat, Supabase, Drizzle) is the o
 
 ## Not now (leave TODOs)
 
-Real auth and real school-email verification (sign-up is mocked), push notifications, an iOS app, reading group messages, the Stripe API and Stripe Connect, the Google Calendar API and OAuth, Slack interactive buttons. Search for `TODO(` to find the spots.
+Real school-email (.edu) verification, push notifications, an iOS app, reading group messages, the Stripe API and Stripe Connect, the Google Calendar API and OAuth, Slack interactive buttons. Search for `TODO(` to find the spots.
