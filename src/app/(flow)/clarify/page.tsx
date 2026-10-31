@@ -28,7 +28,15 @@ export default function ClarifyPage() {
       .filter((q) => answers[q.question])
       .map((q) => ({ question: q.question, answer: answers[q.question] }));
     // Clear the old draft so it's regenerated with the new answers.
-    update({ answers: picked, ask: "", where: undefined, scrub: undefined });
+    update({
+      answers: picked,
+      parts: [],
+      activePart: 0,
+      sentParts: [],
+      ask: "",
+      where: undefined,
+      scrub: undefined,
+    });
     router.push("/draft");
   }
 
@@ -38,7 +46,7 @@ export default function ClarifyPage() {
         step={2}
         title="A couple quick questions"
         subtitle={`“${state.need}”`}
-        backHref="/"
+        backHref="/describe"
       />
       {!questions ? (
         <LoadingLines label="Figuring out what a helper would need to know…" />
