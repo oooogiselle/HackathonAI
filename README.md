@@ -19,16 +19,15 @@ DartAsk was built for the hackathon theme "AI at 70: What must remain human?". O
 
 ## How an ask works
 
-1. **Board.** `/` is the needs board: open asks from other students, filterable by category. Anyone can browse it.
-2. **Ask.** "Ask for help" opens a short form at `/ask` (what, when, where, how long, price; $0 makes it a favor). AI suggestions appear only when you tap for them. Or tap "Let AI help", type the messy version, answer at most two quick questions, and AI breaks it into small, editable asks (`/describe` -> `/clarify` -> `/draft`).
-3. **Quick check.** `/check` runs the safety check on the final wording, and shows "You're not the only one" with a tip from a past helper when the ask is a common one.
-4. **Where.** `/where` picks the route: the public board, a partner group chat, or privately to a few matched helpers who are free at that time.
-5. **Share.** `/share` previews exactly what will be posted. Every ask is anonymous; the privacy check shows what it removed, with Undo. One tap posts it to the board, and, if a group is picked, the DartAsk bot posts the same card to GroupMe.
-6. **Claim.** A helper opens the card (`/h/<token>`) from the board or the GroupMe link, signs in and taps "I can help". Everyone else now sees "Already taken", on the board and from the group link alike.
-7. **Confirm and pay to hold.** The asker confirms the helper, and the bot posts "Covered" to the group without naming anyone. The asker pays to hold the money (mocked; a $15 ask is $17.28 with the 10% platform fee and card processing, see `src/lib/ask/fees.ts`). The two talk in an in-app thread and meet somewhere public.
-8. **Done and thanks.** The helper taps Done, the asker confirms, the payment is released, and the asker writes a thank-you in their own words. If the asker never responds, payment auto-releases 48 hours after Done unless they report a problem; cancelling before Done refunds.
+1. **Board.** `/` is the needs board: open asks from other students. Anyone can browse it. Signed in, asks that match what you like helping with (set on Me) come first under "For you", and paid asks are hidden from anyone who can't accept payment.
+2. **Post a need.** The round Ask button in the tab bar opens a plain form at `/ask`: what you need, details, pay (Fund with a price, Trade or Free; $0 makes it a favor), when, where, how long, and who to ask. AI suggestions appear only when you tap "Get suggestions", and nothing they suggest is applied without another tap. Or tap "Let AI help": type the messy version (`/describe`), answer at most two quick questions (`/clarify`), and AI breaks it into up to four small, editable asks, each with a suggested price, that you send one at a time (`/draft`).
+3. **Quick check.** Both paths land on `/check`, which runs the safety check again on the final wording. Crisis messages go to `/resources?type=crisis` and graded schoolwork to `/resources?type=tutoring`; neither is ever posted or matched. Personal topics stay private automatically. For a common need, "You're not the only one" shows a tip from a past helper.
+4. **Where it goes.** On `/where` the asker picks the needs board, a GroupMe group, or a few matched helpers privately (`/private`), and when the ask comes down. Every ask is anonymous, and the privacy check shows what it removed, with Undo. "Preview" opens `/share`, which shows exactly what the bot will post to the chosen group. Nothing goes out until "Post to the board" (or "Post to the board and <group>") on `/where`. Then the DartAsk bot posts the same card to GroupMe, and the asker lands on the task page.
+5. **Claim.** A helper opens the card (`/h/<token>`) from the board or the GroupMe link, signs in and taps "Claim this task". For a paid ask, a mocked helper setup comes first: "I can accept payment" plus a payout account. Everyone else now sees "Already taken", on the board and from the group link alike. While an ask waits, the asker can extend it by 24 hours, copy a share link for any group chat, or cancel it.
+6. **Confirm and pay to hold.** The asker taps "Confirm <alias>", and the bot posts "Covered, thanks to whoever helped!" to the group, naming no one. That opens a message thread between the two (`/h/<token>/messages`), and the task page shows a public place to meet. The asker taps "Pay $17.28 and hold": the $15 ask plus a 10% platform fee and card processing (`src/lib/ask/fees.ts`), mocked.
+7. **Done and thanks.** The helper taps Done, and the asker taps "Confirm done" (or "Report a problem"). The payment is released, and "Write a thank-you" lets the asker thank the helper in their own words, with no AI. If the asker never responds, payment auto-releases 48 hours after Done unless they report a problem; cancelling before Done refunds.
 
-Private asks land in matched helpers' inboxes, where they can say "I can help" or "Not this time" (no reason asked).
+Private asks land in the picked helpers' Inbox, where they answer "I can help" or "Not this time" (no reason asked). Personal topics (visa, money, health) can only take this route.
 
 ## Guardrails
 
@@ -37,7 +36,7 @@ These are product rules, enforced on the server, not just in the UI.
 - **Safety first.** Every ask is checked before anything else. Crisis-type messages get professional resources only (988 and campus counseling) and are never matched or posted. "Write my essay" goes to tutoring and the writing center, never to a paid or public ask. Visa, money and health asks can't go to the board or a group. The model can only make a safety result stricter than the keyword check, never looser.
 - **Nothing happens without a tap.** Nothing is sent, posted, paid or added to a calendar on its own.
 - **Fully anonymous.** Students only ever see each other's alias (for example "Steady Loon 42"), never a name, email or phone, even after a match. Askers show as "A classmate" on cards.
-- **Post-only bot.** The GroupMe bot has no callback URL, so it never receives or reads group messages. It introduces itself once when added to a group and posts at most 3 asks per group per day.
+- **Post-only bot.** The GroupMe bot has no callback URL, so it never receives or reads group messages. When it joins a group, someone runs `pnpm bot:intro` once to post its intro. It posts at most 3 asks per group per day.
 - **Scam guard.** Messages that suggest paying outside DartAsk or ask for an ID number get a warning for the sender and a note for the receiver.
 - **Visa-aware payments.** Helpers say whether they can accept payment; paid asks never reach those who can't (many F-1 students). Favors go to everyone.
 - **No overload.** Helpers set a weekly limit and matching spreads the load.
@@ -45,16 +44,16 @@ These are product rules, enforced on the server, not just in the UI.
 
 ## What's real and what's mocked
 
-| Part      | Tonight                                                                                                                                                  |
-| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| AI steps  | Real with `ANTHROPIC_API_KEY`; each step has a canned fallback (`src/lib/ai/ask/fallback.ts`) when there is no key or the call fails                     |
-| Group bot | Posts to the real GroupMe with `GROUPME_BOT_ID` (Slack with `SLACK_WEBHOOK_URL`); otherwise logged as `[mock:<platform>]`                                |
-| Database  | Postgres. Locally an in-process PGlite database, migrated and seeded on first use, reset on restart; `ASK_DB=postgres` uses the shared Supabase database |
-| Sign-in   | Mocked "Sign in with Dartmouth": first name plus an `@dartmouth.edu` email, no verification                                                              |
-| Payments  | The hold-and-release flow is modeled end to end; no Stripe API and no payment keys                                                                       |
-| Calendar  | Free/busy seeded into the helper profiles; no Google API or OAuth                                                                                        |
-| Email     | The three notification events go through one `notify()` interface and are logged to the console                                                          |
-| People    | Real campus, fictional people. Seeded helpers and groups live in `src/lib/ask/mock-data.ts`                                                              |
+| Part      | Tonight                                                                                                                                                           |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| AI steps  | Real with `ANTHROPIC_API_KEY`; each step falls back to a canned answer (`src/lib/ai/ask/fallback.ts`) when there is no key, the call fails, or it takes over 12 s |
+| Group bot | Posts to the real GroupMe with `GROUPME_BOT_ID` (Slack with `SLACK_WEBHOOK_URL`); otherwise logged as `[mock:<platform>]`                                         |
+| Database  | Postgres. Locally an in-process PGlite database, migrated and seeded on first use, reset on restart; `ASK_DB=postgres` uses the shared Supabase database          |
+| Sign-in   | Mocked "Sign in with Dartmouth": first name plus an `@dartmouth.edu` email, no verification                                                                       |
+| Payments  | The hold-and-release flow is modeled end to end; no Stripe API and no payment keys                                                                                |
+| Calendar  | Free/busy only. Helpers' free/busy is seeded; the asker's "connect calendar" on Me is a mock kept in that browser. No Google API or OAuth                         |
+| Email     | The three notification events go through one `notify()` interface and are logged to the console                                                                   |
+| People    | Real campus, fictional people. Seeded helpers and groups live in `src/lib/ask/mock-data.ts`                                                                       |
 
 ## Run it locally
 
@@ -80,7 +79,7 @@ With an empty `.env.local` the whole demo path works: AI uses the fallbacks, bot
 
 > **Heads up:** if `.env.local` has `GROUPME_BOT_ID`, sharing an ask to a group from your local app (and `pnpm bot:intro`) posts to the real GroupMe. Blank it when you're just testing.
 
-**Demo tip:** use two browsers (or a normal and a private window) so the asker and helper have different sign-ins. Post from one, then open the card on the board in the other and tap "I can help".
+**Demo tip:** use two browsers (or a normal and a private window) so the asker and helper have different sign-ins. Post from one, then open the card on the board in the other and tap "Claim this task".
 
 ## Scripts
 
@@ -102,7 +101,7 @@ With an empty `.env.local` the whole demo path works: AI uses the fallbacks, bot
 
 Before committing: `pnpm lint && pnpm typecheck && pnpm test`. Unit tests sit next to the code they test (`*.test.ts`).
 
-`pnpm test:e2e` walks the demo path in a real browser (`e2e/demo-path.spec.ts`): board -> form -> Where -> Share -> a second phone signs in and claims -> a third sees "Already taken" -> confirm, pay to hold, Done, confirm done, thank-you, plus the essay and crisis redirects. `e2e/tabs.spec.ts` covers the Claimed, Inbox and Me tabs and the private route. It starts its own dev server on port 3100 (build folder `.next-e2e`) with the AI and bot keys blanked and `ASK_DB` unset, so it runs next to `pnpm dev`, never posts to the real GroupMe and never touches the shared database. First time on a machine: `pnpm exec playwright install chromium`.
+`pnpm test:e2e` walks the demo path in a real browser (`e2e/demo-path.spec.ts`): board -> form -> Quick check -> Where -> group preview -> post -> a second phone signs in and claims -> a third sees "Already taken" -> confirm, the message thread and its scam warning, pay to hold, Done, confirm done, thank-you, plus the essay and crisis redirects. `e2e/tabs.spec.ts` covers the tabs when signed out, the next step on Claimed and Inbox, Me autosave and the payout hint, interest-first ordering on the board, the private route for personal topics, and tap-to-call on the crisis screen. The run starts its own dev server on port 3100 (build folder `.next-e2e`) with the AI and bot keys blanked and `ASK_DB` unset, so it runs next to `pnpm dev`, never posts to the real GroupMe and never touches the shared database. First time on a machine: `pnpm exec playwright install chromium`.
 
 ## Project layout
 
