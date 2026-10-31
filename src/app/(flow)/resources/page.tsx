@@ -30,7 +30,7 @@ export default async function ResourcesPage({ searchParams }: PageProps<"/resour
       </ul>
       {!crisis && (
         <Link
-          href="/"
+          href="/ask"
           className={buttonVariants({ variant: "outline", className: "mt-auto h-11" })}
         >
           Ask for something else

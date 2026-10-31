@@ -1,7 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 // The e2e run gets its own dev server: its own port and build folder (so it can
-// run next to `pnpm dev`), fresh in-memory state (so the 3-posts-per-group limit
+// run next to `pnpm dev`), a fresh local database (so the 3-posts-per-group limit
 // never trips), and blank keys. Blank GROUPME_BOT_ID / SLACK_WEBHOOK_URL keep the
 // bot on the mock adapter even when .env.local has real ones; a blank
 // ANTHROPIC_API_KEY makes every AI step use the canned fallback, so runs are
@@ -29,6 +29,8 @@ export default defineConfig({
     timeout: 120_000,
     env: {
       NEXT_DIST_DIR: ".next-e2e",
+      // Local PGlite, never the shared Supabase database (even if .env.local sets ASK_DB).
+      ASK_DB: "",
       NEXT_PUBLIC_SITE_URL: baseURL,
       ANTHROPIC_API_KEY: "",
       OPENAI_API_KEY: "",

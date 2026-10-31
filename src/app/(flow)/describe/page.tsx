@@ -45,7 +45,7 @@ function Describe({ initialNeed }: { initialNeed: string }) {
   // Back to the form; anything typed so far carries over into Details.
   function writeMyself() {
     reset({ mode: "form", need: need.trim() });
-    router.push("/");
+    router.push("/ask");
   }
 
   return (
@@ -54,7 +54,7 @@ function Describe({ initialNeed }: { initialNeed: string }) {
         step={1}
         title="Tell us in your own words"
         subtitle="Messy is fine. AI will turn it into clear, small asks you can edit."
-        backHref="/"
+        backHref="/ask"
       />
       <Textarea
         value={need}

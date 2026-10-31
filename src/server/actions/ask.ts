@@ -14,7 +14,8 @@ import { safetyCheck } from "@/lib/ai/ask/safety-check";
 import { suggestWhere as suggestWhereAI } from "@/lib/ai/ask/suggest-where";
 import { COVERED_MESSAGE, formatPostMessage } from "@/lib/ask/format";
 import { findGroup, HELPERS, MEETING_SPOTS } from "@/lib/ask/mock-data";
-import { getPost, MAX_POSTS_PER_GROUP_PER_DAY, savePost, takeRateLimit } from "@/lib/ask/store";
+import { MAX_POSTS_PER_GROUP_PER_DAY, takeRateLimit } from "@/lib/ask/board-store";
+import { getPost, savePost } from "@/lib/ask/store";
 import type { AssistSuggestions, ClarifyAnswer, DraftResult, Post } from "@/lib/ask/types";
 import { postToGroup } from "@/lib/groups";
 import { siteUrl } from "@/lib/site-url";
@@ -93,7 +94,7 @@ export async function postAsk(input: z.input<typeof postAskSchema>): Promise<Pos
     return { error: "This ask is better shared one-on-one, so we won't post it to a group." };
   }
 
-  if (!takeRateLimit(group.id)) {
+  if (!(await takeRateLimit(group.id))) {
     return {
       error: `${group.name} already has ${MAX_POSTS_PER_GROUP_PER_DAY} asks today. Try another group or tomorrow.`,
     };

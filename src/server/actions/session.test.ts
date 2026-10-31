@@ -1,4 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
+
+import { openTestDb } from "@/lib/ask/db";
 
 // A tiny cookie jar standing in for next/headers in one browser.
 const jar = new Map<string, string>();
@@ -12,6 +14,10 @@ vi.mock("next/headers", () => ({
 
 const { getMe, mockSignIn, mockSignOut } = await import("./session");
 const { getCurrentUser } = await import("@/lib/ask/mock-session");
+
+beforeAll(async () => {
+  await openTestDb();
+});
 
 describe("mocked sign-in", () => {
   it("needs a first name and a school email", async () => {

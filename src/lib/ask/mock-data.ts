@@ -285,46 +285,72 @@ export const MEETING_SPOTS = [
   "Kessler Hall front desk",
 ];
 
-// Open asks already on the board when the server starts, so the landing page
-// isn't empty. All anonymous. Times are relative to server start.
-export type SeedCard = Pick<BoardCard, "text" | "minutes" | "price"> & {
+// Open asks already on the board, so the landing page isn't empty. All anonymous,
+// posted by the "seed" user. Times are relative to when the database is seeded;
+// re-seeding reopens any that expired. Tokens are fixed so seeding is idempotent.
+export type SeedCard = Pick<
+  BoardCard,
+  "token" | "title" | "text" | "category" | "payType" | "minutes" | "price"
+> & {
   postedMinutesAgo: number;
   expiresInHours: number;
 };
 
+export const SEED_ASKER = { id: "seed", firstName: "A classmate", email: "seed@northfield.edu" };
+
 export const SEED_CARDS: SeedCard[] = [
   {
-    text: "Could someone drive me to Bradley Airport Saturday morning? I have two suitcases. About 45 minutes.",
+    token: "seed-airport-ride",
+    title: "Ride to Bradley Airport",
+    text: "Saturday morning, two suitcases. Pick up at the Campus Center, about 45 minutes.",
+    category: "errands",
+    payType: "pay",
     minutes: 45,
     price: 15,
     postedMinutesAgo: 10,
     expiresInHours: 30,
   },
   {
-    text: "First winter here. Could anyone lend me a warm coat for a weekend trip next week? I'll return it clean.",
+    token: "seed-winter-coat",
+    title: "Lend me a warm coat for a weekend",
+    text: "First winter here. Weekend trip next week; I'll return it clean.",
+    category: "other",
+    payType: "free",
     minutes: 15,
     price: 0,
     postedMinutesAgo: 35,
     expiresInHours: 48,
   },
   {
-    text: "Need a hand carrying 4 boxes from my dorm to the storage place on Elm St this Friday afternoon.",
+    token: "seed-storage-boxes",
+    title: "Carry 4 boxes to storage",
+    text: "From my dorm to the storage place on Elm St, Friday afternoon.",
+    category: "errands",
+    payType: "pay",
     minutes: 30,
     price: 10,
     postedMinutesAgo: 80,
     expiresInHours: 20,
   },
   {
-    text: "Would anyone practice casual English conversation with me over coffee for 20 minutes this week?",
+    token: "seed-english-coffee",
+    title: "English conversation over coffee",
+    text: "20 minutes of casual conversation practice, any afternoon this week.",
+    category: "other",
+    payType: "free",
     minutes: 20,
     price: 0,
     postedMinutesAgo: 150,
     expiresInHours: 72,
   },
   {
-    text: "Could someone show me how to cook rice without a rice cooker? Shared kitchen in my dorm, any evening.",
+    token: "seed-cook-rice",
+    title: "Show me how to cook rice without a rice cooker",
+    text: "Shared kitchen in my dorm, any evening. Happy to trade a dumpling lesson.",
+    category: "other",
+    payType: "trade",
     minutes: 20,
-    price: 5,
+    price: 0,
     postedMinutesAgo: 240,
     expiresInHours: 24,
   },
