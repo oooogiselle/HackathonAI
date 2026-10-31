@@ -2,6 +2,8 @@
 // See docs/contract.md for which server action returns what.
 // TODO(db): BoardCard becomes the `asks` table (see tasks.md, Postgres store).
 
+import type { MessageFlag } from "./scam-check";
+
 // Ordered least → most restrictive (see SAFETY_SEVERITY in safety-check.ts).
 // - none: nothing flagged; a normal practical ask
 // - sensitive: visa / money / health. Peers + offices only, never group chats
@@ -51,6 +53,16 @@ export type HelperSuggestion = { helper: Helper; why: string };
 // weekly limit or payment status.
 export type PublicHelper = Pick<Helper, "id" | "firstName" | "year">;
 export type MatchSuggestion = { helper: PublicHelper; why: string };
+
+// Quick check's "You're not the only one": a need that comes back every term,
+// with a tip a helper wrote (src/lib/ask/common-needs.ts). Sample data tonight.
+export type CommonNeedMatch = {
+  id: string;
+  label: string;
+  askedLastTerm: number;
+  tip: string;
+  from: PublicHelper;
+};
 
 export type Platform = "groupme" | "slack";
 
@@ -238,6 +250,8 @@ export type Message = {
   senderFirstName: string;
   body: string;
   createdAt: number;
+  // Scam guard: paying outside Ask, or an ID number. null = clean.
+  flag: MessageFlag | null;
 };
 
 // A private ask waiting in a helper's inbox.

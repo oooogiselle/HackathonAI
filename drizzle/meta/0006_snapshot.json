@@ -1,6 +1,6 @@
 {
-  "id": "c816b7a6-4406-43be-946a-ce0306a2bff5",
-  "prevId": "000aec45-89fa-4d54-88c3-53f6e561b230",
+  "id": "8319aecf-023d-4b15-846c-ddd812f396f7",
+  "prevId": "3390d742-4de2-45c8-b8e7-0a6b56254e0e",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -781,6 +781,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "flag": {
+          "name": "flag",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -847,6 +853,10 @@
         "messages_body_len": {
           "name": "messages_body_len",
           "value": "char_length(\"messages\".\"body\") between 1 and 1000"
+        },
+        "messages_flag": {
+          "name": "messages_flag",
+          "value": "\"messages\".\"flag\" in ('off-platform-payment', 'id-number')"
         }
       },
       "isRLSEnabled": true

@@ -35,7 +35,7 @@ pnpm dev                     # http://localhost:3000
 
 **Landing:** `/` is the needs board (open cards from `listBoard`, category chips), with a sticky "Ask for help" button that opens the form at `/ask`. Each card opens the task page `/h/[token]`.
 
-**Built today:** `/ask` = the form ("Get suggestions" is opt-in AI) → `/where` (helpers + partner groups) → `/share` (preview; "Post to the board" + optional group via the bot; sign-in required) → `/h/[token]` (task page) → `/thanks?token=`. Optional AI path: Home "Let AI help" → `/describe` (messy need) → `/clarify` → `/draft` (AI breaks the need into small asks) → `/where`.
+**Built today:** `/ask` = the form ("Get suggestions" is opt-in AI) → `/check` (Quick check: safety on the final wording, plus "You're not the only one" when the ask is a common need: seeded count + a helper-written tip, `src/lib/ask/common-needs.ts`; AI only matches, never writes tips) → `/where` (helpers + partner groups) → `/share` (preview; "Post to the board" + optional group via the bot; sign-in required) → `/h/[token]` (task page) → `/thanks?token=`. Optional AI path: Home "Let AI help" → `/describe` (messy need) → `/clarify` → `/draft` (AI breaks the need into small asks) → `/where`.
 Side routes: `/resources?type=crisis|tutoring` (safety redirects), `/h/[token]` (the task page: same card from the board or a GroupMe link; buttons by viewer), `/h/[token]/messages` (asker and helper thread, open once both said yes), `/signin` (mocked "Sign in with Dartmouth"), `/matched/[token]` (redirects to `/h/[token]`).
 
 ## Folder map (Ask code)
@@ -96,6 +96,7 @@ The rest of the repo (`/app`, `/login`, items, chat, Supabase, Drizzle) is the o
 - Contact info is shared only after both sides say yes.
 - Ratings (decided Oct 31, reversing the earlier no-ratings rule): after an ask is done, the asker can "Rate your helper" (`/review`): 1–5 stars, "what went well" tags, an optional comment (no contact details), "Show my name" (off = anonymous), and on paid asks an optional tip charged once to the method used to hold (mocked). Editable for 24 h; the tip can't change. Trust points are computed on read, never stored or sold: 4–5 stars +10, 3 stars +5, each finished help +2. Helpers can hide their ratings from askers ("Show reviews on my profile"). Still no streaks or leaderboards; the thank-you note stays.
 - Never weaken sign-in: passwords only as scrypt hashes, codes only as hashes (10-minute expiry, 5 tries via a guarded update, 30 s resend wait), 5 wrong passwords lock sign-in for 15 minutes, and the mocked sign-in only in demo mode.
+- Scam guard on messages (`src/lib/ask/scam-check.ts`, `src/lib/ai/ask/message-check.ts`): paying outside Ask or an ID number gets a warning for the sender ("Send anyway" is a tap, never a silent block) and a note for the receiver. Keywords always run; the model can only add a flag. The flag is computed on the server and stored on the message.
 - Real campus (Dartmouth College); every person is fictional; no real student names or contact details. Crisis numbers are confirmed by the team, never guessed.
 - To add a chat platform: add an adapter in `src/lib/groups/`, register it in `index.ts`, add the platform to `Platform` in `src/lib/ask/types.ts`.
 - Do not use emojis

@@ -8,9 +8,10 @@ import { z } from "zod";
 
 import { assistAsk as assistAskAI } from "@/lib/ai/ask/assist-ask";
 import { clarify } from "@/lib/ai/ask/clarify";
+import { matchCommonNeed } from "@/lib/ai/ask/common-need";
 import { draftAsk as draftAskAI } from "@/lib/ai/ask/draft-ask";
 import { privacyScrub } from "@/lib/ai/ask/privacy-scrub";
-import { safetyCheck } from "@/lib/ai/ask/safety-check";
+import { keywordCheck, safetyCheck } from "@/lib/ai/ask/safety-check";
 import { type RewriteSuggestion, suggestRewrite } from "@/lib/ai/ask/suggest-rewrite";
 import { suggestCategories as suggestCategoriesAI } from "@/lib/ai/ask/suggest-category";
 import { suggestWhere as suggestWhereAI } from "@/lib/ai/ask/suggest-where";
@@ -22,7 +23,13 @@ import {
   takeRateLimit,
 } from "@/lib/ask/board-store";
 import { getPost, savePost } from "@/lib/ask/store";
-import type { AssistSuggestions, ClarifyAnswer, DraftResult, Post } from "@/lib/ask/types";
+import type {
+  AssistSuggestions,
+  ClarifyAnswer,
+  CommonNeedMatch,
+  DraftResult,
+  Post,
+} from "@/lib/ask/types";
 import { postToGroup } from "@/lib/groups";
 import { siteUrl } from "@/lib/site-url";
 
@@ -56,10 +63,14 @@ const answersSchema = z
 
 export async function draftAsk(need: string, answers: ClarifyAnswer[]): Promise<DraftResult> {
   const cleanNeed = text.parse(need);
+  const cleanAnswers = answersSchema.parse(answers);
   // Home already redirects these; never break them into asks or price them.
-  const { category } = await safetyCheck(cleanNeed);
+  // Answers can be typed freely on Clarify, so they're checked with the need.
+  const { category } = await safetyCheck(
+    [cleanNeed, ...cleanAnswers.map((a) => a.answer)].join("\n"),
+  );
   if (category === "academic" || category === "crisis") return { parts: [] };
-  return draftAskAI(cleanNeed, answersSchema.parse(answers));
+  return draftAskAI(cleanNeed, cleanAnswers);
 }
 
 const assistInput = z.object({
@@ -88,6 +99,25 @@ export async function suggestCategories(input: string): Promise<string[]> {
   const value = z.string().trim().max(1000).parse(input);
   if (value.length < 3) return [];
   return suggestCategoriesAI(value, await listBoardCategories());
+}
+
+// Quick check's "You're not the only one": a need others asked about last term,
+// with a helper's tip. Read-only and stores nothing about the asker. Never for
+// crisis or schoolwork (the page redirects those first; this checks again).
+export async function findCommonNeed(need: string): Promise<CommonNeedMatch | null> {
+  const value = text.parse(need);
+  const { category } = keywordCheck(value);
+  if (category === "crisis" || category === "academic") return null;
+  const match = await matchCommonNeed(value);
+  const helper = match && HELPERS.find((h) => h.id === match.helperId);
+  if (!match || !helper) return null;
+  return {
+    id: match.id,
+    label: match.label,
+    askedLastTerm: match.askedLastTerm,
+    tip: match.tip,
+    from: { id: helper.id, firstName: helper.firstName, year: helper.year },
+  };
 }
 
 export async function suggestWhere(ask: string) {

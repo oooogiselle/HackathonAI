@@ -3,7 +3,7 @@
 // task (board or group link), signs in with the mocked Dartmouth SSO and claims
 // it -> a third sees "Already taken" -> the asker confirms and pays to hold ->
 // the helper taps Done -> the asker confirms done -> thank-you.
-// Plus the two safety redirects. See playwright.config.ts for the server setup.
+// Plus the safety redirects (Home and a typed Clarify answer). See playwright.config.ts for the server setup.
 import { type Browser, devices, expect, type Page, test } from "@playwright/test";
 
 /** Mocked "Sign in with Dartmouth", then back to `next`. */
@@ -58,13 +58,43 @@ test("a posted ask is claimed by another student and closed with a thank-you", a
     "aria-pressed",
     "true",
   );
+  // When: the calendar is connected on Me (mocked); the draft survives the trip.
+  await page.getByRole("button", { name: /See when you're free/ }).click();
+  await expect(page).toHaveURL(/\/me\?next=/);
+  await page.getByRole("switch", { name: /Connect Google Calendar/ }).click();
+  await page.getByRole("link", { name: "Back to your ask" }).click();
+  await expect(page).toHaveURL(/\/ask$/);
+  await expect(page.getByLabel("What do you need?")).toHaveValue("Ride to Manchester airport");
+  await expect(whoToAsk.getByRole("button", { name: "Rides" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  // A free time from the calendar makes it a set time.
+  const freeTimes = page.getByRole("radiogroup", { name: "Free times from your calendar" });
+  await freeTimes.getByRole("radio").first().click();
+  await expect(freeTimes.getByRole("radio").first()).toHaveAttribute("aria-checked", "true");
+  await expect(page.getByRole("button", { name: "At a set time" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   await page.getByLabel("Where").fill("From East Wheelock");
+  await page.getByRole("button", { name: "1 h", exact: true }).click();
+  await expect(page.getByRole("button", { name: "1 h", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   await page.getByLabel("Price in dollars").fill("15");
   await page.getByRole("button", { name: "Continue" }).click();
 
   // Quick check runs the safety check on the final wording.
   await expect(page).toHaveURL(/\/check$/);
   await expect(page.getByRole("heading", { name: "Everyday ask" })).toBeVisible();
+  // Airport rides come back every break: others asked, with a helper's tip.
+  const commonNeed = page.getByRole("region", { name: "You're not the only one" });
+  await expect(commonNeed).toContainText(
+    "students asked about rides to the airport at break last term",
+  );
+  await expect(commonNeed).toContainText("Mei, Junior · helper");
   await page.getByRole("button", { name: "Continue" }).click();
 
   // Where it goes: board + a GroupMe group, anonymous by default.
@@ -129,9 +159,23 @@ test("a posted ask is claimed by another student and closed with a thank-you", a
   // The asker's thread picks up the reply on its own.
   await expect(page.getByText("On my way")).toBeVisible();
 
+  // Scam guard: paying outside Ask asks the sender first, and the receiver sees a note.
+  await helper.getByLabel("Message Lin").fill("You can just Venmo me instead");
+  await helper.keyboard.press("Enter");
+  // (Next.js's route announcer is an alert too, so match the warning by its text.)
+  await expect(
+    helper.getByRole("alert").filter({ hasText: "Paying outside Ask isn't protected" }),
+  ).toBeVisible();
+  await helper.getByRole("button", { name: "Send anyway" }).click();
+  await expect(helper.getByText("You can just Venmo me instead")).toBeVisible();
+  await expect(page.getByText("You can just Venmo me instead")).toBeVisible();
+  await expect(page.getByRole("note")).toContainText("Pay only through Ask");
+
   await page.getByRole("link", { name: "Task" }).click();
   await expect(page).toHaveURL(new RegExp(`${taskPath}$`));
-  await expect(page.getByRole("link", { name: /^Rina/ })).toContainText("On my way");
+  await expect(page.getByRole("link", { name: /^Rina/ })).toContainText(
+    "You can just Venmo me instead",
+  );
   await helper.getByRole("link", { name: "Task" }).click();
   // Venmo is picked first ($16.81); PayPal and cards cost a bit more.
   await expect(page.getByRole("radio", { name: /Venmo/ })).toHaveAttribute("aria-checked", "true");
@@ -209,7 +253,27 @@ test("a crisis message shows professional resources only", async ({ page }) => {
   await page.getByLabel("Details").fill("I don't know who to talk to.");
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page).toHaveURL(/\/resources\?type=crisis$/);
+  await expect(page.getByText("You're not the only one")).toHaveCount(0);
   await expect(
     page.getByRole("heading", { name: "You don't have to handle this alone" }),
   ).toBeVisible();
+});
+
+test("Clarify takes a typed answer, and checks it for safety", async ({ page }) => {
+  await page.goto("/describe");
+  await page
+    .getByLabel("What you need, in your own words")
+    .fill("i need a ride to the airport next month");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page).toHaveURL(/\/clarify$/);
+  const ownAnswer = page.getByPlaceholder("Or type your own").first();
+  await ownAnswer.fill("Boston Logan, Dec 18 around 6am");
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page).toHaveURL(/\/draft$/);
+
+  await page.goBack();
+  await expect(page).toHaveURL(/\/clarify$/);
+  await page.getByPlaceholder("Or type your own").first().fill("honestly I want to die");
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page).toHaveURL(/\/resources\?type=crisis$/);
 });

@@ -4,19 +4,21 @@
 // checkSafety runs again on the final wording, so the check always sees what
 // will actually be posted. Crisis goes to support resources. Graded work is
 // never posted or matched: it gets "We can't post this" with an honest rewrite
-// (getRewrite) and tutoring. Personal topics stay private.
+// (getRewrite) and tutoring. Personal topics stay private. If the ask is a
+// need others had last term, "You're not the only one" shows a helper's tip.
 import { Check, Lock, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { CommonNeedCard } from "@/components/ask/common-need-card";
 import { useRequireNeed } from "@/components/ask/flow-provider";
 import { LoadingLines } from "@/components/ask/loading-line";
 import { PartTicket } from "@/components/ask/part-ticket";
 import { StepHeader } from "@/components/ask/step-header";
 import { Button } from "@/components/ui/button";
 import type { RewriteSuggestion } from "@/lib/ai/ask/suggest-rewrite";
-import type { SafetyResult } from "@/lib/ask/types";
-import { checkSafety, getRewrite } from "@/server/actions/ask";
+import type { CommonNeedMatch, SafetyResult } from "@/lib/ask/types";
+import { checkSafety, findCommonNeed, getRewrite } from "@/server/actions/ask";
 
 export default function QuickCheckPage() {
   const router = useRouter();
@@ -25,17 +27,22 @@ export default function QuickCheckPage() {
   const [safety, setSafety] = useState<SafetyResult | null>(null);
   // Graded work: the suggested rewrite (undefined while it loads).
   const [rewrite, setRewrite] = useState<RewriteSuggestion | null>();
+  const [commonNeed, setCommonNeed] = useState<CommonNeedMatch | null>(null);
 
   useEffect(() => {
     if (!ready || !part) return;
     let live = true;
-    const need = `${part.what}. ${part.text}`;
-    checkSafety(need).then((result) => {
+    const wording = `${part.what}. ${part.text}`;
+    // Shown only once safety passes below, so never next to a redirect.
+    findCommonNeed(wording)
+      .then((match) => live && setCommonNeed(match))
+      .catch(() => {});
+    checkSafety(wording).then((result) => {
       if (!live) return;
       if (result.category === "crisis") return router.replace("/resources?type=crisis");
       setSafety(result);
       if (result.category === "academic") {
-        getRewrite(need).then((r) => live && setRewrite(r));
+        getRewrite(wording).then((r) => live && setRewrite(r));
       }
     });
     return () => {
@@ -149,6 +156,8 @@ export default function QuickCheckPage() {
               <CheckRow ok>Not a personal topic</CheckRow>
             )}
           </ul>
+
+          {commonNeed && <CommonNeedCard match={commonNeed} />}
 
           <section className="flex flex-col gap-1 rounded-3xl bg-pay p-4">
             <h2 className="text-lg font-bold">{sensitive ? "Private topic" : "Everyday ask"}</h2>

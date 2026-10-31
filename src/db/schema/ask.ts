@@ -235,10 +235,13 @@ export const messages = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     body: text("body").notNull(),
+    // Scam guard (src/lib/ask/scam-check.ts): set by the server when it sent; null = clean.
+    flag: text("flag"),
     createdAt: ts("created_at").notNull().defaultNow(),
   },
   (t) => [
     check("messages_body_len", sql`char_length(${t.body}) between 1 and 1000`),
+    check("messages_flag", sql`${t.flag} in ('off-platform-payment', 'id-number')`),
     index("messages_ask_idx").on(t.askToken, t.createdAt),
   ],
 ).enableRLS();

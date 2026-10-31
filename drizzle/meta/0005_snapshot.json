@@ -1,5 +1,5 @@
 {
-  "id": "000aec45-89fa-4d54-88c3-53f6e561b230",
+  "id": "3390d742-4de2-45c8-b8e7-0a6b56254e0e",
   "prevId": "6cfe757e-41e8-4b38-8b67-9e9ba45cade1",
   "version": "7",
   "dialect": "postgresql",
@@ -781,6 +781,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "flag": {
+          "name": "flag",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -847,6 +853,10 @@
         "messages_body_len": {
           "name": "messages_body_len",
           "value": "char_length(\"messages\".\"body\") between 1 and 1000"
+        },
+        "messages_flag": {
+          "name": "messages_flag",
+          "value": "\"messages\".\"flag\" in ('off-platform-payment', 'id-number')"
         }
       },
       "isRLSEnabled": true
@@ -1136,7 +1146,7 @@
       "checkConstraints": {
         "payments_method": {
           "name": "payments_method",
-          "value": "\"payments\".\"method\" in ('venmo', 'paypal', 'card')"
+          "value": "\"payments\".\"method\" in ('venmo', 'card')"
         },
         "payments_status": {
           "name": "payments_status",

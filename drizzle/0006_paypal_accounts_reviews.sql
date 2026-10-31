@@ -31,6 +31,7 @@ CREATE TABLE "reviews" (
 );
 --> statement-breakpoint
 ALTER TABLE "reviews" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "payments" DROP CONSTRAINT "payments_method";--> statement-breakpoint
 ALTER TABLE "users" ADD COLUMN "username" text;--> statement-breakpoint
 ALTER TABLE "users" ADD COLUMN "password_hash" text;--> statement-breakpoint
 ALTER TABLE "users" ADD COLUMN "failed_sign_ins" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
@@ -41,4 +42,5 @@ ALTER TABLE "reviews" ADD CONSTRAINT "reviews_helper_id_users_id_fk" FOREIGN KEY
 ALTER TABLE "reviews" ADD CONSTRAINT "reviews_asker_id_users_id_fk" FOREIGN KEY ("asker_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "pending_signups_email_idx" ON "pending_signups" USING btree ("email");--> statement-breakpoint
 CREATE INDEX "reviews_helper_idx" ON "reviews" USING btree ("helper_id","created_at" DESC NULLS LAST);--> statement-breakpoint
-ALTER TABLE "users" ADD CONSTRAINT "users_username_unique" UNIQUE("username");
+ALTER TABLE "users" ADD CONSTRAINT "users_username_unique" UNIQUE("username");--> statement-breakpoint
+ALTER TABLE "payments" ADD CONSTRAINT "payments_method" CHECK ("payments"."method" in ('venmo', 'paypal', 'card'));

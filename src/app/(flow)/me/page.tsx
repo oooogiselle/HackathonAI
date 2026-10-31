@@ -1,6 +1,7 @@
-// Me tab: your balance (links to Payouts), name, the helper settings matching
-// uses (what you'd enjoy, a weekly limit, whether you can accept payment),
-// privacy, email updates, your ratings and trust points, blocked people, sign out.
+// Me tab: your balance (links to Payouts), your ratings and trust points, your
+// name, the helper settings matching uses (what you'd enjoy, a weekly limit,
+// whether you can accept payment), privacy, calendar, email updates, blocked
+// people, sign out. ?next=/ask comes from "See when you're free" on Post a need.
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 
@@ -18,10 +19,11 @@ import { earnings } from "./earnings";
 import { ProfileForm } from "./profile-form";
 import { Ratings } from "./ratings";
 
-export default async function MePage() {
-  const [profile, unread, mine, blocked, ratings] = await Promise.all([
+export default async function MePage({ searchParams }: PageProps<"/me">) {
+  const [profile, unread, { next }, mine, blocked, ratings] = await Promise.all([
     getMyProfile(),
     countUnread(),
+    searchParams,
     listMyCards(),
     listBlockedPeople(),
     getMyRatings(),
@@ -52,7 +54,7 @@ export default async function MePage() {
             <span className="sr-only">Payouts</span>
           </Link>
           {ratings && <Ratings ratings={ratings} />}
-          <ProfileForm profile={profile} />
+          <ProfileForm profile={profile} backToAsk={next === "/ask"} />
           <BlockedPeople blocked={"blocked" in blocked ? blocked.blocked : []} />
         </>
       ) : (
