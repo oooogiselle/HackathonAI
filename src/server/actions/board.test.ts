@@ -34,7 +34,7 @@ async function postDemoCard(price = 15) {
   const res = await board.postToBoard({
     title: "Ride to the airport",
     text: "Saturday morning, one suitcase.",
-    category: "errands",
+    category: "Errands",
     minutes: 45,
     price,
     anonymous: true,

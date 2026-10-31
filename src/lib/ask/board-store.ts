@@ -222,6 +222,19 @@ export async function listOpenCards(viewerId: string | null, now = Date.now()) {
   return hydrate(db, rows, now);
 }
 
+/** Categories askers typed themselves, from open board asks, most used first. */
+export async function listBoardCategories(now = Date.now(), limit = 20) {
+  const db = await getAskDb();
+  const rows = await db
+    .select({ category: asks.category, uses: sql<number>`count(*)::int` })
+    .from(asks)
+    .where(and(eq(asks.status, "open"), eq(asks.private, false), gt(asks.expiresAt, new Date(now))))
+    .groupBy(asks.category)
+    .orderBy(desc(sql`count(*)`))
+    .limit(limit);
+  return rows.map((r) => r.category);
+}
+
 /** "My asks" (asking) and "I'm helping" on the Claimed tab. */
 export async function listMine(userId: string, now = Date.now()) {
   const db = await getAskDb();

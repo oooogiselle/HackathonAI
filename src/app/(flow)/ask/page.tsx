@@ -16,12 +16,12 @@ import { WhoToAsk } from "@/components/ask/who-to-ask";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { CATEGORY_LABELS, guessCategory } from "@/lib/ask/card-format";
+import { CategoryPicker } from "@/components/ask/category-picker";
+import { guessCategory } from "@/lib/ask/card-format";
+import { guessCategoryFromText, normalizeCategory } from "@/lib/ask/categories";
 import { INTEREST_LABELS, toHelperPrefs } from "@/lib/ask/helper-fit";
 import { suggestPrice } from "@/lib/ask/price";
 import {
-  ASK_CATEGORIES,
-  type AskCategory,
   type AskPart,
   type AssistField,
   type AssistSuggestions,
@@ -62,7 +62,7 @@ function formatWhen(local: string) {
 
 type Form = {
   what: string;
-  category: AskCategory;
+  category: string; // "" = not picked; Continue falls back to a keyword guess
   details: string;
   payType: PayType;
   when: string; // datetime-local value, "" = flexible
@@ -98,7 +98,7 @@ function initialForm(state: AskFlowState): Form {
   }
   return {
     what: "",
-    category: "errands",
+    category: "",
     // Carried over from the AI path's "I'd rather fill in a form".
     details: posted ? "" : state.need,
     payType: "pay",
@@ -210,7 +210,9 @@ function WriteForm({ initial }: { initial: Form }) {
       text: details,
       // Quick check fills this in.
       category: "none",
-      askCategory: form.category,
+      askCategory: form.category.trim()
+        ? normalizeCategory(form.category)
+        : guessCategoryFromText(`${what} ${details}`),
       payType: form.payType,
     };
     reset({ mode: "form", need: `${what}. ${details}`, parts: [part], activePart: 0, ask: details });
@@ -237,19 +239,11 @@ function WriteForm({ initial }: { initial: Form }) {
             onChange={(e) => set({ what: e.target.value })}
           />
         </Field>
-        <div className="flex flex-col gap-1.5">
-          <span className="text-xs text-muted-foreground">Category</span>
-          <div className="flex flex-wrap gap-2">
-            {ASK_CATEGORIES.map((c) => (
-              <ToggleChip
-                key={c}
-                label={CATEGORY_LABELS[c]}
-                pressed={form.category === c}
-                onClick={() => set({ category: c })}
-              />
-            ))}
-          </div>
-        </div>
+        <CategoryPicker
+          value={form.category}
+          onChange={(category) => set({ category })}
+          askText={`${form.what} ${form.details}`}
+        />
         <Field label="Details" id={FIELD_IDS.details} hint="This is what helpers will read.">
           <Textarea
             id={FIELD_IDS.details}
