@@ -2,7 +2,7 @@
 
 # Ask
 
-Mobile-first web app that helps college students (especially international students) ask for help. A student types a vague need; AI turns it into a clear, small ask with a suggested price. The asker sends it privately to 2–3 matched helpers who are free then, or posts it anonymously to the public board; the bot can share that same board card to GroupMe. A helper says "I can help"; the asker confirms, they meet, and the asker pays (a mocked "Pay $15" screen tonight) and writes a thank-you. People do all the helping.
+Mobile-first web app (responsive up to laptop width, and installable on a phone's home screen as a PWA) that helps college students (especially international students) ask for help. A student types a vague need; AI turns it into a clear, small ask with a suggested price. The asker sends it privately to 2–3 matched helpers who are free then, or posts it anonymously to the public board; the bot can share that same board card to GroupMe. A helper says "I can help"; the asker confirms, they meet, and the asker pays (a mocked "Pay $15" screen tonight) and writes a thank-you. People do all the helping.
 
 Full product spec: `docs/PRD.md` (loaded below). It wins on product questions.
 
@@ -24,16 +24,17 @@ pnpm dev                     # http://localhost:3000
 - No `GROUPME_BOT_ID` / `SLACK_WEBHOOK_URL` → posts are logged to the server console as `[mock:<platform>]`.
 - `ANTHROPIC_MODEL` picks the model for the Ask steps (default `claude-sonnet-5-5`).
 - Gate before committing: `pnpm lint`, `pnpm typecheck` and `pnpm test` (Vitest).
-- **After every prompt that changes code, run `pnpm test:e2e` before reporting done.** It's a Playwright test of the demo path (`e2e/demo-path.spec.ts`): the board at `/` → Ask for help → form at `/ask` → Where → Share (anonymous) → post to the board + a group → a second phone (own browser context) opens the card from the board, signs in with the mocked Dartmouth SSO and claims it → a third sees "Already taken" → asker confirms → pays $17.28 to hold (card via Stripe, mocked) → helper taps Done → asker confirms done → thank-you, plus the essay and crisis redirects. It starts its own dev server on :3100 (build folder `.next-e2e`) with bot and AI keys blanked and `ASK_DB` unset (local PGlite, never Supabase), so it runs next to `pnpm dev`, never posts to the real GroupMe, and uses the canned AI fallbacks. When you change a flow screen or add one (sign-in, board, Pay), update the spec in the same change. If it fails, fix it or report the failure output; don't say it works until it passes. First time on a machine: `pnpm exec playwright install chromium`.
+- **After every prompt that changes code, run `pnpm test:e2e` before reporting done.** It's a Playwright test of the demo path (`e2e/demo-path.spec.ts`): the board at `/` → Ask for help → form at `/ask` → Where → Share (anonymous) → post to the board + a group → a second phone (own browser context) opens the card from the board, signs in with the mocked Dartmouth SSO and claims it → a third sees "Already taken" → asker confirms → pays $17.28 to hold (card via Stripe, mocked) → helper taps Done → asker confirms done → thank-you, plus the essay and crisis redirects. It starts its own dev server on :3100 (build folder `.next-e2e`) with bot and AI keys blanked and `ASK_DB` unset (local PGlite, never Supabase), so it runs next to `pnpm dev`, never posts to the real GroupMe, and uses the canned AI fallbacks. When you change a flow screen or add one (sign-in, board, Pay), update the spec in the same change. Screens with a `loading.tsx` skeleton stream in, so for about 300 ms after `goto`/`reload` a hidden copy of the content sits next to the visible one: match with `getByRole(...)` or `getByText(...).filter({ visible: true })`, not a bare `getByText`. If it fails, fix it or report the failure output; don't say it works until it passes. First time on a machine: `pnpm exec playwright install chromium`.
 - `pnpm bot:intro <groupId>` posts the bot intro once when it joins a group. It reads `.env.local`, so with `GROUPME_BOT_ID` set it posts to the real GroupMe.
 - Demo tip: use two browsers (or a normal + private window) so asker and helper have different sign-ins. Post from one; open the card on the board (or the `/h/<token>` link from the GroupMe post) in the other and tap Claim.
+- On a phone: open the deployed HTTPS URL and use Add to Home Screen (iOS: Safari Share menu; Android: the prompt on the Me tab). It opens full screen from `src/app/manifest.ts`; icons are in `public/icons/`. On iOS the home-screen app has its own cookies, so sign in once inside it. `localhost` can't be installed from a phone.
 - Local data (PGlite) resets when the dev server restarts. The old group-first actions (`postAsk` / `claimAsk` / `getPostStatus` / `saveThanks`) are deprecated and no screen calls them.
 
 ## Flow
 
 **Target demo path (PRD):** Home (a form: title, details, when, deadline, where, time, who to ask, price; $0 = favor; AI suggestions only on a tap), or the optional AI path ("Let AI help": messy need → Clarify (≤2 chip questions) → Your ask, where AI breaks it into 1–4 small editable asks) → public board (anonymous, privacy-checked) → bot shares the same card to GroupMe → helper claims in the browser → board shows "Already taken", bot posts "Covered" → Matched (public meeting spot) → mocked "Pay $15" → Thank you. Private route (matched helpers → mock inbox) ships as a simple mock and is told, not demoed. Matching uses seeded free/busy and payment eligibility.
 
-**Landing:** `/` is the needs board (open cards from `listBoard`, category chips), with a sticky "Ask for help" button that opens the form at `/ask`. Each card opens the task page `/h/[token]`.
+**Landing:** `/` is the needs board (`src/app/(flow)/(board)/page.tsx`, in its own route group so its loading skeleton covers only the board) (open cards from `listBoard`, category chips), with a sticky "Ask for help" button that opens the form at `/ask`. Each card opens the task page `/h/[token]`.
 
 **Built today:** `/ask` = the form ("Get suggestions" is opt-in AI) → `/check` (Quick check: safety on the final wording, plus "You're not the only one" when the ask is a common need: seeded count + a helper-written tip, `src/lib/ask/common-needs.ts`; AI only matches, never writes tips) → `/where` (helpers + partner groups) → `/share` (preview; "Post to the board" + optional group via the bot; sign-in required) → `/h/[token]` (task page) → `/thanks?token=`. Optional AI path: Home "Let AI help" → `/describe` (messy need) → `/clarify` → `/draft` (AI breaks the need into small asks) → `/where`.
 Side routes: `/resources?type=crisis|tutoring` (safety redirects), `/h/[token]` (the task page: same card from the board or a GroupMe link; buttons by viewer), `/h/[token]/messages` (asker and helper thread, open once both said yes), `/signin` (mocked "Sign in with Dartmouth"), `/matched/[token]` (redirects to `/h/[token]`).
@@ -41,7 +42,7 @@ Side routes: `/resources?type=crisis|tutoring` (safety redirects), `/h/[token]` 
 ## Folder map (Ask code)
 
 ```
-src/app/(flow)/            flow pages (`/` = needs board, `/ask` = the form, describe/clarify/draft AI path, where, share, matched, thanks) + resources; layout wraps <AskFlowProvider>
+src/app/(flow)/            flow pages (`(board)/` = needs board at `/`, `/ask` = the form, describe/clarify/draft AI path, where, share, matched, thanks) + resources; layout wraps <AskFlowProvider>
 src/app/h/[token]/         task page: details + task-actions (claim, confirm, pay to hold, done, report, cancel);
                            messages/ = the asker-helper thread once both said yes
 src/app/signin/            mocked "Sign in with Dartmouth" (@dartmouth.edu only), returns to ?next=
@@ -65,6 +66,8 @@ docs/contract.md           backend ↔ frontend contract: every server action, i
 ```
 
 The rest of the repo (`/app`, `/login`, items, chat, Supabase, Drizzle) is the original starter. Leave it alone unless a task says otherwise.
+
+**Layout and motion:** phones get one column and the bottom tab bar; from `md:` up the tab bar moves to the top and the board and Claimed become a card grid (`(flow)/template.tsx` sets each screen's width). Every screen change animates through React `<ViewTransition>` (`src/components/ask/page-transition.tsx`, used by the `template.tsx` files; styles at the end of `globals.css`): the ask flow slides (tag a forward Link or push with `NAV.forward`, a back one with `NAV.back`, from `src/lib/ask/nav.ts`), everything else crossfades, and reduced motion drops the slide. Dynamic tab screens and the task page have `loading.tsx` skeletons so a tap answers at once.
 
 ## Rules
 

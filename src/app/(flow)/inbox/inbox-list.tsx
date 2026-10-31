@@ -11,6 +11,7 @@ import type { InboxItem, PrivateRequest } from "@/lib/ask/types";
 import { markInboxRead } from "@/server/actions/inbox";
 import { respondToRequest } from "@/server/actions/private";
 import { cn } from "cn";
+import { NAV } from "@/lib/ask/nav";
 
 function ago(ms: number) {
   const min = Math.round((Date.now() - ms) / 60_000);
@@ -35,7 +36,7 @@ export function PrivateRequests({
       <p className="-mt-1 text-sm text-muted-foreground">
         Only you and a couple of others got these. No need to give a reason if you can&apos;t.
       </p>
-      <ul className="flex flex-col gap-3">
+      <ul className="grid gap-3 md:grid-cols-2">
         {requests.map((r) => (
           <li key={r.card.token}>
             <RequestCard request={r} canAcceptPayment={canAcceptPayment} />
@@ -63,7 +64,7 @@ function RequestCard({
       if ("error" in result) toast.error(result.error);
       else if (value === "yes") {
         toast.success("You offered to help. The asker confirms next.");
-        router.push(`/h/${card.token}`);
+        router.push(`/h/${card.token}`, { transitionTypes: NAV.forward });
         return;
       }
       router.refresh();

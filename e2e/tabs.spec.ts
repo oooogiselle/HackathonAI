@@ -55,8 +55,8 @@ test("Claimed and Inbox show the asker's next step after a claim", async ({
   await expect(page.getByRole("button", { name: "Share link" })).toBeVisible();
 
   await page.goto("/claimed");
-  await expect(page.getByText("My asks · 1")).toBeVisible();
-  await expect(page.getByText("Waiting for a helper")).toBeVisible();
+  await expect(page.getByText("My asks · 1").filter({ visible: true })).toBeVisible();
+  await expect(page.getByText("Waiting for a helper").filter({ visible: true })).toBeVisible();
 
   // A helper claims it (paid ask: the claim button says what's missing).
   const helper = await newPhone(browser, baseURL);
@@ -70,14 +70,18 @@ test("Claimed and Inbox show the asker's next step after a claim", async ({
   await expect(helper.getByText("Waiting for the asker to confirm.")).toBeVisible();
 
   await helper.goto("/claimed");
-  await expect(helper.getByText("I'm helping · 1")).toBeVisible();
-  await expect(helper.getByText("Waiting for the asker to confirm")).toBeVisible();
+  await expect(helper.getByText("I'm helping · 1").filter({ visible: true })).toBeVisible();
+  await expect(
+    helper.getByText("Waiting for the asker to confirm").filter({ visible: true }),
+  ).toBeVisible();
 
   await page.goto("/claimed");
-  await expect(page.getByText("Your turn")).toBeVisible();
+  await expect(page.getByText("Your turn").filter({ visible: true })).toBeVisible();
   // The helper shows up by alias, never by name.
   await expect(
-    page.getByText(/[A-Z][a-z]+ [A-Z][a-z]+ \d{2} can help\. Confirm to lock it in$/),
+    page
+      .getByText(/[A-Z][a-z]+ [A-Z][a-z]+ \d{2} can help\. Confirm to lock it in$/)
+      .filter({ visible: true }),
   ).toBeVisible();
   await expect(page.getByText(/\bOmar\b/)).toHaveCount(0);
 
@@ -120,7 +124,11 @@ test("Me autosaves helper settings and explains a missing payout", async ({ page
   await expect(page.getByText(/I can accept payment \(.* @kai\)/)).toBeVisible();
   // It stuck: a reload shows the saved values.
   await page.reload();
-  await expect(page.getByText(/I can accept payment \(.* @kai\)/)).toBeVisible();
+  // Right after a load the streamed screen can briefly sit in a hidden copy
+  // (the loading skeleton's Suspense boundary), so match visible text only.
+  await expect(
+    page.getByText(/I can accept payment \(.* @kai\)/).filter({ visible: true }),
+  ).toBeVisible();
   await expect(preview.getByText("Senior with a car.")).toBeVisible();
 
   // The blurb goes through the privacy check when you leave the box, with Undo.

@@ -4,6 +4,7 @@ import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { NAV } from "@/lib/ask/nav";
 import { getCard } from "@/server/actions/board";
 import { listMessages } from "@/server/actions/inbox";
 
@@ -21,10 +22,11 @@ export default async function MessagesPage({ params }: PageProps<"/h/[token]/mes
   const name = result.otherAlias || "your match";
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col">
+    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col md:max-w-2xl">
       <header className="sticky top-0 z-10 bg-background px-4 pt-3 pb-2">
         <Link
           href={taskPath}
+          transitionTypes={NAV.back}
           className="-ml-1 flex w-fit items-center gap-0.5 rounded-md text-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           <ChevronLeft className="size-4" /> Task

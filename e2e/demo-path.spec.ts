@@ -23,7 +23,8 @@ async function newPhone(browser: Browser, baseURL: string | undefined) {
 test("the landing page is the needs board", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Needs board" })).toBeVisible();
-  await expect(page.getByText("Ride to Lebanon airport")).toBeVisible();
+  // Visible only: just after load the streamed board can sit in a hidden copy for a moment.
+  await expect(page.getByText("Ride to Lebanon airport").filter({ visible: true })).toBeVisible();
   await page.getByRole("link", { name: "Ask for help" }).click();
   await expect(page).toHaveURL(/\/ask$/);
   await expect(page.getByLabel("What do you need?")).toBeVisible();
@@ -132,7 +133,7 @@ test("a posted ask is claimed by another student and closed with a thank-you", a
   // One ask, one claim: anyone opening the same link now sees it's taken.
   const late = await newPhone(browser, baseURL);
   await late.goto(taskPath);
-  await expect(late.getByText("Already taken")).toBeVisible();
+  await expect(late.getByText("Already taken").filter({ visible: true })).toBeVisible();
   await expect(late.getByRole("link", { name: "Claim this task" })).toHaveCount(0);
 
   // Asker: the page refreshes on its own and shows who said yes, by alias only.
@@ -157,7 +158,7 @@ test("a posted ask is claimed by another student and closed with a thank-you", a
   // The helper never sees the asker's name either.
   await helper.reload();
   await helper.locator(`a[href="${taskPath}/messages"]`).click();
-  await expect(helper.getByText("I'm at the Collis porch")).toBeVisible();
+  await expect(helper.getByText("I'm at the Collis porch").filter({ visible: true })).toBeVisible();
   await expect(helper.getByText(/\bLin\b/)).toHaveCount(0);
   await helper.getByLabel(/^Message /).fill("On my way");
   await helper.keyboard.press("Enter");

@@ -21,6 +21,7 @@ import { findGroup } from "@/lib/ask/mock-data";
 import { scrubForAnonymous } from "@/server/actions/ask";
 import { postToBoard, shareCardToGroup } from "@/server/actions/board";
 import { getMe, type Me } from "@/server/actions/session";
+import { NAV } from "@/lib/ask/nav";
 
 const EXPIRY: { value: ExpiryChoice; label: string }[] = [
   { value: "3h", label: "3 h" },
@@ -66,7 +67,7 @@ export default function WherePage() {
 
   function toggleGroup() {
     if (group) return update({ groupId: undefined });
-    router.push("/share");
+    router.push("/share", { transitionTypes: NAV.forward });
   }
 
   function post() {

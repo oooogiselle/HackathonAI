@@ -1,3 +1,4 @@
+// Lives in its own route group so its loading skeleton covers only the board.
 // Landing page: the public needs board. Anyone can browse open asks; tapping a
 // card opens the task page (/h/[token]), and the round Ask button in the tab
 // bar starts a new ask (/ask). Data comes straight from
@@ -11,6 +12,7 @@ import { TabBar } from "@/components/ask/tab-bar";
 import { TopBar } from "@/components/ask/top-bar";
 import { ASKER_LABEL, durationLabel, expiresLabel, expiresSoon } from "@/lib/ask/card-format";
 import { buttonVariants } from "@/components/ui/button";
+import { NAV } from "@/lib/ask/nav";
 import type { PublicCard } from "@/lib/ask/types";
 import { listBoard } from "@/server/actions/board";
 import { countUnread } from "@/server/actions/inbox";
@@ -79,7 +81,7 @@ export default async function BoardPage() {
 
 function CardList({ cards, now }: { cards: PublicCard[]; now: number }) {
   return (
-    <ul className="flex flex-col gap-4">
+    <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 [&>li>article]:h-full">
       {cards.map((card) => (
         <li key={card.token}>
           <AskCard
@@ -92,6 +94,7 @@ function CardList({ cards, now }: { cards: PublicCard[]; now: number }) {
               // The whole card opens the task (same page as the GroupMe link).
               <Link
                 href={`/h/${card.token}`}
+                transitionTypes={NAV.forward}
                 className="after:absolute after:inset-0 after:rounded-[24px] focus-visible:outline-none focus-visible:after:ring-3 focus-visible:after:ring-ring/60"
               >
                 {card.title}

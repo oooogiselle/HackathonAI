@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { ClarifyAnswer } from "@/lib/ask/types";
 import { checkSafety, getClarifyQuestions } from "@/server/actions/ask";
+import { NAV } from "@/lib/ask/nav";
 
 export default function ClarifyPage() {
   const router = useRouter();
@@ -59,7 +60,7 @@ export default function ClarifyPage() {
         where: undefined,
         scrub: undefined,
       });
-      router.push("/draft");
+      router.push("/draft", { transitionTypes: NAV.forward });
     });
   }
 
