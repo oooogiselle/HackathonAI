@@ -35,7 +35,7 @@ pnpm dev                     # http://localhost:3000
 
 **Landing:** `/` is the needs board (open cards from `listBoard`, category chips), with a sticky "Ask for help" button that opens the form at `/ask`. Each card opens the task page `/h/[token]`.
 
-**Built today:** `/ask` = the form ("Get suggestions" is opt-in AI) → `/where` (helpers + partner groups) → `/share` (preview; "Post to the board" + optional group via the bot; sign-in required) → `/h/[token]` (task page) → `/thanks?token=`. Optional AI path: Home "Let AI help" → `/describe` (messy need) → `/clarify` → `/draft` (AI breaks the need into small asks) → `/where`.
+**Built today:** `/ask` = the form ("Get suggestions" is opt-in AI) → `/check` (Quick check: safety on the final wording, plus "You're not the only one" when the ask is a common need: seeded count + a helper-written tip, `src/lib/ask/common-needs.ts`; AI only matches, never writes tips) → `/where` (helpers + partner groups) → `/share` (preview; "Post to the board" + optional group via the bot; sign-in required) → `/h/[token]` (task page) → `/thanks?token=`. Optional AI path: Home "Let AI help" → `/describe` (messy need) → `/clarify` → `/draft` (AI breaks the need into small asks) → `/where`.
 Side routes: `/resources?type=crisis|tutoring` (safety redirects), `/h/[token]` (the task page: same card from the board or a GroupMe link; buttons by viewer), `/h/[token]/messages` (asker and helper thread, open once both said yes), `/signin` (mocked "Sign in with Dartmouth"), `/matched/[token]` (redirects to `/h/[token]`).
 
 ## Folder map (Ask code)
