@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  categoryForInterest,
   categoryStyle,
   guessCategoryFromText,
+  interestForCategory,
   normalizeCategory,
   rankCategoriesByKeyword,
 } from "./categories";
@@ -21,6 +23,13 @@ describe("categories", () => {
     expect(rankCategoriesByKeyword("my bike has a flat", ["Rides", "Bike repair"])).toEqual([
       "Bike repair",
     ]);
+  });
+
+  it("maps presets to Who to ask interests", () => {
+    expect(guessCategoryFromText("carry boxes to storage")).toBe("Moving stuff");
+    expect(interestForCategory("moving stuff")).toBe("moving");
+    expect(interestForCategory("Bike repair")).toBeUndefined();
+    expect(categoryForInterest("opt")).toBe("Been through OPT");
   });
 
   it("styles typed categories like Other", () => {
