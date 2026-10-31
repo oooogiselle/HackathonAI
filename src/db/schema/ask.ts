@@ -108,6 +108,12 @@ export const asks = pgTable(
     thanks: text("thanks"),
     createdAt: ts("created_at").notNull().defaultNow(),
     cancelledAt: ts("cancelled_at"),
+    // The helper tapped "Done". If the asker doesn't confirm (or report a
+    // problem) within 48 h, it auto-confirms and a held payment is released.
+    helperDoneAt: ts("helper_done_at"),
+    // The asker tapped "Report a problem": stops the auto-confirm (TODO: team review).
+    problemReportedAt: ts("problem_reported_at"),
+    problemNote: text("problem_note"),
   },
   (t) => [
     check("asks_status", sql`${t.status} in ('open', 'held', 'confirmed', 'done', 'cancelled')`),
@@ -124,6 +130,10 @@ export const asks = pgTable(
       .on(t.createdAt.desc())
       .where(sql`${t.status} = 'open' and ${t.private} = false`),
     index("asks_asker_idx").on(t.askerId, t.createdAt.desc()),
+    // Asks waiting to auto-confirm 48 h after the helper's "Done".
+    index("asks_auto_confirm_idx")
+      .on(t.helperDoneAt)
+      .where(sql`${t.status} = 'confirmed' and ${t.helperDoneAt} is not null`),
   ],
 ).enableRLS();
 
@@ -220,7 +230,9 @@ export const notifications = pgTable(
 ).enableRLS();
 
 // Mocked payment: no money moves, no payment API (TODO(stripe): Stripe Connect).
-// held when the asker taps "Pay", released when the help is done, refunded on cancel.
+// held when the asker taps "Pay $X and hold" after confirming a helper; released
+// when the asker confirms it's done (or 48 h after the helper's "Done");
+// refunded if the ask is cancelled before then.
 export const payments = pgTable(
   "payments",
   {

@@ -50,7 +50,7 @@ src/lib/ask/               types, mock-data (fictional campus/people/groups), st
 src/lib/groups/            postToGroup(group, text) + one adapter per platform (groupme, slack, mock)
 src/server/actions/ask.ts  server actions for the ask flow; re-checks safety + rate limit before any post
 src/server/actions/board.ts board card lifecycle: listBoard, getCard, postToBoard, claimCard, confirmHelper,
-                           markDone, markPaid, saveCardThanks, shareCardToGroup, extendCard, cancelCard,
+                           payToHold, markHelperDone, markDone, reportProblem, saveCardThanks, shareCardToGroup, extendCard, cancelCard,
                            listMyCards, createPrivateAsk (sign-in + ownership checked)
 src/server/actions/session.ts mocked sign-in (cookie → sessions table), profile, blocking
 src/server/actions/private.ts private asks: sendPrivately, listMyRequests, respondToRequest
@@ -79,7 +79,7 @@ The rest of the repo (`/app`, `/login`, items, chat, Supabase, Drizzle) is the o
 - Email notifications go through one `notify()` interface. **Tonight they are console-logged only** (decided Oct 30, per the PRD's "logged to the console" option); a Gmail SMTP adapter can be added later behind the same interface. Only the three PRD events trigger them, and they never reveal an anonymous asker.
 - The bot posts its intro ("I post asks from Ask. I can't read your messages. Remove me anytime.") once when added to a group, never on every post.
 - Nothing is sent, posted, paid or added to a calendar without an explicit tap.
-- Payments tonight: a mocked "Pay $X" screen only. **No Stripe API, no payment keys.** The PRD's Stripe Connect hold-and-release design (release when both confirm, 48 h auto-release, refund on cancel) is pitched, not built. Paid asks never reach helpers who can't accept payment; $0 asks (favors) go to everyone.
+- Payments tonight: mocked, **no Stripe API, no payment keys**, but the PRD's hold-and-release flow is modeled: the asker taps "Pay $X and hold" after confirming a helper (`payToHold`), the helper taps Done, the asker confirms to release it, or it auto-releases 48 h after the helper's Done unless the asker reports a problem; cancel before Done refunds. The auto-release runs when a card or inbox is read (no cron yet, TODO(cron)). Real Stripe Connect is pitched, not built. Paid asks never reach helpers who can't accept payment; $0 asks (favors) go to everyone.
 - One ask, one card: a board card and its GroupMe post are the same object; the first "I can help" holds it and everyone else sees "Already taken".
 - Public board: posts are anonymous by default and go through `privacyScrub`; crisis, sensitive (visa, money, health) and academic asks can never be posted. Paid board asks show only to helpers who can accept payment.
 - Calendar: free/busy only, never event titles or details. Tonight it's seeded in mock helpers; no Google API or OAuth.

@@ -184,6 +184,11 @@ export type BoardCard = {
   shares: { groupId: string; postedAt: number }[];
   heldBy?: { userId: string; firstName: string; email: string; year?: string; heldAt: number };
   meetingSpot?: string;
+  // The helper tapped "Done". The asker confirms, or it auto-confirms at autoConfirmAt.
+  helperDoneAt?: number;
+  autoConfirmAt?: number;
+  // The asker reported a problem; auto-confirm is paused.
+  problemReportedAt?: number;
   payment?: Payment;
   thanks?: string;
 };

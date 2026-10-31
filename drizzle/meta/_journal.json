@@ -22,6 +22,13 @@
       "when": 1793412554109,
       "tag": "0002_ask_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793414394909,
+      "tag": "0003_hold_and_release",
+      "breakpoints": true
     }
   ]
 }
