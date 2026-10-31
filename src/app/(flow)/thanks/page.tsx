@@ -50,7 +50,7 @@ export default function ThanksPage() {
       <>
         <StepHeader
           step={7}
-          title="Thank-you sent 💛"
+          title="Thank-you sent"
           subtitle="Asking for help takes courage. Nice work."
         />
         <div className="mt-auto flex flex-col gap-2">

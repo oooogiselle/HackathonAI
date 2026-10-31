@@ -21,7 +21,7 @@ export default async function ClaimPage({ params }: PageProps<"/h/[token]">) {
             <blockquote className="rounded-xl bg-muted px-4 py-3">{post.text}</blockquote>
           </div>
           {post.claim ? (
-            <p className="rounded-xl border p-4">✅ Someone already offered to help. Thank you!</p>
+            <p className="rounded-xl border p-4">Someone already offered to help. Thank you!</p>
           ) : (
             <ClaimForm token={token} />
           )}

@@ -5,7 +5,7 @@ export function formatPostMessage(text: string, name: string | null, claimUrl: s
   return `${text}\n${signature}\n\nCan help? Tap: ${claimUrl}`;
 }
 
-export const COVERED_MESSAGE = "✅ Covered, thanks to whoever helped!";
+export const COVERED_MESSAGE = "Covered, thanks to whoever helped!";
 
 // Rebuilds an ask's sentence from its fields: the no-AI fallback, and what the
 // Your ask screen uses after the student edits What / When / Where. The price
