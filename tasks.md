@@ -81,6 +81,7 @@ The PRD's demo path is board-first: Home → Clarify → Your ask with a price �
       Done when: "Share to GroupMe" (explicit tap) calls `postToGroup` with the card's text and a link that opens that same card (reuse `/h/[token]` as the card page); claiming from the link and from `/board` hit the same hold, so a card can't be taken twice; the demo card is $15, so the link goes through the mocked sign-up and helper setup before claiming (free cards need only sign-up); after the asker confirms, the bot posts "Covered" without naming an anonymous asker; existing guards (safety re-check, rate limit) still apply; lint + typecheck pass.
 
 - [ ] `matchHelpers` on seeded data replaces `suggestWhere`
+      Lib done: `src/lib/ai/ask/match-helpers.ts` (+ tests): free/busy, weekly limit, payment and load rules, AI picks + no-key fallback, `[]` when nobody fits. Still needed: a server action wrapping it (after the Postgres store merges, so `activeMatches` comes from claims) and swapping it in for `suggestWhere`.
       Done when: `src/lib/ai/ask/match-helpers.ts` returns 2–3 helpers with a one-line why; excludes helpers busy at the ask's time (seeded free/busy; asks with no time skip this), at their weekly limit, or with `canAcceptPayment: false` when price > 0; prefers helpers with fewer active matches; returns an empty list (no throw) when nobody fits; has a no-key fallback; lint + typecheck pass.
 
 - [ ] Matched, mocked "Pay $15", Thank you
