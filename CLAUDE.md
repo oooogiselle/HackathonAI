@@ -24,6 +24,7 @@ pnpm dev                     # http://localhost:3000
 - No `GROUPME_BOT_ID` / `SLACK_WEBHOOK_URL` → posts are logged to the server console as `[mock:<platform>]`.
 - `ANTHROPIC_MODEL` picks the model for the Ask steps (default `claude-sonnet-5-5`).
 - Gate before committing: `pnpm lint`, `pnpm typecheck` and `pnpm test` (Vitest).
+- **After every prompt that changes code, run `pnpm test:e2e` before reporting done.** It's a Playwright test of the demo path (`e2e/demo-path.spec.ts`): Home form → Where → Share (anonymous) → post → claim from `/h/<token>` in a second tab → "already offered" on reload → Matched → Thank you, plus the essay and crisis redirects. It starts its own dev server on :3100 (build folder `.next-e2e`) with bot and AI keys blanked, so it runs next to `pnpm dev`, never posts to the real GroupMe, and uses the canned AI fallbacks. When you change a flow screen or add one (sign-in, board, Pay), update the spec in the same change. If it fails, fix it or report the failure output; don't say it works until it passes. First time on a machine: `pnpm exec playwright install chromium`.
 - Demo tip: after posting, the Matched page links to the helper's claim page (`/h/<token>`). Open it in another tab to claim.
 - In-memory data resets when the dev server restarts.
 
@@ -83,6 +84,7 @@ The rest of the repo (`/app`, `/login`, items, chat, Supabase, Drizzle) is the o
 - No ratings, streaks or leaderboards.
 - Fictional names and campus only (Northfield University).
 - To add a chat platform: add an adapter in `src/lib/groups/`, register it in `index.ts`, add the platform to `Platform` in `src/lib/ask/types.ts`.
+- Do not use emojis
 
 ## Not now (leave TODOs)
 
