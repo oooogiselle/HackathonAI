@@ -20,8 +20,6 @@ Three people, one owner per area so nobody blocks anyone.
 | Frontend | Yvonne  | Demo path first: Home → Your ask → public board → GroupMe claim page (with a mocked helper setup step), wired to the API; then the inbox and a "Pay $15" mock screen; mobile layout                                                                                                                        |
 | Story    | Sophia  | User testing tonight (5–10 people), pitch + demo script, recording and submitting the video; also seed helper profiles, safety test examples, and the test GroupMe/Slack setup for the bot                                                                                                                 |
 
-_Decided Oct 30: the frontend calls the backend through server actions, not API routes (the Claude Doc's Backend row still says API routes)._
-
 **Contract first:** in the first 30 minutes, agree on the shared types and mock data together; then backend and frontend build in parallel against mocks.
 
 - Hack started Fri ~5:30 p.m.; no commits before kickoff
