@@ -57,6 +57,8 @@ beforeEach(() => {
 
 describe("board actions", () => {
   it("lets anyone view, but only signed-in users post or claim", async () => {
+    expect(await board.listMyCards()).toEqual({ asking: [], helping: [] });
+    expect(await inbox.listInbox()).toEqual([]);
     expect((await board.listBoard()).length).toBeGreaterThan(0);
     expect(await board.postToBoard({ title: "Help", text: "help", minutes: 10, price: 0 })).toEqual(
       { error: "Sign in to post or help." },
@@ -135,12 +137,11 @@ describe("board actions", () => {
     const covered = vi.mocked(postToGroup).mock.calls.filter(([, msg]) => msg === COVERED_MESSAGE);
     expect(covered).toHaveLength(1);
 
-    expect("error" in (await board.markDone(token))).toBe(true); // pay first
-    const paid = await board.payToHold({ token, method: "venmo" });
+    expect("error" in (await board.markPaid(token))).toBe(true); // done first
+    expect("ok" in (await board.markDone(token))).toBe(true);
+    const paid = await board.markPaid(token, "venmo");
     expect("ok" in paid && paid.card.payment?.totalCents).toBe(1681);
-    expect("error" in (await board.payToHold({ token, method: "venmo" }))).toBe(true);
-    const done = await board.markDone(token);
-    expect("ok" in done && done.card.payment?.status).toBe("released");
+    expect("error" in (await board.markPaid(token))).toBe(true);
     const thanked = await board.saveCardThanks(token, "Thank you so much!");
     expect("ok" in thanked && thanked.card.thanks).toBe("Thank you so much!");
 
@@ -150,10 +151,10 @@ describe("board actions", () => {
     expect(card?.heldByFirstName).toBe("H2");
     expect(JSON.stringify(card)).not.toContain("northfield.edu");
 
-    // The helper's inbox shows the released payment.
+    // The helper's inbox shows the payment.
     currentUser = helpers[1];
     const updates = await inbox.listInbox({ topic: "payments" });
-    expect("ok" in updates && updates.items[0].title).toBe("$15 released to you");
+    expect(updates[0]?.title).toBe("$15 paid to you");
   });
 
   it("gives the rate-limit slot back when the bot post fails", async () => {
@@ -201,8 +202,7 @@ describe("board actions", () => {
 
     currentUser = asker;
     const after = await inbox.listInbox();
-    if (!("ok" in before) || !("ok" in after)) throw new Error("inbox failed");
-    expect(after.items).toHaveLength(before.items.length);
+    expect(after).toHaveLength(before.length);
   });
 
   it("hides paid cards from a helper who said they can't accept payment", async () => {

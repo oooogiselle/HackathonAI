@@ -209,7 +209,7 @@ export async function listOpenCards(viewerId: string | null, now = Date.now()) {
   return hydrate(db, rows, now);
 }
 
-/** "My asks" and "I'm helping" on the Claimed tab. */
+/** "My asks" (asking) and "I'm helping" on the Claimed tab. */
 export async function listMine(userId: string, now = Date.now()) {
   const db = await getAskDb();
   const [mine, helping] = await Promise.all([
@@ -222,7 +222,7 @@ export async function listMine(userId: string, now = Date.now()) {
       .orderBy(desc(claims.heldAt)),
   ]);
   return {
-    asks: await hydrate(db, mine, now),
+    asking: await hydrate(db, mine, now),
     helping: await hydrate(
       db,
       helping.map((r) => r.ask),
@@ -440,11 +440,47 @@ export function paymentBreakdown(price: number, method: PaymentMethod) {
   };
 }
 
+/** confirmed → done, by the asker. Paid asks are paid next (markCardPaid). */
+export async function markCardDone(
+  token: string,
+  userId: string,
+  now = Date.now(),
+): Promise<Transition> {
+  const db = await getAskDb();
+  const won = await db.transaction(async (tx) => {
+    const [row] = await tx
+      .update(asks)
+      .set({ status: "done" })
+      .where(and(eq(asks.token, token), eq(asks.askerId, userId), eq(asks.status, "confirmed")))
+      .returning();
+    if (!row) return null;
+    const [claim] = await tx.select().from(claims).where(eq(claims.askToken, token));
+    if (claim) {
+      await notify(tx, claim.helperId, {
+        askToken: token,
+        kind: "update",
+        topic: "tasks",
+        title: "Marked done",
+        body:
+          row.price > 0
+            ? `“${row.title}” is done. Payment is on its way.`
+            : `“${row.title}” is done. Thank you for helping.`,
+      });
+    }
+    return row;
+  });
+  if (won) return { card: (await readCard(db, token, now))! };
+  return explain(db, token, now, (card) =>
+    card.askerId !== userId ? NOT_YOURS.error : "This ask isn't in progress.",
+  );
+}
+
 /**
- * Mocked "Pay $X": holds the payment once the asker has confirmed a helper.
- * No money moves (TODO(stripe)). The payments primary key makes it once only.
+ * Mocked "Pay $X", after the help is done (decided Oct 30: pay after done, not
+ * a hold). No money moves (TODO(stripe): hold at confirm, release when both
+ * confirm). The payments primary key makes it once only.
  */
-export async function holdPayment(
+export async function markCardPaid(
   token: string,
   userId: string,
   method: PaymentMethod,
@@ -457,9 +493,9 @@ export async function holdPayment(
     if (!row) return NOT_FOUND;
     if (row.askerId !== userId) return NOT_YOURS;
     if (row.price === 0) return { error: "This ask is a favor, so there's nothing to pay." };
-    if (row.status !== "confirmed") return { error: "Confirm your helper before paying." };
+    if (row.status !== "done") return { error: "Mark the help as done before paying." };
     const [claim] = await tx.select().from(claims).where(eq(claims.askToken, token));
-    if (!claim) return { error: "Confirm your helper before paying." };
+    if (!claim) return { error: "Mark the help as done before paying." };
 
     const fees = paymentBreakdown(row.price, method);
     const [paid] = await tx
@@ -469,7 +505,9 @@ export async function holdPayment(
         payerId: userId,
         payeeId: claim.helperId,
         method,
+        status: "released",
         heldAt: new Date(now),
+        releasedAt: new Date(now),
         ...fees,
       })
       .onConflictDoNothing()
@@ -479,70 +517,15 @@ export async function holdPayment(
       askToken: token,
       kind: "update",
       topic: "payments",
-      title: `${dollars(fees.amountCents)} held for you`,
-      body: `Released when “${row.title}” is marked done.`,
+      title: `${dollars(fees.amountCents)} paid to you`,
+      body: `For “${row.title}”. Thank you for helping.`,
     });
     return null;
   });
   return result ?? { card: (await readCard(db, token, now))! };
 }
 
-/** confirmed → done, by the asker. Releases a held payment. Paid asks must be paid first. */
-export async function markCardDone(
-  token: string,
-  userId: string,
-  now = Date.now(),
-): Promise<Transition> {
-  const db = await getAskDb();
-  const won = await db.transaction(async (tx) => {
-    const [row] = await tx
-      .update(asks)
-      .set({ status: "done" })
-      .where(
-        and(
-          eq(asks.token, token),
-          eq(asks.askerId, userId),
-          eq(asks.status, "confirmed"),
-          or(
-            eq(asks.price, 0),
-            exists(
-              tx
-                .select({ one: sql`1` })
-                .from(payments)
-                .where(and(eq(payments.askToken, token), eq(payments.status, "held"))),
-            ),
-          ),
-        ),
-      )
-      .returning();
-    if (!row) return null;
-    const [released] = await tx
-      .update(payments)
-      .set({ status: "released", releasedAt: new Date(now) })
-      .where(and(eq(payments.askToken, token), eq(payments.status, "held")))
-      .returning();
-    const [claim] = await tx.select().from(claims).where(eq(claims.askToken, token));
-    if (claim) {
-      await notify(tx, claim.helperId, {
-        askToken: token,
-        kind: "update",
-        topic: released ? "payments" : "tasks",
-        title: released ? `${dollars(released.amountCents)} released to you` : "Marked done",
-        body: `“${row.title}” is done. Thank you for helping.`,
-      });
-    }
-    return row;
-  });
-  if (won) return { card: (await readCard(db, token, now))! };
-  return explain(db, token, now, (card) => {
-    if (card.askerId !== userId) return NOT_YOURS.error;
-    if (card.status === "confirmed" && card.price > 0)
-      return "Pay to hold the task before marking it done.";
-    return "This ask isn't in progress.";
-  });
-}
-
-/** Cancel before it's done. Refunds a held payment; tells the helper. */
+/** Cancel while waiting (open or held). The card leaves the board; a holder is told. */
 export async function cancelCard(
   token: string,
   userId: string,
@@ -557,15 +540,11 @@ export async function cancelCard(
         and(
           eq(asks.token, token),
           eq(asks.askerId, userId),
-          inArray(asks.status, ["open", "held", "confirmed"]),
+          inArray(asks.status, ["open", "held"]),
         ),
       )
       .returning();
     if (!row) return null;
-    await tx
-      .update(payments)
-      .set({ status: "refunded", refundedAt: new Date(now) })
-      .where(and(eq(payments.askToken, token), eq(payments.status, "held")));
     const [claim] = await tx.select().from(claims).where(eq(claims.askToken, token));
     if (claim) {
       await notify(tx, claim.helperId, {
@@ -584,18 +563,18 @@ export async function cancelCard(
   );
 }
 
-/** "Extend 24 h" while waiting for a helper. Never past 7 days from now. */
+/** Moves an open ask's deadline ("Extend 24 h" passes expiresAt + 24 h). Max 7 days from now. */
 export async function extendCard(
   token: string,
   userId: string,
+  expiresAt: number,
   now = Date.now(),
 ): Promise<Transition> {
+  if (expiresAt <= now) return { error: "Pick a time in the future." };
   const db = await getAskDb();
   const [row] = await db
     .update(asks)
-    .set({
-      expiresAt: sql`least(${asks.expiresAt} + interval '24 hours', ${new Date(now + 7 * 24 * HOUR)})`,
-    })
+    .set({ expiresAt: new Date(Math.min(expiresAt, now + 7 * 24 * HOUR)) })
     .where(
       and(
         eq(asks.token, token),

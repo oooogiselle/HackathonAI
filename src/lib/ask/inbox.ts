@@ -9,46 +9,32 @@ import { getAskDb } from "./db";
 import type { InboxItem, InboxKind, InboxTopic, Message } from "./types";
 import { isBlockedBetween } from "./users";
 
+/** Newest first. All / Actions (kind "action") / Updates (kind "update"). */
 export async function listInbox(
   userId: string,
   filter: { kind?: InboxKind; topic?: InboxTopic } = {},
   limit = 50,
-): Promise<{ items: InboxItem[]; unreadActions: number }> {
+): Promise<InboxItem[]> {
   const db = await getAskDb();
   const conditions = [eq(notifications.userId, userId)];
   if (filter.kind) conditions.push(eq(notifications.kind, filter.kind));
   if (filter.topic) conditions.push(eq(notifications.topic, filter.topic));
-  const [rows, unread] = await Promise.all([
-    db
-      .select()
-      .from(notifications)
-      .where(and(...conditions))
-      .orderBy(desc(notifications.createdAt))
-      .limit(limit),
-    db
-      .select({ id: notifications.id })
-      .from(notifications)
-      .where(
-        and(
-          eq(notifications.userId, userId),
-          eq(notifications.kind, "action"),
-          isNull(notifications.readAt),
-        ),
-      ),
-  ]);
-  return {
-    items: rows.map((n) => ({
-      id: n.id,
-      askToken: n.askToken ?? undefined,
-      kind: n.kind as InboxKind,
-      topic: n.topic as InboxTopic,
-      title: n.title,
-      body: n.body,
-      createdAt: n.createdAt.getTime(),
-      read: Boolean(n.readAt),
-    })),
-    unreadActions: unread.length,
-  };
+  const rows = await db
+    .select()
+    .from(notifications)
+    .where(and(...conditions))
+    .orderBy(desc(notifications.createdAt))
+    .limit(limit);
+  return rows.map((n) => ({
+    id: n.id,
+    token: n.askToken ?? undefined,
+    kind: n.kind as InboxKind,
+    topic: n.topic as InboxTopic,
+    title: n.title,
+    text: n.body,
+    createdAt: n.createdAt.getTime(),
+    read: Boolean(n.readAt),
+  }));
 }
 
 /** Marks some (or, with no ids, all) of a user's notifications read. */

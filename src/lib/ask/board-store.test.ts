@@ -9,10 +9,10 @@ import {
   extendCard,
   getBoardCard,
   holdCard,
-  holdPayment,
   listMine,
   listOpenCards,
   markCardDone,
+  markCardPaid,
   type NewCard,
   paymentBreakdown,
   sendPrivately,
@@ -94,7 +94,7 @@ describe("board store (Postgres)", () => {
     expect((await getBoardCard(token))?.status).toBe("open");
   });
 
-  it("runs confirm → pay → done once each, only for the asker, and releases the payment", async () => {
+  it("runs confirm → done → pay once each, only for the asker", async () => {
     const { token } = await card();
     await holdCard(token, helpers[0]);
 
@@ -102,19 +102,22 @@ describe("board store (Postgres)", () => {
     const confirms = await Promise.all([confirmCard(token, asker), confirmCard(token, asker)]);
     expect(confirms.filter((r) => "card" in r)).toHaveLength(1);
 
-    expect(await markCardDone(token, asker)).toEqual({
-      error: "Pay to hold the task before marking it done.",
+    // Pay comes after done.
+    expect(await markCardPaid(token, asker, "venmo")).toEqual({
+      error: "Mark the help as done before paying.",
     });
+    expect("error" in (await markCardDone(token, helpers[0]))).toBe(true);
+    expect("card" in (await markCardDone(token, asker))).toBe(true);
+    expect("error" in (await markCardDone(token, asker))).toBe(true);
+
     const pays = await Promise.all([
-      holdPayment(token, asker, "venmo"),
-      holdPayment(token, asker, "venmo"),
+      markCardPaid(token, asker, "venmo"),
+      markCardPaid(token, asker, "venmo"),
     ]);
     expect(pays.filter((r) => "card" in r)).toHaveLength(1);
     expect(pays.find((r) => "error" in r)).toEqual({ error: "Already paid." });
-
-    const done = await markCardDone(token, asker);
-    expect("card" in done && done.card.payment?.status).toBe("released");
-    expect("error" in (await markCardDone(token, asker))).toBe(true);
+    const paid = pays.find((r) => "card" in r);
+    expect(paid && "card" in paid && paid.card.payment?.status).toBe("released");
   });
 
   it("matches the design's fee breakdown ($15 by Venmo → $16.81)", () => {
@@ -130,27 +133,32 @@ describe("board store (Postgres)", () => {
     const { token } = await card({ payType: "free", price: 0 });
     await holdCard(token, helpers[1]);
     await confirmCard(token, asker);
-    expect("error" in (await holdPayment(token, asker, "card"))).toBe(true);
     expect("card" in (await markCardDone(token, asker))).toBe(true);
+    expect("error" in (await markCardPaid(token, asker, "card"))).toBe(true);
   });
 
-  it("refunds a held payment on cancel", async () => {
+  it("cancels open or held asks only, and only by the asker", async () => {
     const { token } = await card();
     await holdCard(token, helpers[2]);
-    await confirmCard(token, asker);
-    await holdPayment(token, asker, "card");
+    expect("error" in (await cancelCard(token, helpers[2]))).toBe(true);
     const cancelled = await cancelCard(token, asker);
-    expect("card" in cancelled && cancelled.card.payment?.status).toBe("refunded");
+    expect("card" in cancelled && cancelled.card.status).toBe("cancelled");
     expect("error" in (await cancelCard(token, asker))).toBe(true);
+    expect((await listOpenCards(null)).some((c) => c.token === token)).toBe(false);
+
+    const confirmed = await card();
+    await holdCard(confirmed.token, helpers[2]);
+    await confirmCard(confirmed.token, asker);
+    expect("error" in (await cancelCard(confirmed.token, asker))).toBe(true);
   });
 
   it("extends open asks by 24 h, capped at 7 days", async () => {
     const now = Date.now();
     const { token, expiresAt } = await card({ expiresAt: now + HOUR });
-    const extended = await extendCard(token, asker, now);
+    const extended = await extendCard(token, asker, expiresAt + 24 * HOUR, now);
     expect("card" in extended && extended.card.expiresAt).toBe(expiresAt + 24 * HOUR);
     const far = await card({ expiresAt: now + 7 * 24 * HOUR - HOUR });
-    const capped = await extendCard(far.token, asker, now);
+    const capped = await extendCard(far.token, asker, far.expiresAt + 24 * HOUR, now);
     expect("card" in capped && capped.card.expiresAt).toBe(now + 7 * 24 * HOUR);
   });
 
@@ -216,7 +224,7 @@ describe("board store (Postgres)", () => {
     await holdCard(token, helpers[7]);
 
     const inbox = await listInbox(asker, { kind: "action" });
-    expect(inbox.items.some((n) => n.askToken === token && n.title === "H7 can help")).toBe(true);
+    expect(inbox.some((n) => n.token === token && n.title === "H7 can help")).toBe(true);
 
     expect(await sendMessage(token, helpers[7], "Which terminal?")).toBeNull();
     expect(await sendMessage(token, helpers[8], "Me too?")).toEqual({
@@ -233,7 +241,7 @@ describe("board store (Postgres)", () => {
   it("splits My asks and I'm helping", async () => {
     const { token } = await card();
     await holdCard(token, helpers[9]);
-    expect((await listMine(asker)).asks.some((c) => c.token === token)).toBe(true);
+    expect((await listMine(asker)).asking.some((c) => c.token === token)).toBe(true);
     expect((await listMine(helpers[9])).helping.some((c) => c.token === token)).toBe(true);
   });
 
@@ -241,7 +249,8 @@ describe("board store (Postgres)", () => {
     const { token } = await card();
     await holdCard(token, helpers[0]);
     await confirmCard(token, asker);
-    await holdPayment(token, asker, "venmo");
+    await markCardDone(token, asker);
+    await markCardPaid(token, asker, "venmo");
     const full = (await getBoardCard(token))!;
     const pub = toPublicCard(full, null);
     const json = JSON.stringify(pub);

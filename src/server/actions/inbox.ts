@@ -20,14 +20,15 @@ const filterSchema = z.object({
   topic: z.enum(["tasks", "groups", "payments"]).optional(),
 });
 
-/** All / Actions / Updates, optionally narrowed to Tasks, Groups or Payments. */
-export async function listInbox(
-  filter: z.input<typeof filterSchema> = {},
-): Promise<Result<{ items: InboxItem[]; unreadActions: number }>> {
+/**
+ * Newest first. No filter = All; `{ kind: "action" }` = Actions, `{ kind: "update" }`
+ * = Updates; `topic` narrows to Tasks, Groups or Payments. Empty when signed out.
+ */
+export async function listInbox(filter: z.input<typeof filterSchema> = {}): Promise<InboxItem[]> {
   const user = await getCurrentUser();
-  if (!user) return { error: SIGN_IN_ERROR };
+  if (!user) return [];
   const parsed = filterSchema.safeParse(filter);
-  return { ok: true, ...(await listInboxInStore(user.id, parsed.success ? parsed.data : {})) };
+  return listInboxInStore(user.id, parsed.success ? parsed.data : {});
 }
 
 /** "Mark all read" (no ids) or mark the given items read. */

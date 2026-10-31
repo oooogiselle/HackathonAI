@@ -68,7 +68,7 @@ The PRD's demo path is board-first: Home → Clarify → Your ask with a price �
 
 - [ ] Ask deadline and expiry
       Done when: every ask has `expiresAt` (from the drafted time, default 24 h); expired cards are hidden from `/board`, the claim page shows "This ask has expired", and the claim's atomic update includes `expires_at > now()`; lint + typecheck pass.
-      Backend done: `expiresAt` on every ask (3 h / today / 24 h / 3 d or exact), expired asks leave the board, claims check `expires_at > now`, `extendAsk` (+24 h). The claim page's "This ask has expired" UI is still to do.
+      Backend done: `expiresAt` on every ask (3 h / today / 24 h / 3 d or exact), expired asks leave the board, claims check `expires_at > now`, `extendCard` (Extend 24 h). The claim page's "This ask has expired" UI is still to do.
 
 - [ ] Mocked school-email sign-up + helper setup on the claim page
       Backend done: `mockSignIn` / `getMe` / `mockSignOut` in `src/server/actions/session.ts`; `claimCard` takes the name and email from the session and checks the mocked setup for paid cards. Only the claim-page UI is left.
@@ -88,7 +88,7 @@ The PRD's demo path is board-first: Home → Clarify → Your ask with a price �
 
 - [ ] Matched, mocked "Pay $15", Thank you
       Done when: after the asker confirms a helper, Matched shows the helper's first name and a public meeting spot; for paid asks a "Pay $X" mock screen (explicit tap, no payment API, clearly labeled demo) marks the card paid; $0 asks skip it; Thank you still has the user write their own note; lint + typecheck pass.
-      Backend done: `payToHold` (mocked fees, held → released on done, refunded on cancel), `markDone`, `saveCardThanks`. UI still to do.
+      Backend done: `markDone`, then `markPaid` (mocked, after done, with the fee breakdown), `saveCardThanks`. UI still to do.
 
 - [ ] Private inbox mock (told in the story, not demoed)
       Done when: from Your ask, "Ask privately" lists `matchHelpers` results; tapping "Ask {firstName}" (explicit tap) adds a request to that helper's mock inbox at `/inbox?helper=<id>` (no auth; TODO(auth)); the inbox shows text, minutes and price with "I can help" / "Not this time" (no reason field); no group post happens; lint + typecheck pass.

@@ -207,11 +207,13 @@ export type InboxTopic = "tasks" | "groups" | "payments";
 
 export type InboxItem = {
   id: string;
-  askToken?: string;
+  // The ask it's about, if any.
+  token?: string;
   kind: InboxKind;
   topic: InboxTopic;
+  // Short headline ("Maya can help") and the line under it. Never names an anonymous asker.
   title: string;
-  body: string;
+  text: string;
   createdAt: number;
   read: boolean;
 };

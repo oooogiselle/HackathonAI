@@ -24,6 +24,7 @@ pnpm dev                     # http://localhost:3000
 - No `GROUPME_BOT_ID` / `SLACK_WEBHOOK_URL` → posts are logged to the server console as `[mock:<platform>]`.
 - `ANTHROPIC_MODEL` picks the model for the Ask steps (default `claude-sonnet-5-5`).
 - Gate before committing: `pnpm lint`, `pnpm typecheck` and `pnpm test` (Vitest).
+- **After every prompt that changes code, run `pnpm test:e2e` before reporting done.** It's a Playwright test of the demo path (`e2e/demo-path.spec.ts`): the board at `/` → Ask for help → form at `/ask` → Where → Share (anonymous) → post → claim from `/h/<token>` in a second tab → "already offered" on reload → Matched → Thank you, plus the essay and crisis redirects. It starts its own dev server on :3100 (build folder `.next-e2e`) with bot and AI keys blanked and `ASK_DB` unset (local PGlite, never Supabase), so it runs next to `pnpm dev`, never posts to the real GroupMe, and uses the canned AI fallbacks. When you change a flow screen or add one (sign-in, board, Pay), update the spec in the same change. If it fails, fix it or report the failure output; don't say it works until it passes. First time on a machine: `pnpm exec playwright install chromium`.
 - Demo tip: after posting, the Matched page links to the helper's claim page (`/h/<token>`). Open it in another tab to claim.
 - Local data (PGlite) resets when the dev server restarts. The old group-first flow (`postAsk` / `claimAsk`) still keeps its posts in memory.
 
@@ -31,15 +32,15 @@ pnpm dev                     # http://localhost:3000
 
 **Target demo path (PRD):** Home (a form: title, details, when, deadline, where, time, who to ask, price; $0 = favor; AI suggestions only on a tap), or the optional AI path ("Let AI help": messy need → Clarify (≤2 chip questions) → Your ask, where AI breaks it into 1–4 small editable asks) → public board (anonymous, privacy-checked) → bot shares the same card to GroupMe → helper claims in the browser → board shows "Already taken", bot posts "Covered" → Matched (public meeting spot) → mocked "Pay $15" → Thank you. Private route (matched helpers → mock inbox) ships as a simple mock and is told, not demoed. Matching uses seeded free/busy and payment eligibility.
 
-**Landing (target):** the public board (open cards from `listBoard`), with a button at the bottom that starts the publish flow below.
+**Landing:** `/` is the needs board (open cards from `listBoard`, category chips), with a sticky "Ask for help" button that opens the form at `/ask`. Cards have no Claim button yet.
 
-**Built today:** `/` Home = the form ("Get suggestions" is opt-in AI) → `/where` (helpers + partner groups) → `/share` (preview + "Post to group") → `/matched/[token]` → `/thanks`. Optional AI path: Home "Let AI help" → `/describe` (messy need) → `/clarify` → `/draft` (AI breaks the need into small asks) → `/where`.
+**Built today:** `/ask` = the form ("Get suggestions" is opt-in AI) → `/where` (helpers + partner groups) → `/share` (preview + "Post to group") → `/matched/[token]` → `/thanks`. Optional AI path: Home "Let AI help" → `/describe` (messy need) → `/clarify` → `/draft` (AI breaks the need into small asks) → `/where`.
 Side routes: `/resources?type=crisis|tutoring` (safety redirects), `/h/[token]` (public claim page for helpers).
 
 ## Folder map (Ask code)
 
 ```
-src/app/(flow)/            flow pages (Home form, describe/clarify/draft AI path, where, share, matched, thanks) + resources; layout wraps <AskFlowProvider>
+src/app/(flow)/            flow pages (`/` = needs board, `/ask` = the form, describe/clarify/draft AI path, where, share, matched, thanks) + resources; layout wraps <AskFlowProvider>
 src/app/h/[token]/         public claim page ("I can help": first name + school email)
 src/components/ask/        flow-provider (client state, sessionStorage) + small UI pieces
 src/lib/ai/ask/            one small AI function per step: safety-check, clarify, draft-ask,
@@ -49,7 +50,8 @@ src/lib/ask/               types, mock-data (fictional campus/people/groups), st
 src/lib/groups/            postToGroup(group, text) + one adapter per platform (groupme, slack, mock)
 src/server/actions/ask.ts  server actions for the ask flow; re-checks safety + rate limit before any post
 src/server/actions/board.ts board card lifecycle: listBoard, getCard, postToBoard, claimCard, confirmHelper,
-                           markDone, markPaid, saveCardThanks, shareCardToGroup (sign-in + ownership checked)
+                           markDone, markPaid, saveCardThanks, shareCardToGroup, extendCard, cancelCard,
+                           listMyCards, createPrivateAsk (sign-in + ownership checked)
 src/server/actions/session.ts mocked sign-in (cookie → sessions table), profile, blocking
 src/server/actions/private.ts private asks: sendPrivately, listMyRequests, respondToRequest
 src/server/actions/inbox.ts  inbox notifications and per-ask messages
@@ -86,6 +88,7 @@ The rest of the repo (`/app`, `/login`, items, chat, Supabase, Drizzle) is the o
 - No ratings, streaks or leaderboards. (The design's "Rate your helper" screen and trust points are out; the thank-you note stays.)
 - Fictional names and campus only (Northfield University).
 - To add a chat platform: add an adapter in `src/lib/groups/`, register it in `index.ts`, add the platform to `Platform` in `src/lib/ask/types.ts`.
+- Do not use emojis
 
 ## Not now (leave TODOs)
 

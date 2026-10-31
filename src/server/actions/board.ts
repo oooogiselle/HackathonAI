@@ -10,17 +10,17 @@ import { z } from "zod";
 import { safetyCheck } from "@/lib/ai/ask/safety-check";
 import {
   addSharedGroup,
-  cancelCard,
+  cancelCard as cancelCardInStore,
   confirmCard,
   createCard,
-  extendCard,
+  extendCard as extendCardInStore,
   getBoardCard,
   holdCard,
-  holdPayment,
   isRecipient,
   listMine,
   listOpenCards,
   markCardDone,
+  markCardPaid,
   MAX_POSTS_PER_GROUP_PER_DAY,
   refundRateLimit,
   removeSharedGroup,
@@ -81,16 +81,13 @@ export async function getCard(cardToken: string): Promise<PublicCard | null> {
   return toPublicCard(card, viewer, invited);
 }
 
-/** The Claimed tab: "My asks" and "I'm helping". */
-export async function listMyCards(): Promise<
-  Result<{ asks: PublicCard[]; helping: PublicCard[] }>
-> {
+/** The Claimed tab: "My asks" (asking) and "I'm helping". Empty when signed out. */
+export async function listMyCards(): Promise<{ asking: PublicCard[]; helping: PublicCard[] }> {
   const user = await requireUser();
-  if (!user) return { error: SIGN_IN_ERROR };
+  if (!user) return { asking: [], helping: [] };
   const mine = await listMine(user.id);
   return {
-    ok: true,
-    asks: mine.asks.map((c) => toPublicCard(c, user.id)),
+    asking: mine.asking.map((c) => toPublicCard(c, user.id)),
     helping: mine.helping.map((c) => toPublicCard(c, user.id)),
   };
 }
@@ -241,21 +238,7 @@ export async function confirmHelper(cardToken: string): Promise<Result<{ card: P
   return toResult(t, user.id);
 }
 
-const payMethod = z.enum(["venmo", "card"]);
-
-/** The mocked "Pay $X and hold task" button. No payment API (TODO(stripe)). */
-export async function payToHold(input: {
-  token: string;
-  method: z.infer<typeof payMethod>;
-}): Promise<Result<{ card: PublicCard }>> {
-  const user = await requireUser();
-  if (!user) return { error: SIGN_IN_ERROR };
-  const parsed = z.object({ token, method: payMethod }).safeParse(input);
-  if (!parsed.success) return NOT_FOUND;
-  return toResult(await holdPayment(parsed.data.token, user.id, parsed.data.method), user.id);
-}
-
-/** Asker confirms the help is done. Releases a held payment to the helper. */
+/** Asker confirms the help is done. Paid asks go to the Pay screen next. */
 export async function markDone(cardToken: string): Promise<Result<{ card: PublicCard }>> {
   const user = await requireUser();
   if (!user) return { error: SIGN_IN_ERROR };
@@ -264,22 +247,46 @@ export async function markDone(cardToken: string): Promise<Result<{ card: Public
   return toResult(await markCardDone(tok, user.id), user.id);
 }
 
-/** "Cancel ask". Refunds a held payment. */
-export async function cancelAsk(cardToken: string): Promise<Result<{ card: PublicCard }>> {
+const payMethod = z.enum(["venmo", "card"]);
+
+/**
+ * The mocked "Pay $X" button, after done. Free favors skip it. No payment API
+ * (TODO(stripe)). `card.payment` has the fee breakdown for the receipt.
+ */
+export async function markPaid(
+  cardToken: string,
+  method: z.infer<typeof payMethod> = "venmo",
+): Promise<Result<{ card: PublicCard }>> {
   const user = await requireUser();
   if (!user) return { error: SIGN_IN_ERROR };
   const tok = parseToken(cardToken);
-  if (!tok) return NOT_FOUND;
-  return toResult(await cancelCard(tok, user.id), user.id);
+  const parsedMethod = payMethod.safeParse(method);
+  if (!tok || !parsedMethod.success) return NOT_FOUND;
+  return toResult(await markCardPaid(tok, user.id, parsedMethod.data), user.id);
 }
 
-/** "Extend 24 h" while waiting for a helper. */
-export async function extendAsk(cardToken: string): Promise<Result<{ card: PublicCard }>> {
+/** "Cancel ask" while waiting (open or held). */
+export async function cancelCard(cardToken: string): Promise<Result<{ card: PublicCard }>> {
   const user = await requireUser();
   if (!user) return { error: SIGN_IN_ERROR };
   const tok = parseToken(cardToken);
   if (!tok) return NOT_FOUND;
-  return toResult(await extendCard(tok, user.id), user.id);
+  return toResult(await cancelCardInStore(tok, user.id), user.id);
+}
+
+/** "Extend 24 h" on Waiting: pass card.expiresAt + 24 h. Open asks only; max 7 days from now. */
+export async function extendCard(input: {
+  token: string;
+  expiresAt: number;
+}): Promise<Result<{ card: PublicCard }>> {
+  const user = await requireUser();
+  if (!user) return { error: SIGN_IN_ERROR };
+  const parsed = z.object({ token, expiresAt: z.number().int() }).safeParse(input);
+  if (!parsed.success) return NOT_FOUND;
+  return toResult(
+    await extendCardInStore(parsed.data.token, user.id, parsed.data.expiresAt),
+    user.id,
+  );
 }
 
 export async function saveCardThanks(
