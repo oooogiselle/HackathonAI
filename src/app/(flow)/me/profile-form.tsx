@@ -3,7 +3,7 @@
 import { Minus, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useEffectEvent, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { useCalendarConnection } from "@/components/ask/calendar-slots";
@@ -35,6 +35,8 @@ import { SkillsFromWords } from "./skills-from-words";
 
 const CLASS_YEARS = ["First-year", "Sophomore", "Junior", "Senior", "Grad student", "Alum"];
 const BLURB_MAX = 160;
+// Changes save on their own this long after the last edit.
+const AUTOSAVE_MS = 600;
 
 function SwitchRow({
   title,
@@ -89,6 +91,16 @@ function Card({
       </div>
       {children}
     </section>
+  );
+}
+
+// View mode: a label and its saved value.
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-[13px] font-semibold text-muted-foreground">{label}</span>
+      <span className="font-medium">{children}</span>
+    </div>
   );
 }
 
@@ -269,9 +281,20 @@ export function ProfileForm({
   const [saving, startSave] = useTransition();
   const [signingOut, startSignOut] = useTransition();
   const [unblocking, startUnblock] = useTransition();
+  // Off until "Edit"; then every change autosaves, and "Done" goes back.
+  const [editing, setEditing] = useState(false);
+  // Bumped on every change; the autosave runs once it stops changing.
+  const [version, setVersion] = useState(0);
+  const [savedVersion, setSavedVersion] = useState(0);
+  const [saved, setSaved] = useState(false);
+  const touch = () => {
+    setVersion((v) => v + 1);
+    setSaved(false);
+  };
   const set = (patch: Partial<typeof form>) => {
     setForm((f) => ({ ...f, ...patch }));
     setError(undefined);
+    touch();
   };
 
   function toggleInterest(interest: Interest) {
@@ -303,26 +326,46 @@ export function ProfileForm({
       return next;
     });
     setGridTouched(true);
+    touch();
   }
 
-  function save() {
-    if (!form.firstName.trim()) {
-      setError({ field: "firstName", text: "Add your first name." });
-      return document.getElementById("me-name")?.focus();
-    }
+  function validate() {
+    if (!form.firstName.trim())
+      return { field: "firstName" as const, text: "Add your first name." };
     if (form.canAcceptPayment && !form.payoutHandle.trim()) {
-      setError({ field: "payoutHandle", text: "Add where your payouts go, or turn payment off." });
-      return document.getElementById("me-payout")?.focus();
+      return {
+        field: "payoutHandle" as const,
+        text: "Add where your payouts go, or turn payment off.",
+      };
     }
+  }
+
+  // A blurb that hasn't been through the privacy check yet.
+  const blurbUnchecked = () => {
+    const blurb = form.blurb.trim();
+    return Boolean(blurb) && blurb !== checked;
+  };
+
+  // checkBlurb: run the privacy check on a changed blurb now. Autosave leaves
+  // the blurb as last checked, so the check never rewrites it while you type;
+  // it runs when you leave the box or tap Done.
+  function save(checkBlurb: boolean) {
+    setSavedVersion(version);
+    const problem = validate();
+    if (problem) return setError(problem);
     startSave(async () => {
       let blurb = form.blurb.trim();
-      if (blurb && blurb !== checked) {
-        const result = await scrubForAnonymous(blurb);
-        setScrub({ original: blurb, text: result.text, removed: result.removed });
-        setScrubUndone(false);
-        blurb = result.text.trim();
-        setChecked(blurb);
-        set({ blurb });
+      if (blurbUnchecked()) {
+        if (checkBlurb) {
+          const result = await scrubForAnonymous(blurb);
+          setScrub({ original: blurb, text: result.text, removed: result.removed });
+          setScrubUndone(false);
+          blurb = result.text.trim();
+          setChecked(blurb);
+          setForm((f) => ({ ...f, blurb }));
+        } else {
+          blurb = checked;
+        }
       }
       const result = await updateMyProfile({
         ...form,
@@ -331,10 +374,32 @@ export function ProfileForm({
         ...(gridTouched ? { busy: busyFromFree(free) } : {}),
       });
       if ("error" in result) return void toast.error(result.error);
-      toast.success("Saved");
+      setSaved(true);
       setGridTouched(false);
       router.refresh();
     });
+  }
+
+  const autosave = useEffectEvent(() => {
+    if (savedVersion !== version) save(false);
+  });
+  useEffect(() => {
+    if (version === 0) return;
+    const timer = setTimeout(autosave, AUTOSAVE_MS);
+    return () => clearTimeout(timer);
+  }, [version]);
+
+  function done() {
+    // Stay in edit mode until it's valid; otherwise save what's pending now.
+    const problem = validate();
+    if (problem) {
+      setError(problem);
+      return document
+        .getElementById(problem.field === "firstName" ? "me-name" : "me-payout")
+        ?.focus();
+    }
+    if (savedVersion !== version || blurbUnchecked()) save(true);
+    setEditing(false);
   }
 
   // Undo puts the original wording back; the next Save keeps it as written.
@@ -354,8 +419,125 @@ export function ProfileForm({
         }
       : {};
 
+  const status = error
+    ? "Not saved yet"
+    : saving || savedVersion !== version
+      ? "Saving…"
+      : saved
+        ? "Saved"
+        : "";
+
+  const header = (
+    <div className="flex items-center justify-end gap-3">
+      <p aria-live="polite" className="text-sm text-muted-foreground">
+        {status}
+      </p>
+      {!editing && (
+        <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+          Edit
+        </Button>
+      )}
+    </div>
+  );
+
+  const scrubNotice = scrub && (
+    <ScrubNotice removed={scrub.removed} undone={scrubUndone} onToggle={toggleScrub} />
+  );
+
+  const calendarSwitch = (
+    <>
+      <SwitchRow
+        title="Connect Google Calendar"
+        detail="Ask sees only when you're free, never event details, and suggests times when you ask. Turns on right away. Demo: no real calendar is connected."
+        on={calendar.connected}
+        onChange={calendar.setConnected}
+      />
+      {backToAsk && calendar.connected && (
+        <Link href="/ask" className={buttonVariants({ variant: "outline" })}>
+          Back to your ask
+        </Link>
+      )}
+    </>
+  );
+
+  const thanksCard = (
+    <Card title="Thank-you notes" note="From people you've helped. Only you see these.">
+      {thanks.length > 0 ? (
+        <ul className="flex flex-col gap-3">
+          {thanks.map((t, i) => (
+            <li
+              key={`${t.at}-${i}`}
+              className={`flex flex-col gap-1 rounded-2xl bg-pay p-4 text-ink ${
+                i % 2 ? "rotate-[0.6deg]" : "-rotate-[0.6deg]"
+              }`}
+            >
+              <p className="text-[15px] leading-snug font-medium">&ldquo;{t.thanks}&rdquo;</p>
+              <span className="text-xs text-secondary-foreground/80">For {t.title}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <div className="flex flex-col items-start gap-2">
+          <p className="text-sm text-muted-foreground">
+            When someone you help writes a thank-you, it lands here.
+          </p>
+          <Link
+            href="/"
+            className="text-sm font-semibold text-primary underline-offset-4 hover:underline"
+          >
+            Find an ask on the board
+          </Link>
+        </div>
+      )}
+    </Card>
+  );
+
+  const signOutButton = (
+    <Button
+      variant="ghost"
+      disabled={signingOut}
+      onClick={() =>
+        startSignOut(async () => {
+          await mockSignOut();
+          router.push("/");
+          router.refresh();
+        })
+      }
+    >
+      Sign out
+    </Button>
+  );
+
+  if (!editing) {
+    return (
+      <>
+        {header}
+        <HelperPreview {...form} alias={profile.alias} free={free} />
+        {scrubNotice}
+
+        <Card title="Private" note="Only you see this.">
+          <Row label="First name">{form.firstName}</Row>
+          <Row label="School email">{profile.email}</Row>
+          <Row label="Phone">{form.phone || "Not added"}</Row>
+          <Row label="Getting paid">
+            {form.canAcceptPayment
+              ? `I can accept payment (${form.payoutMethod === "venmo" ? "Venmo" : "Bank or debit card"} ${form.payoutHandle})`
+              : "Favors only"}
+          </Row>
+          <Row label="Email me updates">{form.emailNotifications ? "On" : "Off"}</Row>
+        </Card>
+
+        <Card title="Calendar">{calendarSwitch}</Card>
+
+        {thanksCard}
+        {signOutButton}
+      </>
+    );
+  }
+
   return (
     <>
+      {header}
       <HelperPreview {...form} alias={profile.alias} free={free} />
 
       <Card
@@ -384,7 +566,7 @@ export function ProfileForm({
         <Field
           label="A line about you"
           id="me-blurb"
-          hint={`${form.blurb.length}/${BLURB_MAX}. What you've been through that might help. Skip your name, dorm and contact info; we check on Save.`}
+          hint={`${form.blurb.length}/${BLURB_MAX}. What you've been through that might help. Skip your name, dorm and contact info; we check it when you leave this box.`}
         >
           <Textarea
             id="me-blurb"
@@ -393,11 +575,10 @@ export function ProfileForm({
             rows={3}
             placeholder="Senior with a car. Went through the SSN line last year and survived."
             onChange={(e) => set({ blurb: e.target.value })}
+            onBlur={() => blurbUnchecked() && save(true)}
           />
         </Field>
-        {scrub && (
-          <ScrubNotice removed={scrub.removed} undone={scrubUndone} onToggle={toggleScrub} />
-        )}
+        {scrubNotice}
       </Card>
 
       <Card
@@ -498,47 +679,7 @@ export function ProfileForm({
         note="Green means free. Tap the times you're usually busy. Matching only reads free or busy, never what you're doing."
       >
         <WeekGrid free={free} onToggle={toggleFree} />
-        <SwitchRow
-          title="Connect Google Calendar"
-          detail="Ask sees only when you're free, never event details, and suggests times when you ask. Turns on right away. Demo: no real calendar is connected."
-          on={calendar.connected}
-          onChange={calendar.setConnected}
-        />
-        {backToAsk && calendar.connected && (
-          <Link href="/ask" className={buttonVariants({ variant: "outline" })}>
-            Back to your ask
-          </Link>
-        )}
-      </Card>
-
-      <Card title="Thank-you notes" note="From people you've helped. Only you see these.">
-        {thanks.length > 0 ? (
-          <ul className="flex flex-col gap-3">
-            {thanks.map((t, i) => (
-              <li
-                key={`${t.at}-${i}`}
-                className={`flex flex-col gap-1 rounded-2xl bg-pay p-4 text-ink ${
-                  i % 2 ? "rotate-[0.6deg]" : "-rotate-[0.6deg]"
-                }`}
-              >
-                <p className="text-[15px] leading-snug font-medium">&ldquo;{t.thanks}&rdquo;</p>
-                <span className="text-xs text-secondary-foreground/80">For {t.title}</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <div className="flex flex-col items-start gap-2">
-            <p className="text-sm text-muted-foreground">
-              When someone you help writes a thank-you, it lands here.
-            </p>
-            <Link
-              href="/"
-              className="text-sm font-semibold text-primary underline-offset-4 hover:underline"
-            >
-              Find an ask on the board
-            </Link>
-          </div>
-        )}
+        {calendarSwitch}
       </Card>
 
       <Card title="Getting paid" note="Private.">
@@ -654,23 +795,11 @@ export function ProfileForm({
       </Card>
 
       <div className="sticky bottom-24 z-10 flex flex-col gap-2">
-        <Button size="lg" className="text-base shadow-md" disabled={saving} onClick={save}>
-          {saving ? "Saving…" : "Save"}
+        <Button size="lg" className="text-base shadow-md" onClick={done}>
+          Done
         </Button>
       </div>
-      <Button
-        variant="ghost"
-        disabled={signingOut}
-        onClick={() =>
-          startSignOut(async () => {
-            await mockSignOut();
-            router.push("/");
-            router.refresh();
-          })
-        }
-      >
-        Sign out
-      </Button>
+      {signOutButton}
     </>
   );
 }

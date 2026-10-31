@@ -31,12 +31,13 @@ import {
   toPublicCard,
   type Transition,
 } from "@/lib/ask/board-store";
+import { rankForViewer } from "@/lib/ask/board-rank";
 import { DEFAULT_CATEGORY, normalizeCategory } from "@/lib/ask/categories";
 import { COVERED_MESSAGE, formatPostMessage } from "@/lib/ask/format";
 import { findGroup } from "@/lib/ask/mock-data";
 import { getCurrentUser, type MockUser } from "@/lib/ask/mock-session";
 import { PAY_TYPES, type PublicCard, type Result } from "@/lib/ask/types";
-import { canUserAcceptPayment, saveHelperSetup } from "@/lib/ask/users";
+import { canUserAcceptPayment, getViewerPrefs, saveHelperSetup } from "@/lib/ask/users";
 import { postToGroup } from "@/lib/groups";
 import { siteUrl } from "@/lib/site-url";
 
@@ -64,10 +65,15 @@ function toResult(t: Transition, userId: string): Result<{ card: PublicCard }> {
   return "error" in t ? t : { ok: true, card: toPublicCard(t.card, userId) };
 }
 
-/** The landing page: open, unexpired public asks, newest first. Public. */
+/**
+ * The landing page: open, unexpired public asks, newest first. Public.
+ * Signed in, asks matching the viewer's interests come first (`forYou`).
+ */
 export async function listBoard(): Promise<PublicCard[]> {
   const viewer = await viewerId();
-  return (await listOpenCards(viewer)).map((card) => toPublicCard(card, viewer));
+  const cards = (await listOpenCards(viewer)).map((card) => toPublicCard(card, viewer));
+  const prefs = viewer ? await getViewerPrefs(viewer) : null;
+  return prefs ? rankForViewer(cards, prefs) : cards;
 }
 
 /** One card, for the claim page (/h/[token]), Waiting and Matched. Public, except private asks. */

@@ -99,7 +99,7 @@ export function SkillsFromWords({
         ) : (
           <p role="status" className="text-sm text-muted-foreground">
             {suggestion.interests.length + suggestion.tags.length > 0
-              ? "All added. Save to keep them."
+              ? "All added."
               : "Nothing to add yet. Try naming what you'd do, like \u201cairport rides\u201d."}
           </p>
         ))}
