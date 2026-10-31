@@ -56,20 +56,23 @@ The PRD's demo path is board-first: Home → Clarify → Your ask with a price �
       Done when: posting from the flow (explicit tap) creates a board card in the store (ask, minutes, price, anonymous by default, run through `privacyScrub` with the removed list + Undo); `/board` lists open cards; the first "I can help" holds the card and everyone else sees "Already taken"; the asker confirms the helper (explicit tap); the server rejects crisis, sensitive and academic asks for the board; paid cards are hidden from helpers with `canAcceptPayment: false`; lint + typecheck pass.
       Done: the Share step posts to the board (`postToBoard`); the board at `/` lists open cards; each opens the task page `/h/[token]` where the first Claim holds it and everyone else sees "Already taken"; the asker confirms there. Covered by `e2e/demo-path.spec.ts`.
 
-- [ ] Postgres store for asks and claims, with atomic updates
+- [x] Postgres store for asks and claims, with atomic updates
       Done when: `asks` and `claims` tables exist in `src/db/schema/` (plus a group/day post counter) with a generated migration (do not run it against the shared DB; a human applies it); `src/lib/ask/store.ts` uses Drizzle when `DATABASE_URL` is set and the in-memory store otherwise; claim, confirm, pay and the rate limit are each one guarded `UPDATE … WHERE <expected state> RETURNING` (or `INSERT … ON CONFLICT … WHERE n < 3 RETURNING` for the counter), never read-then-write; two browsers see the same card state; lint + typecheck pass.
       Done (backend): tables in `src/db/schema/ask.ts`, migration `drizzle/0002_ask_tables.sql` (not applied to the shared DB; a human runs `pnpm db:migrate`, then sets `ASK_DB=postgres`). Local dev uses in-process PGlite with the same SQL. Every transition is a guarded UPDATE/INSERT … RETURNING.
+      Done against PGlite. Running on Supabase is a human step (see "Needs a human").
 
-- [ ] Save the card before posting its link
+- [x] Save the card before posting its link
       Done when: `postAsk` in `src/server/actions/ask.ts` saves the card (status open) before calling `postToGroup`, and marks it failed/removed if the post fails, so a helper who taps the GroupMe link instantly never sees "expired"; a failed post gives back its rate-limit slot; lint + typecheck pass.
+      Done in the board flow: `postToBoard` saves the card before any share; `shareCardToGroup` saves the share, then calls `postToGroup`; on failure it removes the share and refunds the rate-limit slot (`src/server/actions/board.ts`).
 
 - [ ] Concurrency tests
       Done when: a test fires 10 parallel `claimAsk` calls on one card and exactly 1 succeeds, 9 get "Already taken", and exactly one "Covered" is posted (mock adapter); repeated confirm and pay calls are no-ops after the first; 4 parallel posts to one group yield exactly 3 successes; runs against the in-memory store, and against Postgres when `DATABASE_URL` is set; `pnpm test` passes. Depends on "Add a test runner and safety tests".
-      Done against PGlite (`src/lib/ask/board-store.test.ts`, `src/server/actions/board.test.ts`): 10 parallel claims → 1, one confirm/pay/Covered, 4 parallel posts → 3. Not yet run against Supabase Postgres.
+      Done against PGlite (`src/lib/ask/board-store.test.ts`, `src/server/actions/board.test.ts`): 10 parallel claims → 1, one confirm/pay/Covered, 4 parallel posts → 3. Not yet run against Supabase Postgres (PGlite only; Supabase run pending).
 
-- [ ] Ask deadline and expiry
+- [x] Ask deadline and expiry
       Done when: every ask has `expiresAt` (from the drafted time, default 24 h); expired cards are hidden from `/board`, the claim page shows "This ask has expired", and the claim's atomic update includes `expires_at > now()`; lint + typecheck pass.
       Backend done: `expiresAt` on every ask (3 h / today / 24 h / 3 d or exact), expired asks leave the board, claims check `expires_at > now`, `extendCard` (Extend 24 h). The claim page's "This ask has expired" UI is still to do.
+      Done: the task page shows "This ask has expired" (with "Post again" for the asker) in `src/app/h/[token]/task-actions.tsx`.
 
 - [x] Mocked school-email sign-up + helper setup on the claim page
       Backend done: `mockSignIn` / `getMe` / `mockSignOut` in `src/server/actions/session.ts`; `claimCard` takes the name and email from the session and checks the mocked setup for paid cards. Only the claim-page UI is left.
@@ -97,13 +100,15 @@ The PRD's demo path is board-first: Home → Clarify → Your ask with a price �
       Backend done: `payToHold` (mocked hold after confirm, fee breakdown), helper `markHelperDone`, asker `markDone` (release) or 48 h auto-release, `reportProblem`, refund on cancel, `saveCardThanks`. UI still to do.
       Done on the task page: meeting spot after confirm, "Pay $X and hold" (mocked fee breakdown), helper Done, asker Confirm done (or 48 h auto-confirm), then `/thanks?token=`.
 
-- [ ] Private inbox mock (told in the story, not demoed)
+- [x] Private inbox mock (told in the story, not demoed)
       Done when: from Your ask, "Ask privately" lists `matchHelpers` results; tapping "Ask {firstName}" (explicit tap) adds a request to that helper's mock inbox at `/inbox?helper=<id>` (no auth; TODO(auth)); the inbox shows text, minutes and price with "I can help" / "Not this time" (no reason field); no group post happens; lint + typecheck pass.
       Backend done: `createPrivateAsk`, `sendPrivately`, `listMyRequests`, `respondToRequest` (private.ts). UI still to do.
+      Done: `/private` lists `matchHelpers` picks and sends only on "Send to N people"; `/inbox` shows text, minutes and price with "I can help" / "Not this time" (no reason). Uses the mock sign-in instead of `?helper=<id>`.
 
-- [ ] Contact info only after both say yes
+- [x] Contact info only after both say yes
       Done when: neither side's contact details are returned by any read until the helper has said yes and the asker has confirmed; lint + typecheck pass.
-      Backend: `PublicCard` never has emails or user ids; payment details only for the two parties; an anonymous asker shows as "The asker" in messages until they confirm.
+      Backend: `PublicCard` never has emails or user ids; payment details only for the two parties; no names are shared in messages, since the thread opens only after confirm.
+      Done: messages open only once both say yes (the asker confirmed), on their own screen `/h/[token]/messages`; before that `listMessages` / `sendMessage` return "Messages open once you've both said yes."
 
 ## PRD gaps: small fixes (see `docs/PRD.md`)
 
@@ -122,6 +127,9 @@ The PRD's demo path is board-first: Home → Clarify → Your ask with a price �
       Done when: a Gmail account for Ask (ideally a new one, not personal) has 2-Step Verification on, an app password is created at https://myaccount.google.com/apppasswords, and `GMAIL_USER` + `GMAIL_APP_PASSWORD` are in `.env.local` and in Vercel's environment variables (never committed).
 
 ## Needs a human (agents: skip)
+
+- [ ] Run the Ask store on Supabase
+      Done when: the `drizzle/` migrations are applied to the shared Supabase database (`pnpm db:migrate`), `ASK_DB=postgres` is set in `.env.local` on the demo machine and in Vercel's environment variables, and the demo path runs on two phones that see the same card ("Already taken" on the second). Agents never touch the shared DB.
 
 - [ ] Set up the test GroupMe group and bot (Sophia)
       Done when: a test GroupMe group exists with teammates in it, a bot is created for it with **no callback URL**, and its `GROUPME_BOT_ID` is in `.env.local` on the demo machine.

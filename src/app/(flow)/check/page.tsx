@@ -3,29 +3,37 @@
 // Quick check: both entry points (Post a need, and the AI path) land here, and
 // checkSafety runs again on the final wording, so the check always sees what
 // will actually be posted. Crisis and schoolwork go to support resources and
-// are never posted or matched; personal topics stay private.
+// are never posted or matched; personal topics stay private. If the ask is a
+// need others had last term, "You're not the only one" shows a helper's tip.
 import { Check, Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { CommonNeedCard } from "@/components/ask/common-need-card";
 import { useRequireNeed } from "@/components/ask/flow-provider";
 import { LoadingLines } from "@/components/ask/loading-line";
 import { PartTicket } from "@/components/ask/part-ticket";
 import { StepHeader } from "@/components/ask/step-header";
 import { Button } from "@/components/ui/button";
-import type { SafetyResult } from "@/lib/ask/types";
-import { checkSafety } from "@/server/actions/ask";
+import type { CommonNeedMatch, SafetyResult } from "@/lib/ask/types";
+import { checkSafety, findCommonNeed } from "@/server/actions/ask";
 
 export default function QuickCheckPage() {
   const router = useRouter();
   const { state, ready, update } = useRequireNeed();
   const part = state.parts[state.activePart];
   const [safety, setSafety] = useState<SafetyResult | null>(null);
+  const [commonNeed, setCommonNeed] = useState<CommonNeedMatch | null>(null);
 
   useEffect(() => {
     if (!ready || !part) return;
     let live = true;
-    checkSafety(`${part.what}. ${part.text}`).then((result) => {
+    const wording = `${part.what}. ${part.text}`;
+    // Shown only once safety passes below, so never next to a redirect.
+    findCommonNeed(wording)
+      .then((match) => live && setCommonNeed(match))
+      .catch(() => {});
+    checkSafety(wording).then((result) => {
       if (!live) return;
       if (result.category === "crisis") return router.replace("/resources?type=crisis");
       if (result.category === "academic") return router.replace("/resources?type=tutoring");
@@ -78,6 +86,8 @@ export default function QuickCheckPage() {
               <CheckRow ok>Not a personal topic</CheckRow>
             )}
           </ul>
+
+          {commonNeed && <CommonNeedCard match={commonNeed} />}
 
           <section className="flex flex-col gap-1 rounded-3xl bg-pay p-4">
             <h2 className="text-lg font-bold">{sensitive ? "Private topic" : "Everyday ask"}</h2>

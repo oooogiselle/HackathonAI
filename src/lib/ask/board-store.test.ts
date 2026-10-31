@@ -270,26 +270,44 @@ describe("board store (Postgres)", () => {
     expect("card" in (await holdCard(token, helpers[6]))).toBe(true);
   });
 
-  it("writes inbox notifications and opens messages once someone says yes", async () => {
+  it("writes inbox notifications and opens messages once both say yes", async () => {
+    const closed = { error: "Messages open once you've both said yes." };
     const { token } = await card();
-    expect(await listMessages(token, asker)).toEqual({
-      error: "Messages open once a helper says yes.",
-    });
+    expect(await listMessages(token, asker)).toEqual(closed);
     await holdCard(token, helpers[7]);
 
     const inbox = await listInbox(asker, { kind: "action" });
     expect(inbox.some((n) => n.token === token && n.title === "H7 can help")).toBe(true);
 
+    // Claimed but not confirmed: still closed for both sides.
+    expect(await listMessages(token, helpers[7])).toEqual(closed);
+    expect(await sendMessage(token, helpers[7], "Text me at 603-555-0142")).toEqual(closed);
+
+    expect("card" in (await confirmCard(token, asker))).toBe(true);
     expect(await sendMessage(token, helpers[7], "Which terminal?")).toBeNull();
-    expect(await sendMessage(token, helpers[8], "Me too?")).toEqual({
-      error: "Messages open once a helper says yes.",
-    });
+    expect(await sendMessage(token, helpers[8], "Me too?")).toEqual(closed);
     await sendMessage(token, asker, "Terminal 1, thanks!");
+
     const thread = await listMessages(token, helpers[7]);
-    expect(Array.isArray(thread) && thread.map((m) => [m.fromMe, m.senderFirstName])).toEqual([
-      [true, "H7"],
-      [false, "The asker"],
+    expect("messages" in thread && thread.otherFirstName).toBe("Lin");
+    expect(
+      "messages" in thread && thread.messages.map((m) => [m.fromMe, m.senderFirstName, m.body]),
+    ).toEqual([
+      [true, "H7", "Which terminal?"],
+      [false, "Lin", "Terminal 1, thanks!"],
     ]);
+    const mine = await listMessages(token, asker);
+    expect("messages" in mine && mine.otherFirstName).toBe("H7");
+    const replies = await listInbox(asker, { kind: "action" });
+    expect(replies.some((n) => n.text === "H7: “Which terminal?”")).toBe(true);
+
+    // Cancelled: the thread stays readable but closed.
+    expect("error" in (await cancelCard(token, asker))).toBe(false);
+    expect(await sendMessage(token, asker, "Never mind")).toEqual({
+      error: "This ask was cancelled.",
+    });
+    const after = await listMessages(token, asker);
+    expect("messages" in after && after.messages).toHaveLength(2);
   });
 
   it("splits My asks and I'm helping", async () => {
