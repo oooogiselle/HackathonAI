@@ -61,10 +61,12 @@ export function ToggleChip({
   label,
   pressed,
   onClick,
+  icon,
 }: {
   label: string;
   pressed: boolean;
   onClick: () => void;
+  icon?: React.ReactNode;
 }) {
   return (
     <button
@@ -72,12 +74,13 @@ export function ToggleChip({
       aria-pressed={pressed}
       onClick={onClick}
       className={cn(
-        "rounded-[10px] border px-3 py-1.5 text-sm font-semibold",
+        "flex items-center gap-1 rounded-[10px] border px-3 py-1.5 text-sm font-semibold",
         pressed
           ? "border-primary bg-primary text-primary-foreground"
           : "border-input bg-card hover:bg-muted",
       )}
     >
+      {icon}
       {label}
     </button>
   );

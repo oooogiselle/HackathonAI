@@ -7,7 +7,6 @@ import { ChevronLeft } from "lucide-react";
 import { AccountLink } from "@/components/ask/account-link";
 import {
   askerLabel,
-  CATEGORY_LABELS,
   durationLabel,
   expiresLabel,
   priceLabel,
@@ -55,7 +54,7 @@ export default async function TaskPage({ params }: PageProps<"/h/[token]">) {
           <header className="flex flex-col gap-2">
             <div className="flex items-center justify-between gap-2">
               <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                {CATEGORY_LABELS[card.category]}
+                {card.category}
               </span>
               <span className="text-lg font-semibold">{priceLabel(card)}</span>
             </div>

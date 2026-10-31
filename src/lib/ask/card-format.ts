@@ -1,13 +1,6 @@
 // Display labels for a card, shared by the board and the task page.
+import { guessCategoryFromText } from "./categories";
 import type { AskCategory, AskPart, PublicCard } from "./types";
-
-export const CATEGORY_LABELS: Record<AskCategory, string> = {
-  writing: "Writing",
-  coding: "Coding",
-  lab: "Lab",
-  errands: "Errands",
-  other: "Other",
-};
 
 export function priceLabel(card: Pick<PublicCard, "payType" | "price">) {
   if (card.payType === "trade") return "Trade";
@@ -49,7 +42,6 @@ export function askerLabel(card: Pick<PublicCard, "askerFirstName" | "askerYear"
 }
 
 // A best guess for the AI path, where nobody picked a category.
-export function guessCategory(part: Pick<AskPart, "helper">): AskCategory {
-  const interests = part.helper.interests;
-  return interests.includes("rides") || interests.includes("moving") ? "errands" : "other";
+export function guessCategory(part: Pick<AskPart, "what" | "text">): AskCategory {
+  return guessCategoryFromText(`${part.what} ${part.text}`);
 }

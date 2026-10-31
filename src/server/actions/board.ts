@@ -31,10 +31,11 @@ import {
   toPublicCard,
   type Transition,
 } from "@/lib/ask/board-store";
+import { DEFAULT_CATEGORY, normalizeCategory } from "@/lib/ask/categories";
 import { COVERED_MESSAGE, formatPostMessage } from "@/lib/ask/format";
 import { findGroup } from "@/lib/ask/mock-data";
 import { getCurrentUser, type MockUser } from "@/lib/ask/mock-session";
-import { ASK_CATEGORIES, PAY_TYPES, type PublicCard, type Result } from "@/lib/ask/types";
+import { PAY_TYPES, type PublicCard, type Result } from "@/lib/ask/types";
 import { canUserAcceptPayment, saveHelperSetup } from "@/lib/ask/users";
 import { postToGroup } from "@/lib/groups";
 import { siteUrl } from "@/lib/site-url";
@@ -100,7 +101,7 @@ const EXPIRY_CHOICES = { "3h": 3 * HOUR, "24h": 24 * HOUR, "3d": 72 * HOUR } as 
 const askSchema = z.object({
   title: z.string().trim().min(1, "Add a short title.").max(120),
   text,
-  category: z.enum(ASK_CATEGORIES).default("other"),
+  category: z.string().max(80).default(DEFAULT_CATEGORY).transform(normalizeCategory),
   payType: z.enum(PAY_TYPES).optional(),
   minutes: z.number().int().min(5).max(480),
   price: z.number().int().min(0).max(500),
@@ -142,7 +143,7 @@ async function createAsk(input: AskInput, isPrivate: boolean): Promise<Result<{ 
 
   // Crisis and academic asks never become asks. Sensitive ones (visa, money,
   // health) may go privately to picked helpers, never to the board or a group.
-  const safety = await safetyCheck(`${data.title}\n${data.text}`);
+  const safety = await safetyCheck(`${data.title}\n${data.category}\n${data.text}`);
   if (safety.category === "crisis" || safety.category === "academic") {
     return { error: "We can't post this one. Let's find the right support instead." };
   }
