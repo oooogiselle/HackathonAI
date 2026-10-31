@@ -44,6 +44,7 @@ import type {
   BoardCard,
   CardStatus,
   CardViewer,
+  Helper,
   InboxKind,
   InboxTopic,
   PayType,
@@ -1036,4 +1037,33 @@ export async function recentLoad(helperIds: string[], now = Date.now()) {
     )
     .groupBy(claims.helperId);
   return new Map(rows.map((r) => [r.helperId, r.n]));
+}
+
+/**
+ * Everyone with a helper profile (at least one interest), for matching.
+ * Leaves out the viewer and anyone blocked either way. Not answered on
+ * payment yet counts as can't accept payment, so they only see favors.
+ */
+export async function listHelperProfiles(viewerId: string | null): Promise<Helper[]> {
+  const db = await getAskDb();
+  const rows = await db
+    .select()
+    .from(users)
+    .where(
+      and(
+        sql`cardinality(${users.interests}) > 0`,
+        viewerId ? and(ne(users.id, viewerId), notBlockedBetween(users.id, viewerId)) : undefined,
+      ),
+    );
+  return rows.map((u) => ({
+    id: u.id,
+    firstName: u.firstName,
+    year: u.classYear ?? "",
+    blurb: u.blurb ?? "",
+    tags: u.tags,
+    interests: u.interests,
+    busy: u.busy,
+    weeklyLimit: u.weeklyLimit,
+    canAcceptPayment: u.canAcceptPayment === true,
+  }));
 }

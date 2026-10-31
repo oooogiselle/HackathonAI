@@ -9,16 +9,30 @@ import { HelperCard } from "@/components/ask/helper-card";
 import { LoadingLines } from "@/components/ask/loading-line";
 import { StepHeader } from "@/components/ask/step-header";
 import { suggestWhere } from "@/server/actions/ask";
+import { matchHelpers } from "@/server/actions/private";
 
 export default function WherePage() {
   const router = useRouter();
   const { state, ready, update } = useRequireNeed();
   const where = state.where;
 
+  const part = state.parts[state.activePart];
+
   useEffect(() => {
     if (!ready || !state.ask || where) return;
-    suggestWhere(state.ask).then((w) => update({ where: w, category: w.category }));
-  }, [ready, state.ask, where, update]);
+    const startsAt = part?.startsAt ? Date.parse(part.startsAt) : NaN;
+    Promise.all([
+      suggestWhere(state.ask),
+      matchHelpers({
+        text: state.ask,
+        minutes: part?.minutes ?? 30,
+        price: part?.priceSet ?? 0,
+        startsAt: Number.isNaN(startsAt) ? undefined : startsAt,
+        interests: part?.helper.interests ?? [],
+        needs: part?.helper.needs ?? [],
+      }),
+    ]).then(([w, matches]) => update({ where: { ...w, matches }, category: w.category }));
+  }, [ready, state.ask, where, part, update]);
 
   function pickGroup(groupId: string) {
     update({ groupId, scrub: undefined });
@@ -34,10 +48,10 @@ export default function WherePage() {
         <LoadingLines label="Finding people and places that can help…" />
       ) : (
         <>
-          {where.helpers.length > 0 && (
+          {where.matches && where.matches.length > 0 && (
             <section className="flex flex-col gap-2">
               <h2 className="font-medium">People who might help</h2>
-              {where.helpers.map((s) => (
+              {where.matches.map((s) => (
                 <HelperCard key={s.helper.id} suggestion={s} />
               ))}
               {/* TODO(helper-inbox): let the user send the ask to one person directly. */}

@@ -1,6 +1,6 @@
-import type { HelperSuggestion } from "@/lib/ask/types";
+import type { MatchSuggestion } from "@/lib/ask/types";
 
-export function HelperCard({ suggestion }: { suggestion: HelperSuggestion }) {
+export function HelperCard({ suggestion }: { suggestion: MatchSuggestion }) {
   const { helper, why } = suggestion;
   return (
     <div className="flex items-start gap-3 rounded-xl border p-3">
