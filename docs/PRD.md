@@ -71,14 +71,14 @@ We launch with international students as askers and upperclassman helpers as sup
 
 ## Value propositions
 
-|                  | Askers                                                                                            | Helpers                                                                             |
-| ---------------- | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| **Who**          | An international student needing practical help                                                   | An upperclassman or alum who likes helping                                          |
-| **Why**          | Get unstuck without feeling like a burden                                                         | Help in small ways that fit their week                                              |
-| **What before**  | Hesitates for days, posts to 300 people, or doesn't ask                                           | Sees scattered asks, or none; vague asks feel like big commitments                  |
-| **How**          | AI drafts a clear, small ask and picks who or where to ask; anonymous option with a privacy check | Gets only asks they said they'd enjoy, sized in minutes; sets a weekly limit        |
-| **What after**   | Help arrives from a real person, often a new connection                                           | A thank-you note, a new connection, paid for their time if they opt in, no overload |
-| **Alternatives** | Group chats, the international office, asking the same two friends                                | Formal mentoring programs, being the go-to friend                                   |
+|                  | Askers                                                                                             | Helpers                                                                             |
+| ---------------- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| **Who**          | An international student needing practical help                                                    | An upperclassman or alum who likes helping                                          |
+| **Why**          | Get unstuck without feeling like a burden                                                          | Help in small ways that fit their week                                              |
+| **What before**  | Hesitates for days, posts to 300 people, or doesn't ask                                            | Sees scattered asks, or none; vague asks feel like big commitments                  |
+| **How**          | AI drafts a clear, small ask and picks who or where to ask; always anonymous, with a privacy check | Gets only asks they said they'd enjoy, sized in minutes; sets a weekly limit        |
+| **What after**   | Help arrives from a real person, often a new connection                                            | A thank-you note, a new connection, paid for their time if they opt in, no overload |
+| **Alternatives** | Group chats, the international office, asking the same two friends                                 | Formal mentoring programs, being the go-to friend                                   |
 
 **Pitch line:** "The hard part of getting help isn't finding someone. It's asking. Ask helps you ask, then gets out of the way so people can help people."
 
@@ -105,7 +105,7 @@ Each is one small function with a simple prompt and a fallback if the API fails.
 
 - Helper profile: what they'd enjoy helping with (rides, moving stuff, US paperwork, cooking, language practice, course advice, been through OPT), when they're free, a weekly limit, and whether they can accept payment
 - Helper inbox: matched asks sized in minutes with their price, and "I can help" or "Not this time" (no reason needed)
-- The asker picks who to ask privately; contact info is shared only after both say yes
+- The asker picks who to ask privately; both sides see only each other's alias and talk in Ask's message thread, never by phone or email
 - Matched screen suggests a public meeting spot and a short message thread
 
 ### Payments
@@ -122,7 +122,7 @@ Each is one small function with a simple prompt and a fallback if the API fails.
 - Besides asking matched helpers privately, an asker can post to a public board inside Ask that every helper can see
 - **One ask, one card:** an ask shared to a GroupMe by the bot is the same board card, and the GroupMe link opens that card, so it can't be taken twice
 - Each card shows the ask, time needed and price; the first helper to tap "I can help" (from the board or a GroupMe link) holds it, the asker confirms, and everyone else sees "Already taken"
-- Board posts are anonymous by default and go through the privacy check; crisis and sensitive asks (visa, money, health) can't be posted publicly
+- Board posts are always anonymous and go through the privacy check; crisis and sensitive asks (visa, money, health) can't be posted publicly
 - Paid asks on the board show only to helpers who can accept payment; every ask expires at its deadline and leaves the board
 
 ### Calendar sync
@@ -146,8 +146,8 @@ Ask is a web app, so email is how people hear back when they're not looking at i
 - Nothing is sent, posted, paid or added to a calendar without an explicit tap
 - "Write my essay" → redirect to tutoring, the writing center or an extension email, and never a paid or public ask
 - Crisis-type asks → professional resources only (988 and campus counseling), never matched or posted
-- Public board posts are anonymous by default and privacy-checked; sensitive asks stay private
-- Contact info is shared only after both sides say yes
+- Every ask is anonymous and privacy-checked; sensitive asks stay private
+- Fully anonymous: students only ever see each other's alias (for example "Steady Loon 42"), never a name, email or phone, even after a match
 - Helpers set their own limits; no one gets flooded
 - Stripe holds payment until both sides confirm the help is done (auto-release after 48 hours unless the asker reports a problem); paid asks never reach helpers who can't accept payment
 - Calendar access is free/busy only
@@ -177,7 +177,7 @@ Tonight we ship one ask end to end: privately to matched helpers, on the public 
 - **Post-only by construction:** GroupMe bots post messages through GroupMe's bot API, and a bot only receives group messages if a callback URL is registered. We register none, so the bot never receives group messages ([GroupMe bot docs](https://dev.groupme.com/tutorials/bots)).
 - **Permission:** a group member creates the bot for that group, ideally with the admin's OK. On joining, the bot posts a short intro: "I post asks from Ask. I can't read your messages. Remove me anytime." For the demo, our own test GroupMe covers this. Slack needs a workspace admin to approve the app.
 - **No app download:** each post ends with a link to the ask's board card. Helpers tap it in GroupMe and finish in their browser: a quick account sign-up with their school email (mocked tonight), then, for a paid ask, the helper setup (can you accept payment, plus a payout account) so the payout and visa rules still hold. Tonight's demo uses a $15 ask in GroupMe, so the claim page shows the mocked helper setup before accepting.
-- **Anonymous posts** go through a privacy check that shows what was removed, with Undo; after a claim the bot posts "Covered" and never names an anonymous asker.
+- **Anonymous posts** go through a privacy check that shows what was removed, with Undo; after a claim the bot posts "Covered" and never names the asker or the helper.
 - **Fallback for any other chat:** if a group hasn't added the bot, Ask offers Copy or the phone's share sheet so the user pastes the polished ask themselves. No bot permission needed, and it works in any group on day one.
 
 ### Tonight's plan
