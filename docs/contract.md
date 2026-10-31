@@ -12,6 +12,39 @@ The landing page is the public board. **Anyone can view it**: `listBoard` and `g
 - `getMe()` → `{ firstName, email } | null` tells you who's signed in on this browser; `mockSignOut()` clears it. All three are in `src/server/actions/session.ts`.
 - `PublicCard.viewer` is `"asker"`, `"helper"`, `"other"` or `"signed-out"`. Use it to pick the buttons: the asker sees Confirm / Done / Pay / Share, a signed-in `"other"` sees "I can help" on an open card, and `"signed-out"` sees "Sign in to help".
 
+## Design screens → actions
+
+Source: the "Ask: design and contract map" doc and the [design canvas](https://claude.ai/artifact/SHnbdWVPwMQmpdgPy2kwqE). Statuses below come from the code on `dev`, not the doc (the doc lists some board actions as planned; they exist in `board.ts`).
+
+How the flows connect:
+
+- **Asker:** Needs board → Post a need → Quick check (`checkSafety`) routes it. `none` → Where it goes (board, Share to GroupMe or Ask privately, plus expiry) → Waiting. `sensitive` → Kept private (board and GroupMe locked) → Ask privately → Waiting. `crisis` / `academic` → Support resources, never posted or matched. `blocked` (planned) → Quick check: can't post. Then Waiting → Confirm helper → Claimed task → Pay (mock) → Thank you. No yes in time → Ask expired → Post again.
+- **Helper:** Needs board → Task detail → Claim → Payouts (mock).
+- **Everywhere:** bottom bar with Feed, Claimed, Ask, Inbox, Me. Claimed lists my asks and what I'm helping with. Inbox has All, Actions (needs a tap) and Updates (info only).
+
+| Screen                       | Design file                                | Actions                                                      | Status                   |
+| ---------------------------- | ------------------------------------------ | ------------------------------------------------------------ | ------------------------ |
+| Sign in, Verify              | SignIn, Verify                             | `mockSignIn` (first name + `.edu`); phone + codes not built  | ✅ mocked (TODO(auth))   |
+| Needs board                  | original/Main                              | `listBoard` (cards show `minutes` and `expiresAt`)           | ✅ board.ts              |
+| Post a need                  | original/Post                              | `checkSafety`, `draftAsk`                                    | ✅                       |
+| Quick check                  | original/SafetyCheck                       | `checkSafety` = `none`; option to keep it private            | ✅                       |
+| Quick check: can't post      | original/SafetyCheckRejected               | `checkSafety` = `blocked` with `reason` + `suggestedRewrite` | 🟡                       |
+| Where it goes                | original/Route                             | `postToBoard` (sets `expiresAt`)                             | ✅ board.ts              |
+| Kept private                 | original/PrivateRoute                      | `checkSafety` = `sensitive`; board and GroupMe locked        | ✅                       |
+| Ask privately                | original/MatchHelpers                      | `matchHelpers` (pick 2–3)                                    | 🟡                       |
+| Share to GroupMe             | Share                                      | `shareCardToGroup` (3 per group per day)                     | ✅ board.ts              |
+| Waiting for a helper         | original/Waiting                           | `getCard`, `confirmHelper`; `extendCard`, `cancelCard`       | ✅ / 🟡 (Extend, Cancel) |
+| Ask expired                  | original/Expired                           | `getCard` (`status: "expired"`)                              | ✅ board.ts              |
+| Task detail (helper)         | original/Task                              | `getCard`, `claimCard`                                       | ✅ board.ts              |
+| Claimed task                 | original/ClaimedTask                       | `getCard`, `markDone`                                        | ✅ board.ts              |
+| Claimed tab                  | original/Claimed                           | `listMyCards`                                                | 🟡                       |
+| Pay                          | original/Payment                           | `markPaid` (mocked, after `done`; not a hold)                | ✅ board.ts              |
+| Payouts                      | original/Payout                            | Part of `claimCard` `setup` (mocked)                         | ✅ mocked                |
+| Inbox: All, Actions, Updates | original/Inbox, InboxActions, InboxUpdates | `listInbox`                                                  | 🟡                       |
+| Thank you (was "Rate")       | Review                                     | `saveCardThanks` (a note only, no rating)                    | ✅ board.ts              |
+| Profile                      | Profile                                    | `getMe`, `mockSignOut`                                       | ✅ session.ts            |
+| Support resources            | Resources                                  | `CRISIS_RESOURCES`, `TUTORING_RESOURCES`                     | ✅ data                  |
+
 ## Rules every screen follows
 
 - Nothing is sent, posted, paid or added to a calendar without an explicit tap. Disable the button while its action is in flight.
@@ -19,7 +52,12 @@ The landing page is the public board. **Anyone can view it**: `listBoard` and `g
 - Hide group sharing and the board unless the safety category is `"none"`. The server rejects it anyway.
 - Anonymous posts: show `ScrubResult.removed` with an Undo.
 - On "I can help", the server decides who wins. A loser gets `{ error: "Already taken" }`, so refresh the card.
-- Never show a helper's email. `PublicCard` doesn't contain it.
+- Never show a helper's email. `PublicCard` doesn't contain it. A helper's school email is shared only after both sides say yes.
+- Free favors (`price: 0`) skip the Pay screen.
+- Every card shows when it expires. After that it leaves the board, and the GroupMe link shows "This ask has expired".
+- Inbox Actions always need a tap; Updates never do. All shows both.
+- A blocked ask is never posted, shared or matched. Show the reason and offer a suggested rewrite (checked again on tap), tutoring, or discard.
+- No ratings, stars or scores anywhere. The asker writes a thank-you note.
 
 ## Asker flow
 
@@ -40,6 +78,11 @@ The landing page is the public board. **Anyone can view it**: `listBoard` and `g
 | Pay (mock)       | `markPaid`            | `token: string`                                   | `Result<{ card: PublicCard }>` (asker only; only after `done`, once; free cards skip this screen)                                                                                                                | ✅ board.ts                |
 | Thank you        | `saveCardThanks`      | `token: string, note: string`                     | `Result<{ card: PublicCard }>` (asker only; after confirm). Old `saveThanks` in ask.ts is for the group-first flow.                                                                                              | ✅ board.ts                |
 | Ask privately    | `matchHelpers`        | `{ text, minutes, price, when?: string }`         | `HelperSuggestion[]` (2–3, may be empty)                                                                                                                                                                         | 🟡 (today: `suggestWhere`) |
+| Quick check      | `checkSafety`         | `need: string`                                    | `category` gains `"blocked"` (graded work, unsafe, illegal, or aimed at a person) with `reason` and `suggestedRewrite?`. The rewrite is re-checked on tap; blocked asks are never posted, shared or matched      | 🟡                         |
+| Waiting          | `extendCard`          | `{ token, expiresAt }`                            | `Result<{ card: PublicCard }>` (asker only; open cards; max 7 days from now)                                                                                                                                     | 🟡                         |
+| Waiting          | `cancelCard`          | `token: string`                                   | `Result<{ card: PublicCard }>` (asker only; `open` / `held` → `cancelled`; leaves the board)                                                                                                                     | 🟡                         |
+| Claimed tab      | `listMyCards`         | (none)                                            | `{ asking: PublicCard[]; helping: PublicCard[] }` (signed in; newest first)                                                                                                                                      | 🟡                         |
+| Inbox            | `listInbox`           | (none)                                            | `InboxItem[]` (`kind: "action" \| "update"`, `text`, `token?`, `createdAt`); signed in; never reveals an anonymous asker                                                                                         | 🟡                         |
 
 ## Helper flow (claim page `/h/[token]` and board)
 
@@ -65,6 +108,12 @@ The landing page is the public board. **Anyone can view it**: `listBoard` and `g
 ## Mocking a 🟡 action
 
 Until it lands, write a stub with the same name and signature in your component file or a `mocks.ts`, returning data shaped like the table above. When the real one ships, change the import to `@/server/actions/ask` (or `@/server/actions/board` for board actions). Because the types match, TypeScript flags anything that changed.
+
+## Decided (Oct 30, design vs PRD)
+
+- **Payment:** follows the code. The asker pays with `markPaid` after `done` (mocked "Pay $X"). The design's "Pay to hold" screen is that pay step, not a hold before the ride.
+- **No ratings:** the design's "Rate your helper" screen is the thank-you note (`saveCardThanks`), with no stars or score.
+- **Sign-in:** mocked for now (`mockSignIn`: first name + school `.edu` email, no codes). The design's phone + two-code Verify screen is not built (TODO(auth)).
 
 ## Open decisions
 
