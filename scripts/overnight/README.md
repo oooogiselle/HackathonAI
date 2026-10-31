@@ -18,6 +18,8 @@ SUMMARY.md
 
 **Who decides what.** The pipeline runs the gate (lint, typecheck, unit tests, e2e) and the guards itself. An agent saying "tests pass" counts for nothing. Each critic (critique, analysis, review) is a fresh agent that didn't write what it's judging.
 
+**Prompts.** Every stage gets `prompts/_common.md` (unattended, decide don't ask, never commit or push) as an appended system prompt (`--append-system-prompt`), and its own `prompts/<stage>.md` plus the task as the user prompt. The CLI also loads `CLAUDE.md` and `AGENTS.md` from the worktree. Each `<label>.prompt.md` in the run folder shows both parts.
+
 ## One-time setup (human)
 
 ```bash

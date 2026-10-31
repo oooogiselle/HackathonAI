@@ -214,14 +214,16 @@ const WRITE_DENY = [
 ].join(",");
 
 /**
- * Runs one headless Claude stage in the container. The prompt goes in on stdin; with a schema,
- * the answer comes back as `structured`. Everything is logged under `outDir/<label>.*`.
+ * Runs one headless Claude stage in the container. The prompt goes in on stdin and the shared
+ * stage rules (`prompts/_common.md`) go in as an appended system prompt; with a schema, the
+ * answer comes back as `structured`. Everything is logged under `outDir/<label>.*`.
  */
 export async function runAgent<T>(opts: {
   stage: Stage;
   label: string;
   wt: string;
   prompt: string;
+  systemPrompt: string;
   schema?: object;
   budgetUsd: number;
   outDir: string;
@@ -230,7 +232,10 @@ export async function runAgent<T>(opts: {
   const limits = STAGES[opts.stage];
   const home = join(opts.outDir, "homes", opts.label);
   mkdirSync(home, { recursive: true });
-  writeFileSync(join(opts.outDir, `${opts.label}.prompt.md`), opts.prompt);
+  writeFileSync(
+    join(opts.outDir, `${opts.label}.prompt.md`),
+    `<!-- system prompt (appended) -->\n${opts.systemPrompt}\n\n<!-- prompt -->\n${opts.prompt}`,
+  );
 
   const cli = [
     "claude",
@@ -241,6 +246,8 @@ export async function runAgent<T>(opts: {
     String(limits.turns),
     "--max-budget-usd",
     opts.budgetUsd.toFixed(2),
+    "--append-system-prompt",
+    opts.systemPrompt,
     ...(config.model ? ["--model", config.model] : []),
     ...(opts.schema ? ["--json-schema", JSON.stringify(opts.schema)] : []),
     ...(limits.readOnly

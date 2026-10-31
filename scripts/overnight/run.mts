@@ -97,7 +97,7 @@ const prompt = (name: string) =>
 const schema = (name: string) =>
   JSON.parse(readFileSync(join(config.pipelineDir, "schemas", `${name}.json`), "utf8")) as object;
 const compose = (stage: string, sections: (string | null | undefined | false)[]) =>
-  [prompt("_common"), prompt(stage), ...sections].filter(Boolean).join("\n\n");
+  [prompt(stage), ...sections].filter(Boolean).join("\n\n");
 const fence = (text: string) => `\`\`\`\n${text}\n\`\`\``;
 
 class BudgetError extends Error {}
@@ -190,6 +190,7 @@ async function agent<T>(
     label,
     wt,
     prompt: text,
+    systemPrompt: prompt("_common"),
     schema: schemaName ? schema(schemaName) : undefined,
     budgetUsd: cap,
     outDir,
