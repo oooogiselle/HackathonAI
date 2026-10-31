@@ -14,8 +14,10 @@ import {
 } from "@/lib/ask/card-format";
 import type { PublicCard } from "@/lib/ask/types";
 import { getCard } from "@/server/actions/board";
+import { listMessages } from "@/server/actions/inbox";
 import { getMe, getMyProfile } from "@/server/actions/session";
 
+import { MessagesRow } from "./messages-row";
 import { TaskActions } from "./task-actions";
 
 function progressSteps(card: PublicCard) {
@@ -34,6 +36,12 @@ export default async function TaskPage({ params }: PageProps<"/h/[token]">) {
   // Rendered per request, so this is "now".
   // eslint-disable-next-line react-hooks/purity
   const now = Date.now();
+  // Messages open once both have said yes.
+  const party = card?.viewer === "asker" || card?.viewer === "helper";
+  const thread =
+    card && party && (card.status === "confirmed" || card.status === "done")
+      ? await listMessages(token)
+      : null;
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 px-4 py-6">
@@ -79,6 +87,14 @@ export default async function TaskPage({ params }: PageProps<"/h/[token]">) {
           {(card.viewer === "asker" || card.viewer === "helper") &&
             card.status !== "expired" &&
             card.status !== "cancelled" && <Progress card={card} />}
+
+          {thread && "messages" in thread && (
+            <MessagesRow
+              token={token}
+              otherFirstName={thread.otherFirstName}
+              latest={thread.messages.at(-1)}
+            />
+          )}
 
           <TaskActions
             card={card}

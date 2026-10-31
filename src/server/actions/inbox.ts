@@ -4,7 +4,6 @@
 import { z } from "zod";
 
 import {
-  type ContactWarning,
   listInbox as listInboxInStore,
   listMessages as listMessagesInStore,
   markRead,
@@ -47,37 +46,26 @@ export async function markInboxRead(ids?: string[]): Promise<Result> {
   return { ok: true };
 }
 
-export async function listMessages(cardToken: string): Promise<Result<{ messages: Message[] }>> {
+export async function listMessages(
+  cardToken: string,
+): Promise<Result<{ messages: Message[]; otherFirstName: string }>> {
   const user = await getCurrentUser();
   if (!user) return { error: SIGN_IN_ERROR };
   const tok = token.safeParse(cardToken);
   if (!tok.success) return { error: "We couldn't find that ask." };
   const result = await listMessagesInStore(tok.data, user.id);
-  return "error" in result ? result : { ok: true, messages: result };
+  return "error" in result ? result : { ok: true, ...result };
 }
 
-/**
- * Called only from the message box's Send button. Before the asker confirms, a
- * message with an email or phone number comes back as `{ warning, found }`
- * unsent; send again with `confirmed: true` ("Send anyway") to send it.
- */
-export async function sendMessage(input: {
-  token: string;
-  body: string;
-  confirmed?: boolean;
-}): Promise<Result | ContactWarning> {
+/** Called only from the thread's Send button. Open once both have said yes. */
+export async function sendMessage(input: { token: string; body: string }): Promise<Result> {
   const user = await getCurrentUser();
   if (!user) return { error: SIGN_IN_ERROR };
   const parsed = z
-    .object({
-      token,
-      body: z.string().trim().min(1, "Write a message first.").max(1000),
-      confirmed: z.boolean().optional(),
-    })
+    .object({ token, body: z.string().trim().min(1, "Write a message first.").max(1000) })
     .safeParse(input);
   if (!parsed.success)
     return { error: parsed.error.issues[0]?.message ?? "Write a message first." };
-  const { token: cardToken, body, confirmed } = parsed.data;
-  const result = await sendMessageInStore(cardToken, user.id, body, confirmed);
-  return result ?? { ok: true };
+  const error = await sendMessageInStore(parsed.data.token, user.id, parsed.data.body);
+  return error ?? { ok: true };
 }
