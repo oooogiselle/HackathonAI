@@ -23,6 +23,7 @@ Demo ask, used throughout: "Could someone with a car help me pick up a mini frid
 ## Before recording
 
 - [ ] Deployed link, merged demo path on `dev`
+- [ ] Team checks the sample "You're not the only one" tips and counts (`src/lib/ask/common-needs.ts`)
 - [ ] `GROUPME_BOT_ID` set in Vercel; bot posts to the test GroupMe
 - [ ] Demo ask priced at $15; the claim page shows the mocked helper setup
 - [ ] Two identities (asker and helper) and a way to reset the ask

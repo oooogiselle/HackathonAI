@@ -52,6 +52,16 @@ export type HelperSuggestion = { helper: Helper; why: string };
 export type PublicHelper = Pick<Helper, "id" | "firstName" | "year">;
 export type MatchSuggestion = { helper: PublicHelper; why: string };
 
+// Quick check's "You're not the only one": a need that comes back every term,
+// with a tip a helper wrote (src/lib/ask/common-needs.ts). Sample data tonight.
+export type CommonNeedMatch = {
+  id: string;
+  label: string;
+  askedLastTerm: number;
+  tip: string;
+  from: PublicHelper;
+};
+
 export type Platform = "groupme" | "slack";
 
 export type Group = {
