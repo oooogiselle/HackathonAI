@@ -86,7 +86,7 @@ function Section({
           </Link>
         </div>
       ) : (
-        <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 [&>li>article]:h-full">
+        <ul className="grid gap-4 wide:grid-cols-2 wide-lg:grid-cols-3 [&>li>article]:h-full">
           {cards.map((card) => (
             <li key={card.token}>
               <MyCard card={card} />

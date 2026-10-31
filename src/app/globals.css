@@ -4,6 +4,31 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Laptop layout (see src/lib/ask/layout.ts). `wide:` / `wide-lg:` style the
+   tablet and laptop layout and only apply when <html data-layout="wide">.
+   `frame:` styles the phone column a laptop shows otherwise. */
+@custom-variant wide {
+  @media (width >= 48rem) {
+    &:where([data-layout="wide"], [data-layout="wide"] *) {
+      @slot;
+    }
+  }
+}
+@custom-variant wide-lg {
+  @media (width >= 64rem) {
+    &:where([data-layout="wide"], [data-layout="wide"] *) {
+      @slot;
+    }
+  }
+}
+@custom-variant frame {
+  @media (width >= 48rem) {
+    &:where([data-layout="phone"], [data-layout="phone"] *) {
+      @slot;
+    }
+  }
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-ink: var(--ink);

@@ -21,11 +21,11 @@ export function ScreenSkeleton({
   return (
     <ViewTransition exit="vt-fade-out" default="none">
       <div role="status" aria-label="Loading" className="flex flex-1 flex-col gap-6">
-        <div className={cn("flex flex-col gap-2 pt-2", tab && "md:mt-16")}>
-          <Bone className="h-6 w-28 md:hidden" />
+        <div className={cn("flex flex-col gap-2 pt-2", tab && "wide:mt-16")}>
+          <Bone className="h-6 w-28 wide:hidden" />
           <Bone className="h-9 w-48" />
         </div>
-        <div className={cn("flex flex-col gap-4", grid && "md:grid md:grid-cols-2 lg:grid-cols-3")}>
+        <div className={cn("flex flex-col gap-4", grid && "wide:grid wide:grid-cols-2 wide-lg:grid-cols-3")}>
           {Array.from({ length: cards }, (_, i) => (
             <Bone key={i} className="h-40 rounded-[24px]" />
           ))}

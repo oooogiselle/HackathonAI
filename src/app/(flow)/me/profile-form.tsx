@@ -794,7 +794,7 @@ export function ProfileForm({
         </div>
       </Card>
 
-      <div className="sticky bottom-24 z-10 flex flex-col gap-2 md:bottom-6">
+      <div className="sticky bottom-24 z-10 flex flex-col gap-2 wide:bottom-6">
         <Button size="lg" className="text-base shadow-md" onClick={done}>
           Done
         </Button>

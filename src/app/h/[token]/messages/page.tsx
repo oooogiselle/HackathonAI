@@ -22,7 +22,7 @@ export default async function MessagesPage({ params }: PageProps<"/h/[token]/mes
   const name = result.otherAlias || "your match";
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col md:max-w-2xl">
+    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col wide:max-w-2xl">
       <header className="sticky top-0 z-10 bg-background px-4 pt-3 pb-2">
         <Link
           href={taskPath}

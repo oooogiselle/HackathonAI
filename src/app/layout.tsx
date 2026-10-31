@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 
 import { Toaster } from "@/components/ui/sonner";
+import { LAYOUT } from "@/lib/ask/layout";
 
 import "./globals.css";
 
@@ -32,9 +33,16 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${jakarta.variable} ${geistMono.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col pt-[env(safe-area-inset-top)]">
-        {children}
+    <html
+      lang="en"
+      data-layout={LAYOUT}
+      className={`${jakarta.variable} ${geistMono.variable} h-full antialiased`}
+    >
+      <body className="min-h-full flex flex-col pt-[env(safe-area-inset-top)] frame:bg-[#dde7e1]">
+        {/* On a laptop, the app sits in a phone-width column (src/lib/ask/layout.ts). */}
+        <div className="flex w-full flex-1 flex-col frame:mx-auto frame:max-w-md frame:bg-background frame:shadow-[0_0_0_1px_rgba(14,42,32,0.06),0_24px_64px_-24px_rgba(14,42,32,0.3)]">
+          {children}
+        </div>
         {/* Top, so a toast never covers the bottom buttons or the tab bar. */}
         <Toaster richColors position="top-center" />
       </body>

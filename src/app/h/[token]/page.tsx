@@ -45,7 +45,7 @@ export default async function TaskPage({ params }: PageProps<"/h/[token]">) {
       : null;
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 px-4 py-6 md:max-w-2xl md:px-8 md:py-10">
+    <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 px-4 py-6 wide:max-w-2xl wide:px-8 wide:py-10">
       <div className="flex items-center justify-between text-sm">
         <Link
           href="/"

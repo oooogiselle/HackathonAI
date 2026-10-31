@@ -36,7 +36,7 @@ export function PrivateRequests({
       <p className="-mt-1 text-sm text-muted-foreground">
         Only you and a couple of others got these. No need to give a reason if you can&apos;t.
       </p>
-      <ul className="grid gap-3 md:grid-cols-2">
+      <ul className="grid gap-3 wide:grid-cols-2">
         {requests.map((r) => (
           <li key={r.card.token}>
             <RequestCard request={r} canAcceptPayment={canAcceptPayment} />

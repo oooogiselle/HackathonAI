@@ -2,7 +2,7 @@
 
 # Ask
 
-Mobile-first web app (responsive up to laptop width, and installable on a phone's home screen as a PWA) that helps college students (especially international students) ask for help. A student types a vague need; AI turns it into a clear, small ask with a suggested price. The asker sends it privately to 2–3 matched helpers who are free then, or posts it anonymously to the public board; the bot can share that same board card to GroupMe. A helper says "I can help"; the asker confirms, they meet, and the asker pays (a mocked "Pay $15" screen tonight) and writes a thank-you. People do all the helping.
+Mobile-first web app (installable on a phone's home screen as a PWA; laptops show the same phone layout in a centered column) that helps college students (especially international students) ask for help. A student types a vague need; AI turns it into a clear, small ask with a suggested price. The asker sends it privately to 2–3 matched helpers who are free then, or posts it anonymously to the public board; the bot can share that same board card to GroupMe. A helper says "I can help"; the asker confirms, they meet, and the asker pays (a mocked "Pay $15" screen tonight) and writes a thank-you. People do all the helping.
 
 Full product spec: `docs/PRD.md` (loaded below). It wins on product questions.
 
@@ -67,7 +67,7 @@ docs/contract.md           backend ↔ frontend contract: every server action, i
 
 The rest of the repo (`/app`, `/login`, items, chat, Supabase, Drizzle) is the original starter. Leave it alone unless a task says otherwise.
 
-**Layout and motion:** phones get one column and the bottom tab bar; from `md:` up the tab bar moves to the top and the board and Claimed become a card grid (`(flow)/template.tsx` sets each screen's width). Every screen change animates through React `<ViewTransition>` (`src/components/ask/page-transition.tsx`, used by the `template.tsx` files; styles at the end of `globals.css`): the ask flow slides (tag a forward Link or push with `NAV.forward`, a back one with `NAV.back`, from `src/lib/ask/nav.ts`), everything else crossfades, and reduced motion drops the slide. Dynamic tab screens and the task page have `loading.tsx` skeletons so a tap answers at once.
+**Layout and motion:** DartAsk is a phone app first. Phones get one column and the bottom tab bar, and a laptop shows that same layout in a centered phone-width column (`LAYOUT = "phone"` in `src/lib/ask/layout.ts`, styled with the `frame:` variant). A tablet/laptop layout is built but switched off: set `LAYOUT = "wide"` and the `wide:` / `wide-lg:` classes turn on (tab bar on top, card grid on the board and Claimed, widths per screen in `(flow)/template.tsx`). Use `wide:` instead of `md:` for that layout, and update `e2e/responsive.spec.ts` if you flip it. Every screen change animates through React `<ViewTransition>` (`src/components/ask/page-transition.tsx`, used by the `template.tsx` files; styles at the end of `globals.css`): the ask flow slides (tag a forward Link or push with `NAV.forward`, a back one with `NAV.back`, from `src/lib/ask/nav.ts`), everything else crossfades, and reduced motion drops the slide. Dynamic tab screens and the task page have `loading.tsx` skeletons so a tap answers at once.
 
 ## Rules
 

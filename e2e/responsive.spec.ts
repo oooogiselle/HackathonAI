@@ -1,36 +1,34 @@
-// Wider screens and home-screen install. The phone layout is covered by the
-// other specs (they run as an iPhone 13); this one checks a laptop window and
-// the web app manifest. Same server setup as demo-path.spec.ts.
+// Laptops and home-screen install. The phone layout is covered by the other
+// specs (they run as an iPhone 13). A laptop shows that same phone layout in a
+// centered column (LAYOUT = "phone" in src/lib/ask/layout.ts); if you switch to
+// "wide", update the laptop test. Same server setup as demo-path.spec.ts.
 import { expect, test } from "@playwright/test";
 
 test.describe("on a laptop", () => {
   test.use({ viewport: { width: 1280, height: 800 }, isMobile: false, hasTouch: false });
 
-  test("the tab bar sits on top and board cards spread over columns", async ({ page }) => {
+  test("the app shows as a centered phone-width column", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByRole("heading", { name: "Needs board" })).toBeVisible();
 
+    // Same as on a phone: the tab bar along the bottom, one card per row.
     const nav = page.getByRole("navigation", { name: "Main" });
-    const navBox = await nav.boundingBox();
-    expect(navBox?.y).toBe(0);
-    await expect(nav.getByRole("link", { name: "Ask for help" })).toContainText("Ask for help");
+    const navBox = (await nav.boundingBox())!;
+    expect(navBox.y + navBox.height).toBe(800);
+    expect(navBox.width).toBeLessThanOrEqual(448);
+    expect(Math.abs(navBox.x + navBox.width / 2 - 640)).toBeLessThanOrEqual(1);
 
-    // The seeded board has several cards: at least two share a row.
     const cards = page.getByRole("article");
     await expect(cards.nth(1)).toBeVisible();
-    const [first, second] = [await cards.nth(0).boundingBox(), await cards.nth(1).boundingBox()];
-    expect(first?.y).toBe(second?.y);
+    const [first, second] = [
+      (await cards.nth(0).boundingBox())!,
+      (await cards.nth(1).boundingBox())!,
+    ];
+    expect(second.y).toBeGreaterThan(first.y);
+    expect(first.width).toBeLessThanOrEqual(448);
 
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
     expect(overflow).toBeLessThanOrEqual(0);
-  });
-
-  test("the ask form stays a readable width", async ({ page }) => {
-    await page.goto("/ask");
-    const field = page.getByLabel("What do you need?");
-    await expect(field).toBeVisible();
-    const box = await field.boundingBox();
-    expect(box?.width).toBeLessThan(640);
   });
 });
 

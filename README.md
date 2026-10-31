@@ -2,6 +2,13 @@
 
 Next.js 16 (App Router) · TypeScript · Tailwind + shadcn/ui · Supabase (auth, Postgres, storage) · Drizzle ORM · pgvector · Vercel AI SDK (Anthropic chat, OpenAI embeddings).
 
+## DartAsk is a phone app first
+
+- **On a phone:** open the deployed link and add it to your home screen (iPhone: Safari Share menu, then Add to Home Screen; Android: the "Add to home screen" button on the Me tab). It then opens full screen from its own icon, like an app. On an iPhone, sign in once inside the home-screen app; it keeps its own login, separate from Safari. A `localhost` link can't be installed; use the Vercel URL.
+- **On a laptop:** you see the same phone layout in a centered column, so the app looks the same everywhere.
+- **Wider layout (built, switched off):** a tablet/laptop layout with the tabs along the top and a grid of cards is in the code. To turn it on, set `LAYOUT = "wide"` in `src/lib/ask/layout.ts`.
+- **Moving between screens:** the ask flow slides forward and back, other screens crossfade, and tab screens show a loading placeholder right away. With the device's "Reduce motion" setting on, only the fades remain.
+
 ## Setup
 
 Requires Node 22+ and pnpm.
