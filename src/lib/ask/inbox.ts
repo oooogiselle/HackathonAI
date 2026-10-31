@@ -7,6 +7,7 @@ import { asks, claims, messages, notifications, users } from "@/db/schema";
 
 import { settleDue } from "./board-store";
 import { getAskDb } from "./db";
+import { MESSAGE_FLAGS, type MessageFlag } from "./scam-check";
 import type { InboxItem, InboxKind, InboxTopic, Message } from "./types";
 import { isBlockedBetween } from "./users";
 
@@ -101,6 +102,7 @@ export async function listMessages(
       senderId: messages.senderId,
       firstName: users.firstName,
       body: messages.body,
+      flag: messages.flag,
       createdAt: messages.createdAt,
     })
     .from(messages)
@@ -115,6 +117,7 @@ export async function listMessages(
       senderFirstName: m.firstName,
       body: m.body,
       createdAt: m.createdAt.getTime(),
+      flag: MESSAGE_FLAGS.find((f) => f === m.flag) ?? null,
     })),
   };
 }
@@ -123,6 +126,8 @@ export async function sendMessage(
   token: string,
   userId: string,
   body: string,
+  // From the scam guard, computed on the server (src/lib/ai/ask/message-check.ts).
+  flag: MessageFlag | null = null,
 ): Promise<{ error: string } | null> {
   const thread = await threadFor(token);
   if (!thread || (userId !== thread.askerId && userId !== thread.helperId)) return NO_THREAD;
@@ -133,7 +138,7 @@ export async function sendMessage(
 
   const db = await getAskDb();
   await db.transaction(async (tx) => {
-    await tx.insert(messages).values({ askToken: token, senderId: userId, body });
+    await tx.insert(messages).values({ askToken: token, senderId: userId, body, flag });
     const [me] = await tx
       .select({ firstName: users.firstName })
       .from(users)

@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 
+import { checkMessage } from "@/lib/ai/ask/message-check";
 import {
   listInbox as listInboxInStore,
   listMessages as listMessagesInStore,
@@ -10,6 +11,7 @@ import {
   sendMessage as sendMessageInStore,
 } from "@/lib/ask/inbox";
 import { getCurrentUser } from "@/lib/ask/mock-session";
+import type { MessageFlag } from "@/lib/ask/scam-check";
 import type { InboxItem, Message, Result } from "@/lib/ask/types";
 
 const SIGN_IN_ERROR = "Sign in to see your inbox.";
@@ -57,15 +59,31 @@ export async function listMessages(
   return "error" in result ? result : { ok: true, ...result };
 }
 
-/** Called only from the thread's Send button. Open once both have said yes. */
-export async function sendMessage(input: { token: string; body: string }): Promise<Result> {
+/**
+ * Called only from the thread's Send button. Open once both have said yes.
+ * Scam guard: a message that suggests paying outside Ask, or asks for an ID
+ * number, comes back as `{ warning }` and isn't sent. "Send anyway" calls again
+ * with `confirmed: true`. The flag is always computed here, never taken from
+ * the client, and stored so the other side sees a note under the message.
+ */
+export async function sendMessage(input: {
+  token: string;
+  body: string;
+  confirmed?: boolean;
+}): Promise<Result | { warning: MessageFlag }> {
   const user = await getCurrentUser();
   if (!user) return { error: SIGN_IN_ERROR };
   const parsed = z
-    .object({ token, body: z.string().trim().min(1, "Write a message first.").max(1000) })
+    .object({
+      token,
+      body: z.string().trim().min(1, "Write a message first.").max(1000),
+      confirmed: z.boolean().optional(),
+    })
     .safeParse(input);
   if (!parsed.success)
     return { error: parsed.error.issues[0]?.message ?? "Write a message first." };
-  const error = await sendMessageInStore(parsed.data.token, user.id, parsed.data.body);
+  const flag = await checkMessage(parsed.data.body);
+  if (flag && !parsed.data.confirmed) return { warning: flag };
+  const error = await sendMessageInStore(parsed.data.token, user.id, parsed.data.body, flag);
   return error ?? { ok: true };
 }

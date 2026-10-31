@@ -147,9 +147,23 @@ test("a posted ask is claimed by another student and closed with a thank-you", a
   // The asker's thread picks up the reply on its own.
   await expect(page.getByText("On my way")).toBeVisible();
 
+  // Scam guard: paying outside Ask asks the sender first, and the receiver sees a note.
+  await helper.getByLabel("Message Lin").fill("You can just Venmo me instead");
+  await helper.keyboard.press("Enter");
+  // (Next.js's route announcer is an alert too, so match the warning by its text.)
+  await expect(
+    helper.getByRole("alert").filter({ hasText: "Paying outside Ask isn't protected" }),
+  ).toBeVisible();
+  await helper.getByRole("button", { name: "Send anyway" }).click();
+  await expect(helper.getByText("You can just Venmo me instead")).toBeVisible();
+  await expect(page.getByText("You can just Venmo me instead")).toBeVisible();
+  await expect(page.getByRole("note")).toContainText("Pay only through Ask");
+
   await page.getByRole("link", { name: "Task" }).click();
   await expect(page).toHaveURL(new RegExp(`${taskPath}$`));
-  await expect(page.getByRole("link", { name: /^Rina/ })).toContainText("On my way");
+  await expect(page.getByRole("link", { name: /^Rina/ })).toContainText(
+    "You can just Venmo me instead",
+  );
   await helper.getByRole("link", { name: "Task" }).click();
   await page.getByRole("button", { name: "Pay $17.28 and hold" }).click();
   await expect(page.getByText("Rina is on it")).toBeVisible();
