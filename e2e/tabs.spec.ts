@@ -91,6 +91,60 @@ test("Claimed and Inbox show the asker's next step after a claim", async ({
   await expect(page.getByText(/\bOmar\b/)).toHaveCount(0);
 });
 
+/** On Me: picks a house community (and a line about you), waits for the autosave. */
+async function setHouse(page: Page, house: string, blurb?: string) {
+  // Signed in just before: wait for the redirect so the session cookie is set.
+  await expect(page).toHaveURL(/\/me$/);
+  await page.getByRole("button", { name: "Edit" }).click();
+  if (blurb) {
+    await page.getByLabel("A line about you").fill(blurb);
+    await page.getByLabel("A line about you").blur();
+  }
+  const houses = page.getByRole("group", { name: "Your house" });
+  await houses.getByRole("button", { name: house, exact: true }).click();
+  await expect(houses.getByRole("button", { name: house, exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(page.getByText("Saved", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Done" }).click();
+  // Still there after Done, in the private card (never on the helper card).
+  await expect(page.getByText(`${house} House`, { exact: true })).toBeVisible();
+}
+
+test("the asker sees why the helper fits: their line and a shared house", async ({
+  page,
+  browser,
+  baseURL,
+}) => {
+  const helper = await newPhone(browser, baseURL);
+  await helper.goto(`/signin?next=${encodeURIComponent("/me")}`);
+  await signIn(helper, "Wren");
+  await setHouse(helper, "West", "Drives to Logan most breaks.");
+
+  await page.goto(`/signin?next=${encodeURIComponent("/me")}`);
+  await signIn(page, "Ines");
+  await setHouse(page, "West");
+  await fillAsk(page, "Ride to the Dartmouth Coach stop", "Two suitcases, Saturday morning.");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page).toHaveURL(/\/where$/);
+  await page.getByRole("button", { name: /^Post to the board/ }).click();
+  await expect(page).toHaveURL(/\/h\/[^/]+$/);
+  const taskPath = new URL(page.url()).pathname;
+
+  await helper.goto(taskPath);
+  await helper.getByLabel("I can accept payment").check();
+  await helper.getByLabel("Payout account (connected with Stripe)").fill("4242");
+  await helper.getByRole("button", { name: "Claim this task" }).click();
+  await expect(helper.getByText("Waiting for the asker to confirm.")).toBeVisible();
+
+  await page.reload();
+  const fit = page.getByLabel("Why they fit");
+  await expect(fit).toContainText("Drives to Logan most breaks.");
+  await expect(fit).toContainText("Also in West House");
+  await expect(page.getByText(/\bWren\b/)).toHaveCount(0);
+});
+
 test("Me autosaves helper settings and explains a missing payout", async ({ page }) => {
   await page.goto(`/signin?next=${encodeURIComponent("/me")}`);
   await signIn(page, "Kai");

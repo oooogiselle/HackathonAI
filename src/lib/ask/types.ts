@@ -199,7 +199,16 @@ export type BoardCard = {
   expiresAt: number;
   // Groups the bot has shared this card to.
   shares: { groupId: string; postedAt: number }[];
-  heldBy?: { userId: string; alias: string; year?: string; heldAt: number };
+  heldBy?: {
+    userId: string;
+    alias: string;
+    year?: string;
+    // The helper's own line about themselves (privacy-scrubbed on save).
+    blurb?: string;
+    // A house community the helper and the asker both put on their profile.
+    sharedHouse?: string;
+    heldAt: number;
+  };
   meetingSpot?: string;
   // The helper tapped "Done". The asker confirms, or it auto-confirms at autoConfirmAt.
   helperDoneAt?: number;
@@ -220,6 +229,9 @@ export type PublicCard = Omit<BoardCard, "askerId" | "heldBy" | "payment"> & {
   // Only the asker sees who's holding their ask.
   heldByAlias?: string;
   heldByYear?: string;
+  // Why this helper fits: their own line, and "Also in West House" when shared.
+  heldByBlurb?: string;
+  heldBySharedHouse?: string;
   // Only the asker and the helper see payment details.
   payment?: Payment;
   viewer: CardViewer;

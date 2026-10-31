@@ -7,13 +7,15 @@ export const SCHOOL_EMAIL_DOMAIN = "dartmouth.edu";
 
 // 16 seeded helpers. Some can't accept payment (e.g. F-1 students), so they only see $0 favors.
 // `busy` is seeded weekly free/busy (no event titles), standing in for Google Calendar tonight.
+// Blurbs are concrete Dartmouth experience; tags include a house community
+// (src/lib/ask/dartmouth.ts) for the "same house" boost. No one is tied to a real Greek house.
 export const HELPERS: Helper[] = [
   {
     id: "mei",
     firstName: "Mei",
     year: "Junior",
-    blurb: "Has a car, drives to Lebanon and Manchester airports most breaks",
-    tags: ["ride", "airport", "car", "drive", "break", "luggage"],
+    blurb: "Drives to Lebanon airport and the Dartmouth Coach stop most breaks",
+    tags: ["ride", "airport", "car", "drive", "break", "luggage", "bus", "west house"],
     interests: ["rides"],
     busy: [
       { day: 1, start: "09:00", end: "12:00" },
@@ -27,8 +29,8 @@ export const HELPERS: Helper[] = [
     id: "tomas",
     firstName: "Tomás",
     year: "Senior",
-    blurb: "Got an SSN last year, knows the Social Security office",
-    tags: ["ssn", "social security", "paperwork", "office", "bank", "id"],
+    blurb: "Got an SSN last year with an on-campus job letter, can walk you through it",
+    tags: ["ssn", "social security", "paperwork", "office", "bank", "id", "south house"],
     interests: ["us-paperwork", "opt"],
     busy: [
       { day: 2, start: "10:00", end: "15:00" },
@@ -41,8 +43,18 @@ export const HELPERS: Helper[] = [
     id: "priya",
     firstName: "Priya",
     year: "Sophomore",
-    blurb: "RA in East Wheelock, has a dolly for moving",
-    tags: ["move", "moving", "fridge", "furniture", "lift", "dorm", "storage"],
+    blurb: "UGA in East Wheelock, has a dolly for moving day",
+    tags: [
+      "move",
+      "moving",
+      "fridge",
+      "furniture",
+      "lift",
+      "dorm",
+      "storage",
+      "dolly",
+      "east wheelock house",
+    ],
     interests: ["moving"],
     busy: [
       { day: 1, start: "18:00", end: "22:00" },
@@ -56,7 +68,7 @@ export const HELPERS: Helper[] = [
     id: "jonah",
     firstName: "Jonah",
     year: "Grad student",
-    blurb: "Lives off campus, happy to help with groceries and errands",
+    blurb: "Lives off campus near the Co-op, happy to do grocery runs and errands",
     tags: ["groceries", "errand", "store", "shopping", "pharmacy", "ride"],
     interests: ["rides", "cooking"],
     busy: [
@@ -72,8 +84,8 @@ export const HELPERS: Helper[] = [
     id: "aiko",
     firstName: "Aiko",
     year: "Senior",
-    blurb: "Peer mentor for international students, went through OPT",
-    tags: ["opt", "cpt", "work", "job", "internship", "paperwork"],
+    blurb: "Peer mentor for international students, went through OPT last spring",
+    tags: ["opt", "cpt", "work", "job", "internship", "paperwork", "allen house"],
     interests: ["opt", "us-paperwork", "course-advice"],
     busy: [
       { day: 1, start: "13:00", end: "16:00" },
@@ -86,8 +98,8 @@ export const HELPERS: Helper[] = [
     id: "diego",
     firstName: "Diego",
     year: "Junior",
-    blurb: "Drives a minivan, can fit a lot of luggage",
-    tags: ["ride", "airport", "van", "luggage", "move", "drive"],
+    blurb: "Drives a minivan, does Logan and storage runs at the end of every term",
+    tags: ["ride", "airport", "van", "luggage", "move", "drive", "storage", "north park house"],
     interests: ["rides", "moving"],
     busy: [
       { day: 2, start: "09:00", end: "13:00" },
@@ -101,8 +113,8 @@ export const HELPERS: Helper[] = [
     id: "fatima",
     firstName: "Fatima",
     year: "Sophomore",
-    blurb: "Cooks for friends every Sunday, can show you the grocery store",
-    tags: ["cook", "cooking", "groceries", "recipe", "food", "store"],
+    blurb: "Shops at the Co-op every Sunday and cooks for friends in the dorm kitchen",
+    tags: ["cook", "cooking", "groceries", "recipe", "food", "store", "school house"],
     interests: ["cooking"],
     busy: [
       { day: 1, start: "09:00", end: "15:00" },
@@ -116,8 +128,8 @@ export const HELPERS: Helper[] = [
     id: "lucas",
     firstName: "Lucas",
     year: "Senior",
-    blurb: "Tutors intro CS and knows which courses to pair",
-    tags: ["course", "class", "schedule", "major", "cs", "advice"],
+    blurb: "TA for COSC 1, knows which courses pair well on a D-Plan",
+    tags: ["course", "class", "schedule", "major", "cs", "advice", "west house"],
     interests: ["course-advice"],
     busy: [
       { day: 2, start: "14:00", end: "18:00" },
@@ -130,8 +142,8 @@ export const HELPERS: Helper[] = [
     id: "yuna",
     firstName: "Yuna",
     year: "Junior",
-    blurb: "Speaks Korean and English, likes language practice",
-    tags: ["language", "english", "korean", "practice", "conversation"],
+    blurb: "Speaks Korean and English, does conversation practice over coffee at Novack",
+    tags: ["language", "english", "korean", "practice", "conversation", "south house"],
     interests: ["language"],
     busy: [
       { day: 1, start: "10:00", end: "12:00" },
@@ -145,7 +157,7 @@ export const HELPERS: Helper[] = [
     id: "samir",
     firstName: "Samir",
     year: "Grad student",
-    blurb: "Opened a US bank account and phone plan in week one",
+    blurb: "Opened a US bank account and phone plan in week one, can show you how",
     tags: ["bank", "account", "phone", "sim", "paperwork", "credit"],
     interests: ["us-paperwork"],
     busy: [
@@ -159,8 +171,8 @@ export const HELPERS: Helper[] = [
     id: "grace",
     firstName: "Grace",
     year: "Sophomore",
-    blurb: "Strong and free most evenings, happy to carry boxes",
-    tags: ["move", "moving", "boxes", "lift", "carry", "dorm"],
+    blurb: "Free most evenings to carry boxes, helped a whole floor move out last spring",
+    tags: ["move", "moving", "boxes", "lift", "carry", "dorm", "allen house"],
     interests: ["moving"],
     busy: [
       { day: 1, start: "09:00", end: "16:00" },
@@ -176,7 +188,7 @@ export const HELPERS: Helper[] = [
     firstName: "Ivan",
     year: "Junior",
     blurb: "Speaks Russian and Spanish, can help with forms in either",
-    tags: ["language", "spanish", "russian", "forms", "translate"],
+    tags: ["language", "spanish", "russian", "forms", "translate", "north park house"],
     interests: ["language", "us-paperwork"],
     busy: [
       { day: 2, start: "08:00", end: "12:00" },
@@ -189,8 +201,18 @@ export const HELPERS: Helper[] = [
     id: "chloe",
     firstName: "Chloe",
     year: "Senior",
-    blurb: "Has a car most weekends, goes to the outlet mall",
-    tags: ["ride", "car", "shopping", "weekend", "store"],
+    blurb: "Has a car most weekends, lends winter coats and boots to first-years",
+    tags: [
+      "ride",
+      "car",
+      "shopping",
+      "weekend",
+      "store",
+      "winter",
+      "coat",
+      "boots",
+      "east wheelock house",
+    ],
     interests: ["rides"],
     busy: [
       { day: 1, start: "08:00", end: "18:00" },
@@ -206,7 +228,7 @@ export const HELPERS: Helper[] = [
     id: "kwame",
     firstName: "Kwame",
     year: "Alum (Class of 2025)",
-    blurb: "Works nearby, mentors on internships and OPT timing",
+    blurb: "Alum working in the Upper Valley, mentors on internships and OPT timing",
     tags: ["opt", "internship", "job", "resume", "career"],
     interests: ["opt", "course-advice"],
     busy: [
@@ -223,8 +245,8 @@ export const HELPERS: Helper[] = [
     id: "nadia",
     firstName: "Nadia",
     year: "Junior",
-    blurb: "Has storage space over the summer and a hand truck",
-    tags: ["storage", "summer", "move", "boxes", "fridge"],
+    blurb: "Stayed for sophomore summer, has storage space and a hand truck",
+    tags: ["storage", "summer", "move", "boxes", "fridge", "school house"],
     interests: ["moving"],
     busy: [
       { day: 3, start: "12:00", end: "18:00" },
@@ -237,8 +259,18 @@ export const HELPERS: Helper[] = [
     id: "ben",
     firstName: "Ben",
     year: "Sophomore",
-    blurb: "Bakes and cooks, can show you how to use the dorm kitchen",
-    tags: ["cook", "cooking", "kitchen", "bake", "food"],
+    blurb: "Bakes in the dorm kitchen, DOC trip leader who knows the gear room",
+    tags: [
+      "cook",
+      "cooking",
+      "kitchen",
+      "bake",
+      "food",
+      "gear",
+      "outdoors",
+      "winter",
+      "south house",
+    ],
     interests: ["cooking", "language"],
     busy: [
       { day: 2, start: "10:00", end: "14:00" },
@@ -356,15 +388,6 @@ export const SEED_CARDS: SeedCard[] = [
     postedMinutesAgo: 240,
     expiresInHours: 24,
   },
-];
-
-// Used by the fallback privacy scrub to catch dorm names.
-export const DORMS = [
-  "Massachusetts Hall",
-  "Fayerweather",
-  "McLaughlin",
-  "East Wheelock",
-  "Russell Sage",
 ];
 
 export const CRISIS_RESOURCES = [

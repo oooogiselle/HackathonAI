@@ -130,6 +130,30 @@ describe("board actions", () => {
     expect(await board.claimCard({ token, setup })).toEqual({ ok: true });
   });
 
+  it("shows the asker why the helper fits: their line and a shared house, never a Greek house", async () => {
+    const token = await postDemoCard(0);
+    const helper = (await signInUser("Fitwell", "fit@dartmouth.edu")).user;
+    await updateProfile(helper.id, {
+      blurb: "Drives to Logan most breaks, lives at Psi U",
+      tags: ["airport", "west house"],
+    });
+    await updateProfile(asker.id, { tags: ["west house"] });
+    currentUser = helper;
+    expect(await board.claimCard({ token })).toEqual({ ok: true });
+
+    currentUser = asker;
+    const card = await board.getCard(token);
+    expect(card?.heldByBlurb).toBe("Drives to Logan most breaks, lives at a Greek house");
+    expect(card?.heldBySharedHouse).toBe("West House");
+
+    // Only the asker gets it.
+    currentUser = helpers[2];
+    const other = await board.getCard(token);
+    expect(other?.heldByBlurb).toBeUndefined();
+    expect(other?.heldBySharedHouse).toBeUndefined();
+    await updateProfile(asker.id, { tags: [] });
+  });
+
   it("runs the demo path and posts Covered exactly once", async () => {
     const token = await postDemoCard();
     expect(await board.shareCardToGroup({ token, groupId: "intl" })).toEqual({ ok: true });

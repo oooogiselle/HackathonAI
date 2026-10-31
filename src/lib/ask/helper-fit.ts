@@ -1,6 +1,7 @@
 // Who'd be a good fit for an ask, counted against the seeded helpers. A preview
 // for the Your ask screen; matchHelpers (Phase 2) adds free/busy, weekly limits
 // and load spreading and picks the actual 2–3 people. Safe to run on the client.
+import { campusTags, canonicalTag, isCommunityTag, mentionsTag } from "./dartmouth";
 import { HELPERS } from "./mock-data";
 import type { Helper, HelperPrefs, Interest } from "./types";
 
@@ -24,8 +25,11 @@ export const INTEREST_LABELS: Record<Interest, string> = {
   opt: "Been through OPT",
 };
 
-// Every tag a seeded helper has; "needs" must come from this list.
-export const KNOWN_TAGS = [...new Set(HELPERS.flatMap((h) => h.tags))].sort();
+// Every skill tag a seeded helper has; "needs" must come from this list. House and
+// Greek tags are left out: where someone lives is a boost, never a must-have.
+export const KNOWN_TAGS = [...new Set(HELPERS.flatMap((h) => h.tags))]
+  .filter((t) => !isCommunityTag(t))
+  .sort();
 
 export function helperFits(helper: Helper, interests: Interest[], needs: string[]) {
   const interestOk = interests.length === 0 || helper.interests.some((i) => interests.includes(i));
@@ -57,9 +61,10 @@ export function toHelperPrefs(raw: {
 
 // No-AI guess: interests of helpers whose tags appear in the need.
 export function guessHelperPrefs(need: string): HelperPrefs {
-  const text = need.toLowerCase();
-  // Whole words only, so "id" doesn't match inside "need".
-  const mentions = (tag: string) => new RegExp(`\\b${tag}s?\\b`).test(text);
+  // Whole words only, so "id" doesn't match inside "need"; campus words count
+  // too ("Dartmouth Coach" → airport, ride).
+  const implied = campusTags(need);
+  const mentions = (tag: string) => mentionsTag(need, tag) || implied.includes(tag);
   const interests = INTERESTS.filter((i) =>
     HELPERS.some((h) => h.interests.includes(i) && h.tags.some(mentions)),
   );
@@ -93,7 +98,9 @@ export function cleanTags(tags: string[], limit = MAX_TAGS): string[] {
         .replace(/\s+/g, " ")
         .trim(),
     )
-    .filter((t) => t.length >= 2 && t.length <= MAX_TAG_LENGTH);
+    .filter((t) => t.length >= 2 && t.length <= MAX_TAG_LENGTH)
+    // "Psi U" → "psi upsilon", "Fahey" → "west house", so matching sees one name.
+    .map(canonicalTag);
   return [...new Set(clean)].slice(0, limit);
 }
 
@@ -106,10 +113,8 @@ export function cleanSkills(raw: { interests: string[]; tags: string[] }): Skill
 
 // No-AI guess: known tags mentioned in the text, and the interests that go with them.
 export function guessSkills(text: string): SkillSuggestion {
-  const lower = text.toLowerCase();
-  const mentions = (tag: string) => new RegExp(`\\b${tag}s?\\b`).test(lower);
   return cleanSkills({
     interests: guessHelperPrefs(text).interests,
-    tags: KNOWN_TAGS.filter(mentions),
+    tags: KNOWN_TAGS.filter((tag) => mentionsTag(text, tag)),
   });
 }
