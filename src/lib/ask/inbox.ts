@@ -57,11 +57,10 @@ type Thread = {
   askerId: string;
   helperId: string;
   title: string;
-  anonymous: boolean;
   status: string;
 };
 
-/** The asker and the helper holding the ask, once someone has said yes. */
+/** The asker and the helper on the ask, once a helper has claimed it. */
 async function threadFor(token: string): Promise<Thread | null> {
   const db = await getAskDb();
   const [row] = await db
@@ -69,7 +68,6 @@ async function threadFor(token: string): Promise<Thread | null> {
       askerId: asks.askerId,
       helperId: claims.helperId,
       title: asks.title,
-      anonymous: asks.anonymous,
       status: asks.status,
     })
     .from(asks)
@@ -78,15 +76,25 @@ async function threadFor(token: string): Promise<Thread | null> {
   return row ?? null;
 }
 
-const NO_THREAD = { error: "Messages open once a helper says yes." };
+// Messages open only after both say yes (the asker confirmed the helper), so
+// names and contact details are never shared before that. A cancelled ask
+// keeps its thread readable but closed.
+const OPEN = new Set(["confirmed", "done"]);
+const NO_THREAD = { error: "Messages open once you've both said yes." };
 
 export async function listMessages(
   token: string,
   userId: string,
-): Promise<Message[] | { error: string }> {
+): Promise<{ messages: Message[]; otherFirstName: string } | { error: string }> {
   const thread = await threadFor(token);
   if (!thread || (userId !== thread.askerId && userId !== thread.helperId)) return NO_THREAD;
+  if (!OPEN.has(thread.status) && thread.status !== "cancelled") return NO_THREAD;
   const db = await getAskDb();
+  const otherId = userId === thread.askerId ? thread.helperId : thread.askerId;
+  const [other] = await db
+    .select({ firstName: users.firstName })
+    .from(users)
+    .where(eq(users.id, otherId));
   const rows = await db
     .select({
       id: messages.id,
@@ -99,15 +107,16 @@ export async function listMessages(
     .innerJoin(users, eq(users.id, messages.senderId))
     .where(eq(messages.askToken, token))
     .orderBy(messages.createdAt);
-  // An anonymous asker stays "The asker" until they confirm the helper.
-  const askerHidden = thread.anonymous && thread.status === "held";
-  return rows.map((m) => ({
-    id: m.id,
-    fromMe: m.senderId === userId,
-    senderFirstName: m.senderId === thread.askerId && askerHidden ? "The asker" : m.firstName,
-    body: m.body,
-    createdAt: m.createdAt.getTime(),
-  }));
+  return {
+    otherFirstName: other?.firstName ?? "",
+    messages: rows.map((m) => ({
+      id: m.id,
+      fromMe: m.senderId === userId,
+      senderFirstName: m.firstName,
+      body: m.body,
+      createdAt: m.createdAt.getTime(),
+    })),
+  };
 }
 
 export async function sendMessage(
@@ -118,6 +127,7 @@ export async function sendMessage(
   const thread = await threadFor(token);
   if (!thread || (userId !== thread.askerId && userId !== thread.helperId)) return NO_THREAD;
   if (thread.status === "cancelled") return { error: "This ask was cancelled." };
+  if (!OPEN.has(thread.status)) return NO_THREAD;
   const other = userId === thread.askerId ? thread.helperId : thread.askerId;
   if (await isBlockedBetween(userId, other)) return { error: "You can't message this person." };
 
@@ -128,17 +138,13 @@ export async function sendMessage(
       .select({ firstName: users.firstName })
       .from(users)
       .where(eq(users.id, userId));
-    const name =
-      userId === thread.askerId && thread.anonymous && thread.status === "held"
-        ? "The asker"
-        : me?.firstName;
     await tx.insert(notifications).values({
       userId: other,
       askToken: token,
       kind: "action",
       topic: "tasks",
       title: `Reply about “${thread.title}”`,
-      body: `${name}: “${body.length > 80 ? `${body.slice(0, 79)}…` : body}”`,
+      body: `${me?.firstName}: “${body.length > 80 ? `${body.slice(0, 79)}…` : body}”`,
     });
   });
   return null;

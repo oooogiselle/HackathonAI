@@ -70,7 +70,7 @@ export async function seedAskData(db: AskDb, now = Date.now()) {
   for (const card of SEED_CARDS) {
     await db
       .update(asks)
-      .set({ title: card.title, details: card.text })
+      .set({ title: card.title, details: card.text, category: card.category })
       .where(and(eq(asks.token, card.token), eq(asks.askerId, SEED_ASKER.id)));
   }
   if (reopened.length) {

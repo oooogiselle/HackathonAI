@@ -2,7 +2,6 @@
 
 // Helper, once confirmed: where to meet, the chat, and Done. On paid asks they
 // start once the asker has held the money. Then the asker confirms.
-import { MessageThread } from "@/components/task/message-thread";
 import {
   BottomActions,
   Panel,
@@ -17,7 +16,7 @@ import { formatCents } from "@/lib/ask/fees";
 import type { PublicCard } from "@/lib/ask/types";
 import { markHelperDone } from "@/server/actions/board";
 
-export function HelperActive({ card }: { card: PublicCard }) {
+export function HelperActive({ card, messages }: { card: PublicCard; messages: React.ReactNode }) {
   const { pending, run } = useTaskAction();
   const paid = card.price > 0;
   const pay = formatCents(card.price * 100);
@@ -74,7 +73,7 @@ export function HelperActive({ card }: { card: PublicCard }) {
         </Panel>
       )}
 
-      <MessageThread token={card.token} />
+      {messages}
 
       {card.helperDoneAt
         ? card.autoConfirmAt && (

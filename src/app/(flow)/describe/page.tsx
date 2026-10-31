@@ -56,6 +56,7 @@ function Describe({ initialNeed }: { initialNeed: string }) {
         backHref="/ask"
       />
       <Textarea
+        aria-label="What you need, in your own words"
         value={need}
         onChange={(e) => setNeed(e.target.value)}
         placeholder="e.g. i need to get to the airport on dec 18 but don't know anyone with a car"

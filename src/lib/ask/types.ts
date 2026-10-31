@@ -52,6 +52,16 @@ export type HelperSuggestion = { helper: Helper; why: string };
 export type PublicHelper = Pick<Helper, "id" | "firstName" | "year">;
 export type MatchSuggestion = { helper: PublicHelper; why: string };
 
+// Quick check's "You're not the only one": a need that comes back every term,
+// with a tip a helper wrote (src/lib/ask/common-needs.ts). Sample data tonight.
+export type CommonNeedMatch = {
+  id: string;
+  label: string;
+  askedLastTerm: number;
+  tip: string;
+  from: PublicHelper;
+};
+
 export type Platform = "groupme" | "slack";
 
 export type Group = {
@@ -141,8 +151,8 @@ export type DraftResult = { parts: AskPart[] };
 // Any state before done can become cancelled; open/held read as expired after expiresAt.
 export type CardStatus = "open" | "held" | "confirmed" | "done" | "expired" | "cancelled";
 
-export const ASK_CATEGORIES = ["writing", "coding", "lab", "errands", "other"] as const;
-export type AskCategory = (typeof ASK_CATEGORIES)[number];
+// Free text: a preset ("Rides") or whatever the asker typed. See ./categories.ts.
+export type AskCategory = string;
 
 // pay: asker pays the helper. fund: paid by a club or office. trade: swap help. free: a favor.
 export const PAY_TYPES = ["pay", "fund", "trade", "free"] as const;

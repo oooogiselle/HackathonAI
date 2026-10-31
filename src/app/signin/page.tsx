@@ -1,6 +1,7 @@
 // "Sign in with Dartmouth". The SSO step is mocked tonight (first name + school
 // email, no password); real Dartmouth SSO needs the college to register the app.
 // TODO(auth): swap in real SSO behind the same mockSignIn → session cookie flow.
+import { Brand } from "@/components/ask/brand";
 import { CAMPUS } from "@/lib/ask/mock-data";
 
 import { SignInFlow } from "./sign-in-flow";
@@ -15,8 +16,8 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-4 py-10">
       <header className="flex flex-col gap-1">
-        <span className="text-sm font-semibold">Ask</span>
-        <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
+        <Brand />
+        <h1 className="mt-2 text-[28px] leading-tight font-extrabold tracking-tight">Sign in</h1>
         <p className="text-muted-foreground">
           {CAMPUS} students only. Anyone can browse the board; you need to sign in to post or help.
         </p>

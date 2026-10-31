@@ -92,7 +92,8 @@ export const asks = pgTable(
     title: text("title").notNull(),
     // "What done looks like": where, when, details.
     details: text("details").notNull(),
-    category: text("category").notNull().default("other"),
+    // Free text: a preset or what the asker typed (src/lib/ask/categories.ts).
+    category: text("category").notNull().default("Other"),
     payType: text("pay_type").notNull().default("free"),
     // Whole dollars. 0 = a favor.
     price: integer("price").notNull().default(0),
@@ -117,7 +118,7 @@ export const asks = pgTable(
   },
   (t) => [
     check("asks_status", sql`${t.status} in ('open', 'held', 'confirmed', 'done', 'cancelled')`),
-    check("asks_category", sql`${t.category} in ('writing', 'coding', 'lab', 'errands', 'other')`),
+    check("asks_category_len", sql`char_length(${t.category}) between 1 and 24`),
     check("asks_pay_type", sql`${t.payType} in ('pay', 'fund', 'trade', 'free')`),
     check("asks_price", sql`${t.price} between 0 and 500`),
     // Only paid asks carry a price.

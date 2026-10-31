@@ -10,20 +10,30 @@ export function Field({
   label,
   id,
   hint,
+  error,
   children,
 }: {
   label: string;
   id: string;
   hint?: string;
+  // Shown right under the input, in place of the hint. The input sets
+  // aria-invalid and aria-describedby={`${id}-error`}.
+  error?: string;
   children: React.ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <Label htmlFor={id} className="text-xs text-muted-foreground">
+      <Label htmlFor={id} className="text-[13px] font-semibold text-muted-foreground">
         {label}
       </Label>
       {children}
-      {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
+      {error ? (
+        <span id={`${id}-error`} role="alert" className="text-sm font-medium text-destructive">
+          {error}
+        </span>
+      ) : (
+        hint && <span className="text-xs text-muted-foreground">{hint}</span>
+      )}
     </div>
   );
 }
@@ -61,10 +71,12 @@ export function ToggleChip({
   label,
   pressed,
   onClick,
+  icon,
 }: {
   label: string;
   pressed: boolean;
   onClick: () => void;
+  icon?: React.ReactNode;
 }) {
   return (
     <button
@@ -72,12 +84,13 @@ export function ToggleChip({
       aria-pressed={pressed}
       onClick={onClick}
       className={cn(
-        "rounded-[10px] border px-3 py-1.5 text-sm font-semibold",
+        "flex items-center gap-1 rounded-[10px] border px-3 py-1.5 text-sm font-semibold",
         pressed
           ? "border-primary bg-primary text-primary-foreground"
           : "border-input bg-card hover:bg-muted",
       )}
     >
+      {icon}
       {label}
     </button>
   );

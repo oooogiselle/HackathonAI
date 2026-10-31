@@ -5,7 +5,11 @@ import { cn } from "cn";
 
 import { CategoryTag, PriceTag } from "./card-tags";
 
-export type AskCardMeta = { kind: "who" | "time" | "when" | "expires"; label: string; urgent?: boolean };
+export type AskCardMeta = {
+  kind: "who" | "time" | "when" | "expires";
+  label: string;
+  urgent?: boolean;
+};
 
 const META_ICONS = { who: User, time: Clock, when: Calendar, expires: CalendarClock };
 
@@ -21,6 +25,7 @@ export function AskCard({
   meta,
   action,
   titleSlot,
+  notice,
   className,
 }: {
   category: AskCategory;
@@ -32,6 +37,8 @@ export function AskCard({
   action?: React.ReactNode;
   // Replaces the plain title, e.g. with a link that makes the whole card tappable.
   titleSlot?: React.ReactNode;
+  // Under the stub, e.g. the next step on the Claimed tab.
+  notice?: React.ReactNode;
   className?: string;
 }) {
   return (
@@ -46,9 +53,7 @@ export function AskCard({
           <CategoryTag category={category} />
           <PriceTag card={{ payType, price }} />
         </div>
-        <h2 className="mt-3 text-lg leading-tight font-bold text-balance">
-          {titleSlot ?? title}
-        </h2>
+        <h2 className="mt-3 text-lg leading-tight font-bold text-balance">{titleSlot ?? title}</h2>
         {text && <p className="mt-1.5 line-clamp-2 text-[15px] text-muted-foreground">{text}</p>}
       </div>
 
@@ -78,6 +83,7 @@ export function AskCard({
         </ul>
         {action}
       </div>
+      {notice}
     </article>
   );
 }

@@ -31,6 +31,11 @@ export async function listInbox(filter: z.input<typeof filterSchema> = {}): Prom
   return listInboxInStore(user.id, parsed.success ? parsed.data : {});
 }
 
+/** The Inbox tab's badge. 0 when signed out. */
+export async function countUnread(): Promise<number> {
+  return (await listInbox()).filter((item) => !item.read).length;
+}
+
 /** "Mark all read" (no ids) or mark the given items read. */
 export async function markInboxRead(ids?: string[]): Promise<Result> {
   const user = await getCurrentUser();
@@ -41,16 +46,18 @@ export async function markInboxRead(ids?: string[]): Promise<Result> {
   return { ok: true };
 }
 
-export async function listMessages(cardToken: string): Promise<Result<{ messages: Message[] }>> {
+export async function listMessages(
+  cardToken: string,
+): Promise<Result<{ messages: Message[]; otherFirstName: string }>> {
   const user = await getCurrentUser();
   if (!user) return { error: SIGN_IN_ERROR };
   const tok = token.safeParse(cardToken);
   if (!tok.success) return { error: "We couldn't find that ask." };
   const result = await listMessagesInStore(tok.data, user.id);
-  return "error" in result ? result : { ok: true, messages: result };
+  return "error" in result ? result : { ok: true, ...result };
 }
 
-/** Called only from the message box's Send button. */
+/** Called only from the thread's Send button. Open once both have said yes. */
 export async function sendMessage(input: { token: string; body: string }): Promise<Result> {
   const user = await getCurrentUser();
   if (!user) return { error: SIGN_IN_ERROR };
@@ -59,7 +66,6 @@ export async function sendMessage(input: { token: string; body: string }): Promi
     .safeParse(input);
   if (!parsed.success)
     return { error: parsed.error.issues[0]?.message ?? "Write a message first." };
-  // TODO(privacy): warn when a message includes a phone number or email before both say yes.
   const error = await sendMessageInStore(parsed.data.token, user.id, parsed.data.body);
   return error ?? { ok: true };
 }

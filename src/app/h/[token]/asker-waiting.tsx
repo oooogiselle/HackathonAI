@@ -2,6 +2,9 @@
 
 // Asker, before anyone is confirmed: how long the ask stays up, where it was
 // posted, and (once someone taps "I can help") who it's held for.
+import { useState } from "react";
+import { toast } from "sonner";
+
 import { ExpiryCountdown } from "@/components/task/expiry-countdown";
 import {
   clockLabel,
@@ -98,6 +101,8 @@ export function AskerWaiting({ card }: { card: PublicCard }) {
         <Rows rows={postedTo} />
       </Panel>
 
+      {!held && !card.private && <ShareLink token={token} title={card.title} />}
+
       {held && (
         <Button
           variant="ghost"
@@ -109,5 +114,42 @@ export function AskerWaiting({ card }: { card: PublicCard }) {
         </Button>
       )}
     </>
+  );
+}
+
+// After posting: one link that works anywhere (any group chat, a DM), so a
+// group without the bot still sees the same card. Uses the phone's share sheet
+// when there is one.
+function ShareLink({ token, title }: { token: string; title: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function share() {
+    const url = `${window.location.origin}/h/${token}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, text: `Can anyone help? ${title}`, url });
+        return;
+      } catch {
+        // Closed the sheet, or sharing is blocked: fall back to copying.
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Couldn't copy. Copy the link from the address bar instead.");
+    }
+  }
+
+  return (
+    <Panel>
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-muted-foreground">Share the link in any group chat</span>
+        <Button variant="secondary" onClick={share} aria-live="polite">
+          {copied ? "Link copied" : "Share link"}
+        </Button>
+      </div>
+    </Panel>
   );
 }

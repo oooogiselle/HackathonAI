@@ -20,9 +20,9 @@ export function StepHeader({
         <Link
           href={backHref}
           aria-label="Back"
-          className="-ml-1 flex size-9 items-center justify-center rounded-full bg-card shadow-sm"
+          className="-ml-1 flex size-11 items-center justify-center rounded-full bg-card shadow-sm"
         >
-          <ChevronLeft className="size-5" />
+          <ChevronLeft aria-hidden className="size-5" />
         </Link>
       )}
       {eyebrow && <div className="text-sm font-bold text-primary">{eyebrow}</div>}

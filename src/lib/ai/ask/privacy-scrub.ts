@@ -6,6 +6,7 @@ import { generateText, Output } from "ai";
 import { z } from "zod";
 
 import { askModel } from "@/lib/ai/models";
+import { EMAIL_PATTERN, PHONE_PATTERN } from "@/lib/ask/contact-info";
 import { DORMS } from "@/lib/ask/mock-data";
 import type { ScrubResult } from "@/lib/ask/types";
 
@@ -23,8 +24,8 @@ flight numbers. Keep the ask useful (keep the general time and task). Change not
 List each removed detail exactly as it appeared.`;
 
 const PATTERNS: [RegExp, string][] = [
-  [/[\w.+-]+@[\w-]+\.[\w.]+/g, "[email]"],
-  [/\+?\d[\d\s().-]{7,}\d/g, "[phone]"],
+  [EMAIL_PATTERN, "[email]"],
+  [PHONE_PATTERN, "[phone]"],
   // Name must be capitalized, so "i'm in" isn't treated as a name.
   [/\b(?:[Mm]y name is|[Ii]'m|[Ii] am|[Tt]his is)\s+[A-Z][a-z]+,?/g, ""],
   // "in Kessler Hall room 214" → "on campus"

@@ -4,7 +4,6 @@
 // held, and "Confirm done", which shows only after the helper taps Done.
 import { useState } from "react";
 
-import { MessageThread } from "@/components/task/message-thread";
 import {
   BottomActions,
   Panel,
@@ -21,7 +20,13 @@ import { formatCents } from "@/lib/ask/fees";
 import type { PublicCard } from "@/lib/ask/types";
 import { cancelCard, markDone, reportProblem } from "@/server/actions/board";
 
-export function AskerConfirmed({ card }: { card: PublicCard }) {
+export function AskerConfirmed({
+  card,
+  messages,
+}: {
+  card: PublicCard;
+  messages: React.ReactNode;
+}) {
   const { pending, run } = useTaskAction();
   const [reporting, setReporting] = useState(false);
   const [note, setNote] = useState("");
@@ -63,7 +68,7 @@ export function AskerConfirmed({ card }: { card: PublicCard }) {
         </Panel>
       )}
 
-      <MessageThread token={card.token} />
+      {messages}
 
       {facts.length > 0 && (
         <Panel>

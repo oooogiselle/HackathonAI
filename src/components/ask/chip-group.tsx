@@ -20,7 +20,7 @@ export function ChipGroup({
           aria-pressed={value === option}
           onClick={() => onChange(option)}
           className={cn(
-            "rounded-full border px-4 py-2 text-sm transition-colors",
+            "min-h-11 rounded-full border px-4 py-2 text-sm transition-colors",
             value === option
               ? "border-primary bg-primary text-primary-foreground"
               : "border-border bg-background hover:bg-muted",

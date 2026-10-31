@@ -66,12 +66,12 @@ export function HelperDetail({
             This is a paid ask, so it only goes to helpers who can accept payment. Many F-1 students
             can&apos;t; leave this off if that&apos;s you.
           </p>
-          <label className="flex items-center gap-2 py-1">
+          <label className="-mx-1 flex min-h-11 items-center gap-3 rounded-lg px-1 font-semibold">
             <input
               type="checkbox"
               checked={canAcceptPayment}
               onChange={(e) => setCanAcceptPayment(e.target.checked)}
-              className="size-4 accent-primary"
+              className="size-5 accent-primary"
             />
             I can accept payment
           </label>
@@ -127,11 +127,15 @@ export function HelperDetail({
           </Link>
         )}
         <p className="text-center text-sm text-muted-foreground">
-          {signedIn
-            ? paid
-              ? "Payment is held when the asker confirms you, and released when it's done."
-              : "A favor: no money changes hands."
-            : "Sign in with your Dartmouth account to help."}
+          {signedIn && setupBlocked
+            ? canAcceptPayment
+              ? "Add your payout account to help."
+              : 'Turn on "I can accept payment" to help with this paid ask.'
+            : signedIn
+              ? paid
+                ? "Payment is held when the asker confirms you, and released when it's done."
+                : "A favor: no money changes hands."
+              : "Sign in with your Dartmouth account to help."}
         </p>
       </BottomActions>
     </>

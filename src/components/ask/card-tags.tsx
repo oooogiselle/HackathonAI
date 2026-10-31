@@ -1,27 +1,29 @@
-import { CATEGORY_LABELS, priceLabel } from "@/lib/ask/card-format";
+import { priceLabel } from "@/lib/ask/card-format";
+import { categoryStyle } from "@/lib/ask/categories";
 import type { AskCategory, PublicCard } from "@/lib/ask/types";
-
-// Category pill colors from the design (v2).
-const CATEGORY_STYLES: Record<AskCategory, string> = {
-  writing: "bg-pay text-secondary-foreground",
-  coding: "bg-[#ede7ff] text-[#5b3cc4]",
-  lab: "bg-[#e2eeff] text-[#1d5fb8]",
-  errands: "bg-[#ffead5] text-[#9a4300]",
-  other: "bg-muted text-muted-foreground",
-};
 
 export function CategoryTag({ category }: { category: AskCategory }) {
   return (
     <span
-      className={`rounded-full px-2.5 py-1 text-xs font-bold ${CATEGORY_STYLES[category]}`}
+      className={`rounded-full px-2.5 py-1 text-xs font-bold ${categoryStyle(category)}`}
     >
-      {CATEGORY_LABELS[category]}
+      {category}
     </span>
   );
 }
 
+// One color per kind of exchange, picked to sit with the forest green:
+// money is the brand green, a trade is honey, a favor is blush.
+function priceStyle(card: Pick<PublicCard, "payType" | "price">) {
+  if (card.payType === "trade") return "bg-[#f2d58a] text-[#5a4300]";
+  if (card.price === 0) return "bg-[#f5d5dc] text-[#8c2f4a]";
+  return "bg-primary text-primary-foreground";
+}
+
 export function PriceTag({ card }: { card: Pick<PublicCard, "payType" | "price"> }) {
   return (
-    <span className="rounded-full bg-pay px-2.5 py-1 text-[13px] font-bold">{priceLabel(card)}</span>
+    <span className={`rounded-full px-2.5 py-1 text-[13px] font-bold ${priceStyle(card)}`}>
+      {priceLabel(card)}
+    </span>
   );
 }

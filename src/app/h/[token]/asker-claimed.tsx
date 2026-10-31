@@ -4,14 +4,13 @@
 // Pay to hold (/h/[token]/pay). The chat is open from here on.
 import Link from "next/link";
 
-import { MessageThread } from "@/components/task/message-thread";
 import { HelperLine, Panel, Progress, TaskHeader, TaskTicket } from "@/components/task/task-parts";
 import { useTaskAction } from "@/components/task/use-task-action";
 import { Button, buttonVariants } from "@/components/ui/button";
 import type { PublicCard } from "@/lib/ask/types";
 import { cancelCard } from "@/server/actions/board";
 
-export function AskerClaimed({ card }: { card: PublicCard }) {
+export function AskerClaimed({ card, messages }: { card: PublicCard; messages: React.ReactNode }) {
   const { pending, run } = useTaskAction();
   const helperName = card.heldByFirstName ?? "Your helper";
 
@@ -43,7 +42,7 @@ export function AskerClaimed({ card }: { card: PublicCard }) {
         </Link>
       </section>
 
-      <MessageThread token={card.token} />
+      {messages}
 
       <Button
         variant="ghost"
