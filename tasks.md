@@ -128,5 +128,5 @@ The PRD's demo path is board-first: Home → Clarify → Your ask with a price �
 
 - [x] Put the real campus counseling number on the crisis screen
       Done when: `CRISIS_RESOURCES` in `src/lib/ask/mock-data.ts` has the real counseling center name and number (confirmed by the team, see PRD open questions) alongside 988; lint + typecheck pass.
-      Done: Dartmouth Counseling Center, 603-646-9442 (confirmed by the team Oct 30). Safety and Security number still to confirm.
+      Done: Dartmouth Counseling Center, 603-646-9442 (confirmed by the team Oct 30). Safety and Security: 603-646-3333 (or 911) for emergencies, 603-646-4000 for non-emergencies.
       Note for agents: needs the real number from the team, so don't guess one.

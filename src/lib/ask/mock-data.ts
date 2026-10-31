@@ -369,10 +369,12 @@ export const DORMS = [
 
 export const CRISIS_RESOURCES = [
   { name: "988 Suicide & Crisis Lifeline", detail: "Call or text 988 (US), 24/7" },
-  // Counseling number confirmed by the team, Oct 30.
+  // Numbers confirmed by the team, Oct 30.
   { name: "Dartmouth Counseling Center", detail: "Call 603-646-9442" },
-  // TODO(human): confirm the Safety and Security number before recording. Never guess one.
-  { name: "Safety and Security", detail: "Number to confirm before recording. Emergencies: 911" },
+  {
+    name: "Dartmouth Safety and Security",
+    detail: "Emergencies: 603-646-3333 or 911. Non-emergencies: 603-646-4000",
+  },
 ];
 
 export const TUTORING_RESOURCES = [
