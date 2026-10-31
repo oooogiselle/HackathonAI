@@ -292,6 +292,27 @@ describe("board store (Postgres)", () => {
     ]);
   });
 
+  it("warns before contact info is shared, until the asker confirms", async () => {
+    const { token } = await card();
+    await holdCard(token, helpers[8]);
+
+    const early = await sendMessage(token, helpers[8], "Text me at 603-555-0142");
+    expect(early).toEqual({
+      warning: "This shares contact info before you've both said yes. Send anyway?",
+      found: ["603-555-0142"],
+    });
+    expect(await listMessages(token, helpers[8])).toEqual([]);
+
+    expect(await sendMessage(token, helpers[8], "Text me at 603-555-0142", true)).toBeNull();
+    expect("card" in (await confirmCard(token, asker))).toBe(true);
+    expect(await sendMessage(token, asker, "Mine is lin@dartmouth.edu")).toBeNull();
+    const thread = await listMessages(token, asker);
+    expect(Array.isArray(thread) && thread.map((m) => m.body)).toEqual([
+      "Text me at 603-555-0142",
+      "Mine is lin@dartmouth.edu",
+    ]);
+  });
+
   it("splits My asks and I'm helping", async () => {
     const { token } = await card();
     await holdCard(token, helpers[9]);
