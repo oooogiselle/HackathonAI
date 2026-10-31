@@ -5,16 +5,26 @@
 
 import { z } from "zod";
 
+import { matchHelpers as matchHelpersAI } from "@/lib/ai/ask/match-helpers";
+import { safetyCheck } from "@/lib/ai/ask/safety-check";
 import {
   acceptRequest,
   declineRequest,
+  listHelperProfiles,
   listRequestsFor,
   MAX_PRIVATE_RECIPIENTS,
+  recentLoad,
   sendPrivately as sendPrivatelyInStore,
   toPublicCard,
 } from "@/lib/ask/board-store";
 import { getCurrentUser } from "@/lib/ask/mock-session";
-import type { PrivateRequest, PublicCard, Result } from "@/lib/ask/types";
+import {
+  INTERESTS,
+  type MatchSuggestion,
+  type PrivateRequest,
+  type PublicCard,
+  type Result,
+} from "@/lib/ask/types";
 import { canUserAcceptPayment } from "@/lib/ask/users";
 
 const SIGN_IN_ERROR = "Sign in to post or help.";
@@ -24,6 +34,47 @@ const sendSchema = z.object({
   token,
   helperIds: z.array(z.string().min(1).max(64)).min(1).max(MAX_PRIVATE_RECIPIENTS),
 });
+
+const matchSchema = z.object({
+  text: z.string().trim().min(1).max(1000),
+  minutes: z.number().int().min(5).max(480),
+  price: z.number().int().min(0).max(500),
+  // ms, like createPrivateAsk. No time → free/busy isn't checked.
+  startsAt: z.number().int().optional(),
+  interests: z.array(z.enum(INTERESTS)).max(INTERESTS.length).default([]),
+  needs: z.array(z.string().trim().toLowerCase().min(1).max(40)).max(5).default([]),
+});
+
+/**
+ * "Ask privately": 2–3 people likely to say yes, with a one-line why. A
+ * read-only preview, so sign-in is optional; when signed in, you and anyone
+ * blocked either way are left out. sendPrivately re-checks on send.
+ */
+export async function matchHelpers(input: z.input<typeof matchSchema>): Promise<MatchSuggestion[]> {
+  const parsed = matchSchema.safeParse(input);
+  if (!parsed.success) return [];
+  const { startsAt, ...ask } = parsed.data;
+
+  // Crisis and essay asks are never matched to a peer.
+  const { category } = await safetyCheck(ask.text);
+  if (category === "crisis" || category === "academic") return [];
+
+  const viewer = await getCurrentUser();
+  const helpers = await listHelperProfiles(viewer?.id ?? null);
+  const load = await recentLoad(helpers.map((h) => h.id));
+  const picks = await matchHelpersAI(
+    {
+      ...ask,
+      startsAt: startsAt === undefined ? undefined : new Date(startsAt).toISOString(),
+      activeMatches: Object.fromEntries(load),
+    },
+    helpers,
+  );
+  return picks.map(({ helper, why }) => ({
+    helper: { id: helper.id, firstName: helper.firstName, year: helper.year },
+    why,
+  }));
+}
 
 /** Called only from the "Send to N people" button. */
 export async function sendPrivately(

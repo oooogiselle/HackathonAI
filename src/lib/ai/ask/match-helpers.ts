@@ -29,7 +29,7 @@ export type MatchInput = {
   // Whole dollars. 0 = a favor, open to everyone.
   price: number;
   // Helper id → asks they're already matched on this week (missing = 0).
-  // TODO(db): read from the claims table once the Postgres store lands.
+  // The matchHelpers action fills this from recentLoad (claims in the last 7 days).
   activeMatches?: Record<string, number>;
 };
 

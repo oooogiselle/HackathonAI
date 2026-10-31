@@ -47,6 +47,11 @@ export type Helper = {
 
 export type HelperSuggestion = { helper: Helper; why: string };
 
+// What the asker sees about a matched helper. Never their free/busy, tags,
+// weekly limit or payment status.
+export type PublicHelper = Pick<Helper, "id" | "firstName" | "year">;
+export type MatchSuggestion = { helper: PublicHelper; why: string };
+
 export type Platform = "groupme" | "slack";
 
 export type Group = {

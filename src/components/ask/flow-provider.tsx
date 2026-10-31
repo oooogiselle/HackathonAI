@@ -9,6 +9,7 @@ import type {
   AskPart,
   ClarifyAnswer,
   ClarifyQuestion,
+  MatchSuggestion,
   SafetyCategory,
   ScrubResult,
   WhereSuggestion,
@@ -28,7 +29,8 @@ export type AskFlowState = {
   sentParts: number[];
   // The active part's text, used by Where / Share.
   ask: string;
-  where?: WhereSuggestion & { category: SafetyCategory };
+  // matches: people for "Ask privately" (matchHelpers); groups/offices from suggestWhere.
+  where?: WhereSuggestion & { category: SafetyCategory; matches?: MatchSuggestion[] };
   groupId?: string;
   anonymous: boolean;
   name: string;
