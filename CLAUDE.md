@@ -10,7 +10,7 @@ Full product spec: `docs/PRD.md` (loaded below). It wins on product questions.
 
 @docs/PRD.md
 
-Hackathon demo: one ask, start to finish. No auth yet. Asks and claims move to a small Postgres store (the existing Drizzle + Supabase setup in `src/db/`) so two phones see the same card; until that lands, state is in memory. Payments, calendar and school-email sign-up are mocked.
+Hackathon demo: one ask, start to finish. **Sign-in is mocked:** first name + school (.edu) email, no verification (`src/server/actions/session.ts`, TODO(auth)). Anyone can view the board and a card; posting, claiming and every asker step need the mock sign-in, checked inside each server action. Asks and claims move to a small Postgres store (the existing Drizzle + Supabase setup in `src/db/`) so two phones see the same card; until that lands, state is in memory. Payments, calendar and school-email sign-up are mocked.
 
 ## Run
 
@@ -23,13 +23,15 @@ pnpm dev                     # http://localhost:3000
 - No `ANTHROPIC_API_KEY` → every AI step uses a canned fallback (`src/lib/ai/ask/fallback.ts`).
 - No `GROUPME_BOT_ID` / `SLACK_WEBHOOK_URL` → posts are logged to the server console as `[mock:<platform>]`.
 - `ANTHROPIC_MODEL` picks the model for the Ask steps (default `claude-sonnet-5-5`).
-- Gate before committing: `pnpm lint` and `pnpm typecheck`.
+- Gate before committing: `pnpm lint`, `pnpm typecheck` and `pnpm test` (Vitest).
 - Demo tip: after posting, the Matched page links to the helper's claim page (`/h/<token>`). Open it in another tab to claim.
 - In-memory data resets when the dev server restarts.
 
 ## Flow
 
 **Target demo path (PRD):** Home (a form: title, details, when, deadline, where, time, who to ask, price; $0 = favor; AI suggestions only on a tap), or the optional AI path ("Let AI help": messy need → Clarify (≤2 chip questions) → Your ask, where AI breaks it into 1–4 small editable asks) → public board (anonymous, privacy-checked) → bot shares the same card to GroupMe → helper claims in the browser → board shows "Already taken", bot posts "Covered" → Matched (public meeting spot) → mocked "Pay $15" → Thank you. Private route (matched helpers → mock inbox) ships as a simple mock and is told, not demoed. Matching uses seeded free/busy and payment eligibility.
+
+**Landing (target):** the public board (open cards from `listBoard`), with a button at the bottom that starts the publish flow below.
 
 **Built today:** `/` Home = the form ("Get suggestions" is opt-in AI) → `/where` (helpers + partner groups) → `/share` (preview + "Post to group") → `/matched/[token]` → `/thanks`. Optional AI path: Home "Let AI help" → `/describe` (messy need) → `/clarify` → `/draft` (AI breaks the need into small asks) → `/where`.
 Side routes: `/resources?type=crisis|tutoring` (safety redirects), `/h/[token]` (public claim page for helpers).
@@ -45,7 +47,11 @@ src/lib/ai/ask/            one small AI function per step: safety-check, clarify
 src/lib/ask/               types, mock-data (fictional campus/people/groups), store (in-memory),
                            format (exact posted message, shared by preview + server)
 src/lib/groups/            postToGroup(group, text) + one adapter per platform (groupme, slack, mock)
-src/server/actions/ask.ts  server actions; re-checks safety + rate limit before any post
+src/server/actions/ask.ts  server actions for the ask flow; re-checks safety + rate limit before any post
+src/server/actions/board.ts board card lifecycle: listBoard, getCard, postToBoard, claimCard, confirmHelper,
+                           markDone, markPaid, saveCardThanks, shareCardToGroup (sign-in + ownership checked)
+src/server/actions/session.ts mocked sign-in: mockSignIn, mockSignOut, getMe (cookie → in-memory session)
+src/lib/ask/board-store.ts in-memory cards; every transition is a synchronous check-and-set
 docs/contract.md           backend ↔ frontend contract: every server action, its input/output, status
 ```
 

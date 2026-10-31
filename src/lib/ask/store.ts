@@ -37,3 +37,10 @@ export function takeRateLimit(groupId: string): boolean {
   store.postCounts.set(key, count + 1);
   return true;
 }
+
+/** Gives back a slot taken by takeRateLimit when the post itself failed. */
+export function refundRateLimit(groupId: string) {
+  const key = dayKey(groupId);
+  const count = store.postCounts.get(key) ?? 0;
+  if (count > 0) store.postCounts.set(key, count - 1);
+}

@@ -126,6 +126,8 @@ export type CardStatus = "open" | "held" | "confirmed" | "done" | "expired" | "c
 
 export type BoardCard = {
   token: string;
+  // Supabase user id of whoever posted it ("seed" for demo cards). Never sent to browsers.
+  askerId: string;
   text: string;
   minutes: number;
   price: number;
@@ -137,16 +139,22 @@ export type BoardCard = {
   expiresAt: number;
   // Group ids the bot has shared this card to.
   sharedTo: string[];
-  heldBy?: { firstName: string; email: string; heldAt: number };
+  heldBy?: { userId: string; firstName: string; email: string; heldAt: number };
   meetingSpot?: string;
   // Mocked payment: set when the asker taps "Pay $X" after done. Free cards never set it.
   paidAt?: number;
   thanks?: string;
 };
 
-// What any browser may see. Never includes the helper's email (contact info is
-// shared only after both say yes) or the asker's name on anonymous cards.
-export type PublicCard = Omit<BoardCard, "heldBy"> & { heldByFirstName?: string };
+// Who is looking at a card, so the UI knows which buttons to show.
+export type CardViewer = "asker" | "helper" | "other" | "signed-out";
+
+// What any browser may see. Never includes user ids, the helper's email (contact
+// info is shared only after both say yes) or the asker's name on anonymous cards.
+export type PublicCard = Omit<BoardCard, "askerId" | "heldBy"> & {
+  heldByFirstName?: string;
+  viewer: CardViewer;
+};
 
 // Mocked helper setup on the claim page for paid cards.
 export type HelperSetup = { canAcceptPayment: boolean; payoutAccount: string };

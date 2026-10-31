@@ -1,5 +1,5 @@
 // Fictional campus, people, and group chats for the demo. All names are made up.
-import type { Group, Helper, Office } from "./types";
+import type { BoardCard, Group, Helper, Office } from "./types";
 
 export const CAMPUS = "Northfield University";
 export const SCHOOL_EMAIL_DOMAIN = "northfield.edu";
@@ -283,6 +283,51 @@ export const MEETING_SPOTS = [
   "Front steps of Hadley Library",
   "Campus Center main lobby",
   "Kessler Hall front desk",
+];
+
+// Open asks already on the board when the server starts, so the landing page
+// isn't empty. All anonymous. Times are relative to server start.
+export type SeedCard = Pick<BoardCard, "text" | "minutes" | "price"> & {
+  postedMinutesAgo: number;
+  expiresInHours: number;
+};
+
+export const SEED_CARDS: SeedCard[] = [
+  {
+    text: "Could someone drive me to Bradley Airport Saturday morning? I have two suitcases. About 45 minutes.",
+    minutes: 45,
+    price: 15,
+    postedMinutesAgo: 10,
+    expiresInHours: 30,
+  },
+  {
+    text: "First winter here. Could anyone lend me a warm coat for a weekend trip next week? I'll return it clean.",
+    minutes: 15,
+    price: 0,
+    postedMinutesAgo: 35,
+    expiresInHours: 48,
+  },
+  {
+    text: "Need a hand carrying 4 boxes from my dorm to the storage place on Elm St this Friday afternoon.",
+    minutes: 30,
+    price: 10,
+    postedMinutesAgo: 80,
+    expiresInHours: 20,
+  },
+  {
+    text: "Would anyone practice casual English conversation with me over coffee for 20 minutes this week?",
+    minutes: 20,
+    price: 0,
+    postedMinutesAgo: 150,
+    expiresInHours: 72,
+  },
+  {
+    text: "Could someone show me how to cook rice without a rice cooker? Shared kitchen in my dorm, any evening.",
+    minutes: 20,
+    price: 5,
+    postedMinutesAgo: 240,
+    expiresInHours: 24,
+  },
 ];
 
 // Used by the fallback privacy scrub to catch dorm names.
