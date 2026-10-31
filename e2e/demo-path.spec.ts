@@ -104,6 +104,29 @@ test("a posted ask is claimed by another student and closed with a thank-you", a
   await expect(page.getByText("Rina can help!")).toBeVisible();
   await page.getByRole("button", { name: "Confirm Rina" }).click();
   await expect(page.getByText("Meet at (public)")).toBeVisible();
+
+  // Both said yes, so messages open: asker writes first, helper replies.
+  await page.getByRole("link", { name: /^Rina/ }).click();
+  await expect(page).toHaveURL(new RegExp(`${taskPath}/messages$`));
+  await expect(page.getByText("You both said yes. Plan the details here.")).toBeVisible();
+  await page.getByLabel("Message Rina").fill("I'm at the Collis porch");
+  await page.getByRole("button", { name: "Send" }).click();
+  await expect(page.getByText("I'm at the Collis porch")).toBeVisible();
+  await expect(page.getByLabel("Message Rina")).toHaveValue("");
+
+  await helper.reload();
+  await helper.getByRole("link", { name: /^Lin/ }).click();
+  await expect(helper.getByText("I'm at the Collis porch")).toBeVisible();
+  await helper.getByLabel("Message Lin").fill("On my way");
+  await helper.keyboard.press("Enter");
+  await expect(helper.getByText("On my way")).toBeVisible();
+  // The asker's thread picks up the reply on its own.
+  await expect(page.getByText("On my way")).toBeVisible();
+
+  await page.getByRole("link", { name: "Task" }).click();
+  await expect(page).toHaveURL(new RegExp(`${taskPath}$`));
+  await expect(page.getByRole("link", { name: /^Rina/ })).toContainText("On my way");
+  await helper.getByRole("link", { name: "Task" }).click();
   await page.getByRole("button", { name: "Pay $17.28 and hold" }).click();
   await expect(page.getByText("Rina is on it")).toBeVisible();
 

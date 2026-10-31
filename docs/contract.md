@@ -102,13 +102,13 @@ How the flows connect:
 
 ## Private requests, inbox and messages
 
-| Screen         | Action             | Input                                   | Returns                                                                                                                                                   | Status        |
-| -------------- | ------------------ | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-| Inbox (helper) | `listMyRequests`   | none                                    | `Result<{ requests: PrivateRequest[] }>` (`card`, `sentAt`, `response?`)                                                                                  | ✅ private.ts |
-| Inbox (helper) | `respondToRequest` | `{ token, answer: "yes" \| "no" }`      | `Result`. "yes" is the same hold as the board (first yes wins); "no" asks no reason and tells the asker nothing                                           | ✅ private.ts |
-| Inbox          | `markInboxRead`    | `ids?: string[]` (none = mark all read) | `Result`                                                                                                                                                  | ✅ inbox.ts   |
-| Claimed task   | `listMessages`     | `token`                                 | `Result<{ messages: Message[] }>`: asker and holder only, once someone said yes. An anonymous asker shows as "The asker" until they confirm               | ✅ inbox.ts   |
-| Claimed task   | `sendMessage`      | `{ token, body, confirmed? }`           | `Result`; notifies the other side. Before the asker confirms, an email or phone number returns `{ warning, found }` unsent; resend with `confirmed: true` | ✅ inbox.ts   |
+| Screen         | Action             | Input                                   | Returns                                                                                                                                  | Status        |
+| -------------- | ------------------ | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| Inbox (helper) | `listMyRequests`   | none                                    | `Result<{ requests: PrivateRequest[] }>` (`card`, `sentAt`, `response?`)                                                                 | ✅ private.ts |
+| Inbox (helper) | `respondToRequest` | `{ token, answer: "yes" \| "no" }`      | `Result`. "yes" is the same hold as the board (first yes wins); "no" asks no reason and tells the asker nothing                          | ✅ private.ts |
+| Inbox          | `markInboxRead`    | `ids?: string[]` (none = mark all read) | `Result`                                                                                                                                 | ✅ inbox.ts   |
+| Claimed task   | `listMessages`     | `token`                                 | `Result<{ messages: Message[]; otherFirstName }>`: asker and helper only, once both said yes (confirmed or done; read-only after cancel) | ✅ inbox.ts   |
+| Claimed task   | `sendMessage`      | `{ token, body }`                       | `Result`; open once both said yes, closed after cancel; notifies the other side                                                          | ✅ inbox.ts   |
 
 Inbox items are written by the server in the same transaction as the state change: posted, shared to GroupMe, someone can help (action), confirmed, payment held / released, cancelled, new private ask (action), new message (action).
 

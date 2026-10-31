@@ -107,8 +107,8 @@ The PRD's demo path is board-first: Home → Clarify → Your ask with a price �
 
 - [x] Contact info only after both say yes
       Done when: neither side's contact details are returned by any read until the helper has said yes and the asker has confirmed; lint + typecheck pass.
-      Backend: `PublicCard` never has emails or user ids; payment details only for the two parties; an anonymous asker shows as "The asker" in messages until they confirm.
-      Done: `sendMessage` returns `{ warning, found }` unsent when a message has an email or phone number before the asker confirms; resend with `confirmed: true` (`src/lib/ask/contact-info.ts`, test in `board-store.test.ts`). No message box UI yet.
+      Backend: `PublicCard` never has emails or user ids; payment details only for the two parties; no names are shared in messages, since the thread opens only after confirm.
+      Done: messages open only once both say yes (the asker confirmed), on their own screen `/h/[token]/messages`; before that `listMessages` / `sendMessage` return "Messages open once you've both said yes."
 
 ## PRD gaps: small fixes (see `docs/PRD.md`)
 
