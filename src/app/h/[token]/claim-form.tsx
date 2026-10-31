@@ -27,7 +27,7 @@ export function ClaimForm({ token }: { token: string }) {
   if (done) {
     return (
       <div className="flex flex-col gap-2 rounded-xl border p-4">
-        <p className="font-medium">Thank you, {firstName}! 🙌</p>
+        <p className="font-medium">Thank you, {firstName}!</p>
         <p className="text-sm text-muted-foreground">
           We let them know. They&apos;ll see a public spot to meet. The group has been told
           it&apos;s covered.
