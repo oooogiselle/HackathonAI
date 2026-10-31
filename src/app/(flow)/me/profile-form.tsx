@@ -1,11 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
+import { useCalendarConnection } from "@/components/ask/calendar-slots";
 import { Field, ToggleChip } from "@/components/ask/form-bits";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { INTEREST_LABELS } from "@/lib/ask/helper-fit";
 import { INTERESTS, type Interest, type Profile } from "@/lib/ask/types";
@@ -55,8 +57,9 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
   );
 }
 
-export function ProfileForm({ profile }: { profile: Profile }) {
+export function ProfileForm({ profile, backToAsk }: { profile: Profile; backToAsk?: boolean }) {
   const router = useRouter();
+  const calendar = useCalendarConnection();
   const [form, setForm] = useState({
     firstName: profile.firstName,
     canAcceptPayment: Boolean(profile.canAcceptPayment),
@@ -203,6 +206,20 @@ export function ProfileForm({ profile }: { profile: Profile }) {
               />
             </Field>
           </div>
+        )}
+      </Card>
+
+      <Card title="Calendar">
+        <SwitchRow
+          title="Connect Google Calendar"
+          detail="Ask sees only when you're free, never event details, and suggests times when you ask. Turns on right away. Demo: no real calendar is connected."
+          on={calendar.connected}
+          onChange={calendar.setConnected}
+        />
+        {backToAsk && calendar.connected && (
+          <Link href="/ask" className={buttonVariants({ variant: "outline" })}>
+            Back to your ask
+          </Link>
         )}
       </Card>
 

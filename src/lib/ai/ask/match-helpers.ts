@@ -8,11 +8,14 @@ import { generateText, Output } from "ai";
 import { z } from "zod";
 
 import { askModel } from "@/lib/ai/models";
+import { isBusyAt } from "@/lib/ask/free-busy";
 import { helperFits } from "@/lib/ask/helper-fit";
 import { HELPERS } from "@/lib/ask/mock-data";
-import type { BusySlot, Helper, HelperSuggestion, Interest } from "@/lib/ask/types";
+import type { Helper, HelperSuggestion, Interest } from "@/lib/ask/types";
 
 import { withFallback } from "./fallback";
+
+export { isBusyAt };
 
 const MAX_PICKS = 3;
 // How many rule-passing helpers the model gets to choose from.
@@ -42,27 +45,6 @@ Everyone listed is already free at that time and has room this week; just pick t
 For each, write a one-line reason (under 12 words) that references their profile.
 Never mention their calendar, payment status or how busy they are.
 Don't use he or she; start with what they do (e.g. "Drives to Lebanon airport most breaks")`;
-
-const toMinutes = (hhmm: string) => {
-  const [h, m] = hhmm.split(":").map(Number);
-  return h * 60 + m;
-};
-
-// True if [start, start + minutes) overlaps a busy slot. Local server time, the
-// same clock the seeded slots use. An ask that runs past midnight is checked
-// against the next day too.
-export function isBusyAt(busy: BusySlot[], startsAt: Date, minutes: number) {
-  const day = startsAt.getDay();
-  const from = startsAt.getHours() * 60 + startsAt.getMinutes();
-  const to = from + Math.max(minutes, 1);
-  return busy.some((slot) => {
-    const start = toMinutes(slot.start);
-    const end = toMinutes(slot.end);
-    if (slot.day === day) return from < end && start < to;
-    if (slot.day === (day + 1) % 7) return to > 24 * 60 && start < to - 24 * 60;
-    return false;
-  });
-}
 
 function fitScore(helper: Helper, input: MatchInput) {
   const text = input.text.toLowerCase();
