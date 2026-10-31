@@ -126,6 +126,7 @@ The PRD's demo path is board-first: Home → Clarify → Your ask with a price �
 - [ ] Set up the test GroupMe group and bot (Sophia)
       Done when: a test GroupMe group exists with teammates in it, a bot is created for it with **no callback URL**, and its `GROUPME_BOT_ID` is in `.env.local` on the demo machine.
 
-- [ ] Put the real campus counseling number on the crisis screen
+- [x] Put the real campus counseling number on the crisis screen
       Done when: `CRISIS_RESOURCES` in `src/lib/ask/mock-data.ts` has the real counseling center name and number (confirmed by the team, see PRD open questions) alongside 988; lint + typecheck pass.
+      Done: Dartmouth Counseling Center, 603-646-9442 (confirmed by the team Oct 30). Safety and Security number still to confirm.
       Note for agents: needs the real number from the team, so don't guess one.
