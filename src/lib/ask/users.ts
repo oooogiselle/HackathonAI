@@ -3,13 +3,14 @@ import "server-only";
 
 import { randomBytes } from "node:crypto";
 
-import { and, eq, or } from "drizzle-orm";
+import { and, desc, eq, isNotNull, or } from "drizzle-orm";
 
 import { asks, blocks, claims, sessions, users } from "@/db/schema";
 
+import { aliasFor } from "./alias";
 import type { ViewerPrefs } from "./board-rank";
 import { getAskDb } from "./db";
-import type { BlockedEntry, HelperSetup, Profile } from "./types";
+import type { BlockedEntry, HelperSetup, Profile, ThanksNote } from "./types";
 
 export type SessionUser = { id: string; firstName: string; email: string };
 
@@ -55,14 +56,18 @@ export async function getProfile(userId: string): Promise<Profile | null> {
   if (!u) return null;
   return {
     firstName: u.firstName,
+    alias: aliasFor(u.id),
     email: u.email,
     phone: u.phone ?? undefined,
     classYear: u.classYear ?? undefined,
     showClassYear: u.showClassYear,
+    blurb: u.blurb ?? undefined,
+    busy: u.busy,
     canAcceptPayment: u.canAcceptPayment,
     payoutMethod: (u.payoutMethod ?? undefined) as Profile["payoutMethod"],
     payoutHandle: u.payoutHandle ?? undefined,
     interests: u.interests,
+    tags: u.tags,
     weeklyLimit: u.weeklyLimit,
     emailNotifications: u.emailNotifications,
   };
@@ -78,11 +83,24 @@ export async function getViewerPrefs(userId: string): Promise<ViewerPrefs | null
   return u && u.interests.length > 0 ? u : null;
 }
 
-export type ProfileUpdate = Partial<Omit<Profile, "email">>;
+export type ProfileUpdate = Partial<Omit<Profile, "email" | "alias">>;
 
 export async function updateProfile(userId: string, update: ProfileUpdate) {
   const db = await getAskDb();
   await db.update(users).set(update).where(eq(users.id, userId));
+}
+
+/** Thank-you notes on asks you helped with, newest first. */
+export async function listThanksFor(userId: string, limit = 5): Promise<ThanksNote[]> {
+  const db = await getAskDb();
+  const rows = await db
+    .select({ title: asks.title, thanks: asks.thanks, at: claims.heldAt })
+    .from(claims)
+    .innerJoin(asks, eq(asks.token, claims.askToken))
+    .where(and(eq(claims.helperId, userId), isNotNull(asks.thanks)))
+    .orderBy(desc(claims.heldAt))
+    .limit(limit);
+  return rows.map((r) => ({ title: r.title, thanks: r.thanks ?? "", at: r.at.toISOString() }));
 }
 
 /** The mocked helper setup on the claim page. Saved so it isn't asked again. */
@@ -138,25 +156,20 @@ export async function listBlocked(userId: string): Promise<BlockedEntry[]> {
       viaAskToken: blocks.viaAskToken,
       title: asks.title,
       askerId: asks.askerId,
-      anonymous: asks.anonymous,
-      firstName: users.firstName,
     })
     .from(blocks)
-    .innerJoin(users, eq(users.id, blocks.blockedId))
     .leftJoin(asks, eq(asks.token, blocks.viaAskToken))
     .where(eq(blocks.blockerId, userId));
-  return rows.map((r) => {
-    // Never name an anonymous asker, even to someone who blocked them.
-    const hidden = r.askerId === r.blockedId && r.anonymous;
-    return {
-      key: r.viaAskToken ? `ask:${r.viaAskToken}` : `user:${r.blockedId}`,
-      label: hidden
+  // Aliases only, never names. Askers aren't shown even by alias on their cards.
+  return rows.map((r) => ({
+    key: r.viaAskToken ? `ask:${r.viaAskToken}` : `user:${r.blockedId}`,
+    label:
+      r.askerId === r.blockedId
         ? `The asker of “${r.title}”`
         : r.title
-          ? `${r.firstName} (“${r.title}”)`
-          : r.firstName,
-    };
-  });
+          ? `${aliasFor(r.blockedId)} (“${r.title}”)`
+          : aliasFor(r.blockedId),
+  }));
 }
 
 export async function unblock(userId: string, key: string) {

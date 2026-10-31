@@ -9,7 +9,7 @@ import Link from "next/link";
 import { AskCard } from "@/components/ask/ask-card";
 import { TabBar } from "@/components/ask/tab-bar";
 import { TopBar } from "@/components/ask/top-bar";
-import { askerLabel, durationLabel, expiresLabel, expiresSoon } from "@/lib/ask/card-format";
+import { ASKER_LABEL, durationLabel, expiresLabel, expiresSoon } from "@/lib/ask/card-format";
 import { buttonVariants } from "@/components/ui/button";
 import type { PublicCard } from "@/lib/ask/types";
 import { listBoard } from "@/server/actions/board";
@@ -104,7 +104,7 @@ function CardList({ cards, now }: { cards: PublicCard[]; now: number }) {
                 urgent: expiresSoon(card.expiresAt, now),
               },
               { kind: "time", label: durationLabel(card.minutes) },
-              { kind: "who", label: askerLabel(card) },
+              { kind: "who", label: ASKER_LABEL },
             ]}
             action={
               card.viewer !== "asker" && (

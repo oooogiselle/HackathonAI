@@ -118,7 +118,7 @@ export function TaskActions({
     return <ClaimSection card={card} needsSetup={needsPaymentSetup} pending={pending} run={run} />;
   }
 
-  const helperName = card.heldByFirstName ?? "Your helper";
+  const helperName = card.heldByAlias ?? "Your helper";
   const paidAsk = card.price > 0;
   const held = card.payment?.status === "held";
   const meeting = card.meetingSpot && (
@@ -255,7 +255,8 @@ export function TaskActions({
         <Note>
           <p className="font-medium">{helperName} can help!</p>
           <p className="text-muted-foreground">
-            Confirm to lock it in. Your contact details are shared only after you confirm.
+            Confirm to lock it in. You&apos;ll talk in the thread; names and contact details stay
+            private.
           </p>
         </Note>
         <div className="mt-auto flex flex-col gap-2">

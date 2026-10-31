@@ -17,6 +17,7 @@ import {
   sendPrivately as sendPrivatelyInStore,
   toPublicCard,
 } from "@/lib/ask/board-store";
+import { aliasFor } from "@/lib/ask/alias";
 import { getCurrentUser } from "@/lib/ask/mock-session";
 import {
   INTERESTS,
@@ -71,7 +72,7 @@ export async function matchHelpers(input: z.input<typeof matchSchema>): Promise<
     helpers,
   );
   return picks.map(({ helper, why }) => ({
-    helper: { id: helper.id, firstName: helper.firstName, year: helper.year },
+    helper: { id: helper.id, alias: aliasFor(helper.id), year: helper.year },
     why,
   }));
 }

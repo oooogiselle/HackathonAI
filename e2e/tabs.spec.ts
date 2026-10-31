@@ -75,11 +75,16 @@ test("Claimed and Inbox show the asker's next step after a claim", async ({
 
   await page.goto("/claimed");
   await expect(page.getByText("Your turn")).toBeVisible();
-  await expect(page.getByText("Omar can help. Confirm to lock it in")).toBeVisible();
+  // The helper shows up by alias, never by name.
+  await expect(
+    page.getByText(/[A-Z][a-z]+ [A-Z][a-z]+ \d{2} can help\. Confirm to lock it in$/),
+  ).toBeVisible();
+  await expect(page.getByText(/\bOmar\b/)).toHaveCount(0);
 
   await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: /Inbox/ }).click();
   await expect(page).toHaveURL(/\/inbox$/);
-  await expect(page.getByRole("link", { name: /Omar/ }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: / can help/ }).first()).toBeVisible();
+  await expect(page.getByText(/\bOmar\b/)).toHaveCount(0);
 });
 
 test("Me autosaves helper settings and explains a missing payout", async ({ page }) => {
@@ -87,6 +92,21 @@ test("Me autosaves helper settings and explains a missing payout", async ({ page
   await signIn(page, "Kai");
   await expect(page).toHaveURL(/\/me$/);
   await page.getByRole("button", { name: "Edit" }).click();
+  // The helper card preview follows the form, and shows an alias, never the name.
+  const preview = page.getByRole("region", { name: "How others see you" });
+  await expect(preview.getByText(/^[A-Z][a-z]+ [A-Z][a-z]+ \d{2}$/)).toBeVisible();
+  await expect(preview.getByText(/\bKai\b/)).toHaveCount(0);
+  await page.getByLabel("A line about you").fill("Senior with a car.");
+  await expect(preview.getByText("Senior with a car.")).toBeVisible();
+  await page.getByRole("button", { name: "Junior" }).click();
+  await expect(preview.getByText("Junior")).toBeVisible();
+  const tuesdayEvening = page.getByRole("button", { name: "Tuesday evening" });
+  const wasFree = await tuesdayEvening.getAttribute("aria-pressed");
+  await tuesdayEvening.click();
+  await expect(tuesdayEvening).toHaveAttribute(
+    "aria-pressed",
+    wasFree === "true" ? "false" : "true",
+  );
   const paySwitch = page.getByRole("switch", { name: /I can accept payment/ });
   if ((await paySwitch.getAttribute("aria-checked")) !== "true") await paySwitch.click();
   await page.getByLabel(/Venmo username|Last 4 digits/).fill("");
@@ -95,20 +115,74 @@ test("Me autosaves helper settings and explains a missing payout", async ({ page
   await page.getByRole("button", { name: "Done" }).click();
   await expect(page.getByLabel(/Venmo username|Last 4 digits/)).toBeFocused();
   await page.getByLabel(/Venmo username|Last 4 digits/).fill("@kai");
-  await page.getByRole("button", { name: "Cooking" }).click();
   await expect(page.getByText("Saved", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Done" }).click();
   await expect(page.getByText(/I can accept payment \(.* @kai\)/)).toBeVisible();
   // It stuck: a reload shows the saved values.
   await page.reload();
   await expect(page.getByText(/I can accept payment \(.* @kai\)/)).toBeVisible();
+  await expect(preview.getByText("Senior with a car.")).toBeVisible();
+
+  // The blurb goes through the privacy check when you leave the box, with Undo.
+  await page.getByRole("button", { name: "Edit" }).click();
+  await expect(page.getByRole("button", { name: "Tuesday evening" })).toHaveAttribute(
+    "aria-pressed",
+    wasFree === "true" ? "false" : "true",
+  );
+  await page.getByLabel("A line about you").fill("Senior with a car. Text me at 603-555-0142.");
+  await page.getByLabel("A line about you").blur();
+  await expect(page.getByText("Removed identifying details:")).toBeVisible();
+  await expect(page.getByLabel("A line about you")).not.toHaveValue(/603-555-0142/);
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(page.getByLabel("A line about you")).toHaveValue(/603-555-0142/);
+  await page.getByRole("button", { name: "Remove them again" }).click();
+  await expect(page.getByLabel("A line about you")).not.toHaveValue(/603-555-0142/);
+});
+
+test("Me turns your own words into chips and specifics, added only on a tap", async ({ page }) => {
+  await page.goto(`/signin?next=${encodeURIComponent("/me")}`);
+  await signIn(page, "Bo");
+  await expect(page).toHaveURL(/\/me$/);
+  await page.getByRole("button", { name: "Edit" }).click();
+  const rides = page
+    .getByRole("group", { name: "Interests" })
+    .getByRole("button", { name: "Rides", exact: true });
+  await expect(rides).toHaveAttribute("aria-pressed", "false");
+
+  await page
+    .getByLabel("Or say it in your own words")
+    .fill("I have a car and can drive people to the airport.");
+  await page.getByRole("button", { name: "Turn into chips" }).click();
+  const offered = page.getByRole("status").filter({ hasText: "From what you wrote" });
+  await expect(offered.getByRole("button", { name: "airport" })).toBeVisible();
+  // Nothing changes until a tap.
+  await expect(rides).toHaveAttribute("aria-pressed", "false");
+
+  await offered.getByRole("button", { name: "Add all" }).click();
+  await expect(rides).toHaveAttribute("aria-pressed", "true");
+  const specifics = page.getByRole("list", { name: "Specifics" });
+  await expect(specifics.getByText("airport")).toBeVisible();
+  await expect(page.getByText("All added.")).toBeVisible();
+
+  // Type one by hand too; it saves on its own. Reload to check.
+  await page.getByLabel("Add a specific").fill("Korean");
+  await page.keyboard.press("Enter");
+  await expect(specifics.getByText("korean")).toBeVisible();
+  await expect(page.getByText("Saved", { exact: true })).toBeVisible();
+  await page.reload();
+  await page.getByRole("button", { name: "Edit" }).click();
+  await expect(page.getByRole("list", { name: "Specifics" }).getByText("korean")).toBeVisible();
+  await expect(rides).toHaveAttribute("aria-pressed", "true");
 });
 
 test("the board puts asks matching your interests first", async ({ page }) => {
   await page.goto(`/signin?next=${encodeURIComponent("/me")}`);
   await signIn(page, "Rae");
   await page.getByRole("button", { name: "Edit" }).click();
-  await page.getByRole("button", { name: "Language practice" }).click();
+  await page
+    .getByRole("group", { name: "Interests" })
+    .getByRole("button", { name: "Language practice" })
+    .click();
   await expect(page.getByText("Saved", { exact: true })).toBeVisible();
   await page.goto("/");
   const forYou = page.getByRole("region", { name: "For you" });
