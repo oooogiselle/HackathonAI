@@ -5,7 +5,7 @@
 // nothing it suggests is applied without a tap. Continue goes to Quick check,
 // which runs the safety check on the final wording.
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { use, useEffect, useState, useTransition } from "react";
 import { Sparkles } from "lucide-react";
 
 import { type AskFlowState, useAskFlow } from "@/components/ask/flow-provider";
@@ -27,8 +27,10 @@ import {
   type AssistSuggestions,
   type HelperPrefs,
   type PayType,
+  type PublicCard,
 } from "@/lib/ask/types";
 import { assistAsk } from "@/server/actions/ask";
+import { getCard } from "@/server/actions/board";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const FIELD_IDS: Record<AssistField, string> = {
@@ -112,13 +114,44 @@ function initialForm(state: AskFlowState): Form {
   };
 }
 
-export default function PostNeed() {
+// "Edit and post" on an expired ask (?from=<token>): start from that card.
+function formFromCard(card: PublicCard): Form {
+  return {
+    what: card.title,
+    category: card.category,
+    details: card.text,
+    payType: card.payType,
+    when: card.startsAt && card.startsAt > Date.now() ? toLocalInput(new Date(card.startsAt)) : "",
+    deadline: toLocalInput(new Date(Date.now() + DAY_MS)),
+    deadlineTouched: false,
+    where: "",
+    minutes: card.minutes,
+    helper: toHelperPrefs({ interests: [], needs: [], nice: [], why: "" }),
+    price: card.price,
+  };
+}
+
+export default function PostNeed({ searchParams }: PageProps<"/ask">) {
   const { state, ready } = useAskFlow();
+  const from = use(searchParams).from;
+  const fromToken = typeof from === "string" ? from : undefined;
+  // undefined while loading; null = no card to start from.
+  const [fromCard, setFromCard] = useState<PublicCard | null | undefined>(
+    fromToken ? undefined : null,
+  );
+
+  useEffect(() => {
+    if (fromToken)
+      getCard(fromToken).then((card) => setFromCard(card?.viewer === "asker" ? card : null));
+  }, [fromToken]);
+
   // Wait for sessionStorage so Back from Quick check restores the form.
   return (
     <>
-      <StepHeader title="Post a need" backHref="/" />
-      {ready && <WriteForm initial={initialForm(state)} />}
+      <StepHeader title="Post a need" backHref={fromToken ? `/h/${fromToken}` : "/"} />
+      {ready && fromCard !== undefined && (
+        <WriteForm initial={fromCard ? formFromCard(fromCard) : initialForm(state)} />
+      )}
     </>
   );
 }
@@ -213,7 +246,13 @@ function WriteForm({ initial }: { initial: Form }) {
       askCategory: form.category,
       payType: form.payType,
     };
-    reset({ mode: "form", need: `${what}. ${details}`, parts: [part], activePart: 0, ask: details });
+    reset({
+      mode: "form",
+      need: `${what}. ${details}`,
+      parts: [part],
+      activePart: 0,
+      ask: details,
+    });
     router.push("/check");
   }
 

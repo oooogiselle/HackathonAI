@@ -1,8 +1,9 @@
 // The demo path: the board (/) -> Ask for help -> form (/ask) -> Where -> Share
 // (anonymous) -> posted to the board and a group -> a second student opens the
 // task (board or group link), signs in with the mocked Dartmouth SSO and claims
-// it -> a third sees "Already taken" -> the asker confirms and pays to hold ->
-// the helper taps Done -> the asker confirms done -> thank-you.
+// it ("I can help") -> a third sees "Already taken" -> the asker confirms, they
+// message each other, the asker pays to hold (/h/[token]/pay) -> the helper
+// taps Done -> only then can the asker confirm done -> thank-you.
 // Plus the two safety redirects. See playwright.config.ts for the server setup.
 import { type Browser, devices, expect, type Page, test } from "@playwright/test";
 
@@ -69,7 +70,7 @@ test("a posted ask is claimed by another student and closed with a thank-you", a
   await page.getByRole("button", { name: /^Post to the board/ }).click();
 
   await expect(page).toHaveURL(/\/h\/[^/]+$/);
-  await expect(page.getByText("Waiting for a helper")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Waiting for a helper" })).toBeVisible();
   const taskPath = new URL(page.url()).pathname;
 
   // Helper, on another phone: finds it on the board and claims it.
@@ -77,35 +78,53 @@ test("a posted ask is claimed by another student and closed with a thank-you", a
   await helper.goto("/");
   await helper.getByRole("link", { name: "Ride to Manchester airport" }).click();
   await expect(helper).toHaveURL(new RegExp(`${taskPath}$`));
-  await helper.getByRole("link", { name: "Claim this task" }).click();
+  await expect(helper.getByRole("heading", { name: "Can you help?" })).toBeVisible();
+  // No messaging before the asker confirms.
+  await expect(helper.getByPlaceholder("Write a message")).toHaveCount(0);
+  await helper.getByRole("link", { name: "I can help" }).click();
   await signIn(helper, "Rina", "rina@dartmouth.edu");
   await expect(helper).toHaveURL(new RegExp(`${taskPath}$`));
   // Paid ask: the mocked helper setup comes first.
   await helper.getByLabel("I can accept payment").check();
   await helper.getByLabel("Payout account (connected with Stripe)").fill("4242");
-  await helper.getByRole("button", { name: "Claim this task" }).click();
-  await expect(helper.getByText("Waiting for the asker to confirm.")).toBeVisible();
+  await helper.getByRole("button", { name: "I can help" }).click();
+  await expect(helper.getByRole("heading", { name: "You offered to help" })).toBeVisible();
 
   // One ask, one claim: anyone opening the same link now sees it's taken.
   const late = await newPhone(browser, baseURL);
   await late.goto(taskPath);
   await expect(late.getByText("Already taken")).toBeVisible();
-  await expect(late.getByRole("link", { name: "Claim this task" })).toHaveCount(0);
+  await expect(late.getByRole("link", { name: "I can help" })).toHaveCount(0);
 
   // Asker: the page refreshes on its own and shows who said yes.
-  await expect(page.getByText("Rina can help!")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Rina can help" })).toBeVisible();
   await page.getByRole("button", { name: "Confirm Rina" }).click();
-  await expect(page.getByText("Meet at (public)")).toBeVisible();
+
+  // Claimed: the chat opens for both, and the next step is holding the pay.
+  await expect(page.getByRole("heading", { name: "Rina is helping" })).toBeVisible();
+  await page.getByPlaceholder("Write a message").fill("East Wheelock lobby at 7?");
+  await page.getByRole("button", { name: "Send" }).click();
+  await expect(helper.getByText("East Wheelock lobby at 7?")).toBeVisible();
+  await helper.getByPlaceholder("Write a message").fill("See you there!");
+  await helper.getByRole("button", { name: "Send" }).click();
+  await expect(page.getByText("See you there!")).toBeVisible();
+
+  await page.getByRole("link", { name: "Hold $15 to start" }).click();
+  await expect(page).toHaveURL(new RegExp(`${taskPath}/pay$`));
   await page.getByRole("button", { name: "Pay $17.28 and hold" }).click();
-  await expect(page.getByText("Rina is on it")).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`${taskPath}$`));
+  await expect(page.getByRole("heading", { name: "Rina is on it" })).toBeVisible();
+  await expect(page.getByText("Meet here")).toBeVisible();
+  // "Confirm done" waits for the helper's Done.
+  await expect(page.getByRole("button", { name: "Confirm done" })).toHaveCount(0);
 
   // Helper: starts once it's held, then marks it done.
   await expect(helper.getByText("$15.00 is held for you.")).toBeVisible();
   await helper.getByRole("button", { name: "Done", exact: true }).click();
-  await expect(helper.getByText("Marked done")).toBeVisible();
+  await expect(helper.getByRole("heading", { name: "Marked done" })).toBeVisible();
 
   // Asker: confirms, which releases the payment.
-  await expect(page.getByText("Rina marked it done")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Rina marked it done" })).toBeVisible();
   await page.getByRole("button", { name: "Confirm done" }).click();
   await expect(page.getByText("$15.00 released to Rina.")).toBeVisible();
   await expect(helper.getByText("$15.00 released to you.")).toBeVisible();

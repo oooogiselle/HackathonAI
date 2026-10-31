@@ -36,13 +36,14 @@ pnpm dev                     # http://localhost:3000
 **Landing:** `/` is the needs board (open cards from `listBoard`, category chips), with a sticky "Ask for help" button that opens the form at `/ask`. Each card opens the task page `/h/[token]`.
 
 **Built today:** `/ask` = the form ("Get suggestions" is opt-in AI) → `/where` (helpers + partner groups) → `/share` (preview; "Post to the board" + optional group via the bot; sign-in required) → `/h/[token]` (task page) → `/thanks?token=`. Optional AI path: Home "Let AI help" → `/describe` (messy need) → `/clarify` → `/draft` (AI breaks the need into small asks) → `/where`.
-Side routes: `/resources?type=crisis|tutoring` (safety redirects), `/h/[token]` (the task page: same card from the board or a GroupMe link; buttons by viewer), `/signin` (mocked "Sign in with Dartmouth"), `/matched/[token]` (redirects to `/h/[token]`).
+Side routes: `/resources?type=crisis|tutoring` (safety redirects), `/h/[token]` (the task page: same card from the board or a GroupMe link; a screen per viewer and state), `/h/[token]/pay` (Pay to hold, Stripe only, mocked), `/signin` (mocked "Sign in with Dartmouth"), `/matched/[token]` (redirects to `/h/[token]`).
 
 ## Folder map (Ask code)
 
 ```
 src/app/(flow)/            flow pages (`/` = needs board, `/ask` = the form, describe/clarify/draft AI path, where, share, matched, thanks) + resources; layout wraps <AskFlowProvider>
-src/app/h/[token]/         task page: details + task-actions (claim, confirm, pay to hold, done, report, cancel)
+src/app/h/[token]/         task page: one screen per viewer/state (asker-*, helper-*, closed) + pay/ (Pay to hold)
+src/components/task/       task screen parts: header, ticket, progress, message thread, expiry countdown
 src/app/signin/            mocked "Sign in with Dartmouth" (@dartmouth.edu only), returns to ?next=
 src/components/ask/        flow-provider (client state, sessionStorage) + small UI pieces
 src/lib/ai/ask/            one small AI function per step: safety-check, clarify, draft-ask,
