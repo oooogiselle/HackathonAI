@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 
 import { AccountLink } from "@/components/ask/account-link";
+import { NAV } from "@/lib/ask/nav";
 import {
   ASKER_LABEL,
   durationLabel,
@@ -44,10 +45,11 @@ export default async function TaskPage({ params }: PageProps<"/h/[token]">) {
       : null;
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 px-4 py-6">
+    <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 px-4 py-6 wide:max-w-2xl wide:px-8 wide:py-10">
       <div className="flex items-center justify-between text-sm">
         <Link
           href="/"
+          transitionTypes={NAV.back}
           className="-ml-1 flex items-center gap-0.5 text-muted-foreground hover:text-foreground"
         >
           <ChevronLeft className="size-4" /> Board

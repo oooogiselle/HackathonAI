@@ -11,6 +11,7 @@ import { StepHeader } from "@/components/ask/step-header";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { checkSafety } from "@/server/actions/ask";
+import { NAV } from "@/lib/ask/nav";
 
 const EXAMPLES = [
   "need ride to airport for break",
@@ -38,14 +39,14 @@ function Describe({ initialNeed }: { initialNeed: string }) {
       if (safety.category === "crisis") return router.push("/resources?type=crisis");
       if (safety.category === "academic") return router.push("/resources?type=tutoring");
       reset({ mode: "ai", need: trimmed, category: safety.category });
-      router.push("/clarify");
+      router.push("/clarify", { transitionTypes: NAV.forward });
     });
   }
 
   // Back to the form; anything typed so far carries over into Details.
   function writeMyself() {
     reset({ mode: "form", need: need.trim() });
-    router.push("/ask");
+    router.push("/ask", { transitionTypes: NAV.back });
   }
 
   return (

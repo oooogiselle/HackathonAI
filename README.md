@@ -29,6 +29,15 @@ DartAsk was built for the hackathon theme "AI at 70: What must remain human?". O
 
 Private asks land in the picked helpers' Inbox, where they answer "I can help" or "Not this time" (no reason asked). Personal topics (visa, money, health) can only take this route.
 
+## On a phone and on a laptop
+
+DartAsk is a phone app first.
+
+- **On a phone:** open the deployed link and add it to your home screen (iPhone: Safari Share menu, then Add to Home Screen; Android: the "Add to home screen" button on the Me tab). It then opens full screen from its own icon, like an app. On an iPhone, sign in once inside the home-screen app; it keeps its own login, separate from Safari. A `localhost` link can't be installed; use the Vercel URL.
+- **On a laptop:** you see the same phone layout in a centered column, so the app looks the same everywhere.
+- **Wider layout (built, switched off):** a tablet/laptop layout with the tabs along the top and a grid of cards is in the code. To turn it on, set `LAYOUT = "wide"` in `src/lib/ask/layout.ts`.
+- **Moving between screens:** the ask flow slides forward and back, other screens crossfade, and tab screens show a loading placeholder right away. With the device's "Reduce motion" setting on, only the fades remain.
+
 ## Guardrails
 
 These are product rules, enforced on the server, not just in the UI.
@@ -101,12 +110,12 @@ With an empty `.env.local` the whole demo path works: AI uses the fallbacks, bot
 
 Before committing: `pnpm lint && pnpm typecheck && pnpm test`. Unit tests sit next to the code they test (`*.test.ts`).
 
-`pnpm test:e2e` walks the demo path in a real browser (`e2e/demo-path.spec.ts`): board -> form -> Quick check -> Where -> group preview -> post -> a second phone signs in and claims -> a third sees "Already taken" -> confirm, the message thread and its scam warning, pay to hold, Done, confirm done, thank-you, plus the essay and crisis redirects. `e2e/tabs.spec.ts` covers the tabs when signed out, the next step on Claimed and Inbox, Me autosave and the payout hint, interest-first ordering on the board, the private route for personal topics, and tap-to-call on the crisis screen. The run starts its own dev server on port 3100 (build folder `.next-e2e`) with the AI and bot keys blanked and `ASK_DB` unset, so it runs next to `pnpm dev`, never posts to the real GroupMe and never touches the shared database. First time on a machine: `pnpm exec playwright install chromium`.
+`pnpm test:e2e` walks the demo path in a real browser (`e2e/demo-path.spec.ts`): board -> form -> Quick check -> Where -> group preview -> post -> a second phone signs in and claims -> a third sees "Already taken" -> confirm, the message thread and its scam warning, pay to hold, Done, confirm done, thank-you, plus the essay and crisis redirects. `e2e/tabs.spec.ts` covers the tabs when signed out, the next step on Claimed and Inbox, Me autosave and the payout hint, interest-first ordering on the board, the private route for personal topics, and tap-to-call on the crisis screen. `e2e/responsive.spec.ts` checks the laptop view (the centered phone column) and the home-screen manifest and icons. The run starts its own dev server on port 3100 (build folder `.next-e2e`) with the AI and bot keys blanked and `ASK_DB` unset, so it runs next to `pnpm dev`, never posts to the real GroupMe and never touches the shared database. First time on a machine: `pnpm exec playwright install chromium`.
 
 ## Project layout
 
 ```
-src/app/(flow)/          the asker flow: board (/), ask, describe/clarify/draft, check, where, share,
+src/app/(flow)/          the asker flow: board (/, in (board)/), ask, describe/clarify/draft, check, where, share,
                          thanks, resources (crisis and tutoring redirects), plus the Claimed, Inbox and Me tabs
 src/app/h/[token]/       the task page: one card, buttons by viewer; messages/ is the asker-helper thread
 src/app/signin/          mocked "Sign in with Dartmouth"

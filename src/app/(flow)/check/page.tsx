@@ -17,6 +17,7 @@ import { StepHeader } from "@/components/ask/step-header";
 import { Button } from "@/components/ui/button";
 import type { CommonNeedMatch, SafetyResult } from "@/lib/ask/types";
 import { checkSafety, findCommonNeed } from "@/server/actions/ask";
+import { NAV } from "@/lib/ask/nav";
 
 export default function QuickCheckPage() {
   const router = useRouter();
@@ -64,7 +65,7 @@ export default function QuickCheckPage() {
       groupId: sensitive || state.keepPrivate ? undefined : state.groupId,
       where: undefined,
     });
-    router.push("/where");
+    router.push("/where", { transitionTypes: NAV.forward });
   }
 
   return (
@@ -136,7 +137,11 @@ export default function QuickCheckPage() {
         <Button size="lg" className="h-12 text-base" disabled={!safety} onClick={next}>
           Continue
         </Button>
-        <Button variant="ghost" className="h-11" onClick={() => router.push(editHref)}>
+        <Button
+          variant="ghost"
+          className="h-11"
+          onClick={() => router.push(editHref, { transitionTypes: NAV.back })}
+        >
           Edit my ask
         </Button>
       </div>

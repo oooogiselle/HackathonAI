@@ -4,6 +4,31 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Laptop layout (see src/lib/ask/layout.ts). `wide:` / `wide-lg:` style the
+   tablet and laptop layout and only apply when <html data-layout="wide">.
+   `frame:` styles the phone column a laptop shows otherwise. */
+@custom-variant wide {
+  @media (width >= 48rem) {
+    &:where([data-layout="wide"], [data-layout="wide"] *) {
+      @slot;
+    }
+  }
+}
+@custom-variant wide-lg {
+  @media (width >= 64rem) {
+    &:where([data-layout="wide"], [data-layout="wide"] *) {
+      @slot;
+    }
+  }
+}
+@custom-variant frame {
+  @media (width >= 48rem) {
+    &:where([data-layout="phone"], [data-layout="phone"] *) {
+      @slot;
+    }
+  }
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-ink: var(--ink);
@@ -133,5 +158,92 @@
   }
   html {
     @apply font-sans;
+  }
+}
+
+/* Page transitions (React <ViewTransition>, see components/ask/page-transition.tsx).
+   The ask flow slides a short way, like turning to the next step; everything
+   else crossfades. Exits are quicker than entrances so the new screen never
+   waits on the old one. */
+:root {
+  --vt-exit: 140ms;
+  --vt-enter: 220ms;
+  --vt-move: 280ms;
+  --vt-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes vt-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes vt-from-right {
+  from {
+    transform: translateX(48px);
+  }
+}
+@keyframes vt-from-left {
+  from {
+    transform: translateX(-48px);
+  }
+}
+@keyframes vt-to-left {
+  to {
+    transform: translateX(-48px);
+  }
+}
+@keyframes vt-to-right {
+  to {
+    transform: translateX(48px);
+  }
+}
+
+::view-transition-old(.vt-fade-out) {
+  animation: var(--vt-exit) ease-out both vt-fade reverse;
+}
+::view-transition-new(.vt-fade-in) {
+  animation: var(--vt-enter) ease-out both vt-fade;
+}
+::view-transition-old(.vt-out-fwd) {
+  animation:
+    var(--vt-exit) ease-out both vt-fade reverse,
+    var(--vt-move) var(--vt-ease) both vt-to-left;
+}
+::view-transition-new(.vt-in-fwd) {
+  animation:
+    var(--vt-enter) ease-out var(--vt-exit) both vt-fade,
+    var(--vt-move) var(--vt-ease) both vt-from-right;
+}
+::view-transition-old(.vt-out-back) {
+  animation:
+    var(--vt-exit) ease-out both vt-fade reverse,
+    var(--vt-move) var(--vt-ease) both vt-to-right;
+}
+::view-transition-new(.vt-in-back) {
+  animation:
+    var(--vt-enter) ease-out var(--vt-exit) both vt-fade,
+    var(--vt-move) var(--vt-ease) both vt-from-left;
+}
+
+/* The tab bar is the fixed point: it never moves with the screen. */
+::view-transition-group(tab-bar) {
+  animation: none;
+  z-index: 10;
+}
+
+/* Taps during an animation reach the page instead of the overlay. */
+::view-transition {
+  pointer-events: none;
+}
+
+/* Reduced motion: keep the fades, drop the sideways movement. */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(.vt-out-fwd),
+  ::view-transition-old(.vt-out-back) {
+    animation: var(--vt-exit) ease-out both vt-fade reverse;
+  }
+  ::view-transition-new(.vt-in-fwd),
+  ::view-transition-new(.vt-in-back) {
+    animation: var(--vt-enter) ease-out both vt-fade;
   }
 }

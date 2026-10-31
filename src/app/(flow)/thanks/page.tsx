@@ -13,6 +13,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { saveCardThanks } from "@/server/actions/board";
+import { NAV } from "@/lib/ask/nav";
 
 export default function ThanksPage({ searchParams }: PageProps<"/thanks">) {
   const router = useRouter();
@@ -48,7 +49,7 @@ export default function ThanksPage({ searchParams }: PageProps<"/thanks">) {
       scrub: undefined,
       groupId: undefined,
     });
-    router.push("/draft");
+    router.push("/draft", { transitionTypes: NAV.forward });
   }
 
   if (sent) {

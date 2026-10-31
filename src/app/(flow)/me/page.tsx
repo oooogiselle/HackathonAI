@@ -1,6 +1,7 @@
 // Me tab: a live preview of your helper card (your alias, never your name), then
 // what others see (year, a line about you, what you help with, when you're free)
 // and what's private (name, payouts, contact, email updates, blocked people).
+import { InstallHint } from "@/components/ask/install-hint";
 import { SignInPrompt } from "@/components/ask/sign-in-prompt";
 import { TabBar } from "@/components/ask/tab-bar";
 import { TopBar } from "@/components/ask/top-bar";
@@ -21,6 +22,7 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
   return (
     <>
       <TopBar title="Me" firstName={profile?.firstName} next="/me" />
+      <InstallHint />
       {profile ? (
         <ProfileForm
           profile={profile}

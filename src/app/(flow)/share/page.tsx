@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { formatPostMessage } from "@/lib/ask/format";
 import { GROUPS } from "@/lib/ask/mock-data";
 import { siteUrl } from "@/lib/site-url";
+import { NAV } from "@/lib/ask/nav";
 
 export default function SharePage() {
   const router = useRouter();
@@ -26,7 +27,7 @@ export default function SharePage() {
 
   function useGroup() {
     update({ groupId: group.id, toBoard: true });
-    router.push("/where");
+    router.push("/where", { transitionTypes: NAV.back });
   }
 
   if (!canShare) {

@@ -36,6 +36,7 @@ import {
   type PayType,
 } from "@/lib/ask/types";
 import { assistAsk } from "@/server/actions/ask";
+import { NAV } from "@/lib/ask/nav";
 
 const FIELD_IDS: Record<AssistField, string> = {
   when: "write-when",
@@ -169,7 +170,7 @@ function WriteForm({ initial }: { initial: Form }) {
   function letAiHelp() {
     const need = [form.what.trim(), form.details.trim()].filter(Boolean).join(". ");
     reset({ mode: "ai", need });
-    router.push("/describe");
+    router.push("/describe", { transitionTypes: NAV.forward });
   }
 
   function getSuggestions() {
@@ -237,7 +238,7 @@ function WriteForm({ initial }: { initial: Form }) {
     const problem = validate();
     if (problem) return setError(problem);
     saveDraft();
-    router.push("/check");
+    router.push("/check", { transitionTypes: NAV.forward });
   }
 
   return (

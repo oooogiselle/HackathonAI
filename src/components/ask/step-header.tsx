@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 
+import { NAV } from "@/lib/ask/nav";
+
 // Header for a flow screen: Back (or the DartAsk mark), an optional status
 // line ("✓ Everyday ask") and the big title.
 export function StepHeader({
@@ -19,6 +21,7 @@ export function StepHeader({
       {backHref && (
         <Link
           href={backHref}
+          transitionTypes={NAV.back}
           aria-label="Back"
           className="-ml-1 flex size-11 items-center justify-center rounded-full bg-card shadow-sm"
         >

@@ -3,7 +3,9 @@ import Link from "next/link";
 import { Brand } from "./brand";
 
 // Header for the tab screens (Feed, Claimed, Inbox, Me): brand, big title and
-// the signed-in person's initial (or "Sign in").
+// the signed-in person's initial (or "Sign in"). In the wide layout
+// (src/lib/ask/layout.ts) the wordmark moves into the top tab bar, so the
+// header clears it and drops its own.
 export function TopBar({
   title,
   firstName,
@@ -14,9 +16,11 @@ export function TopBar({
   next: string;
 }) {
   return (
-    <header className="flex items-center justify-between gap-3 pt-2">
+    <header className="flex items-center justify-between gap-3 pt-2 wide:mt-16">
       <div className="flex flex-col gap-0.5">
-        <Brand place="Hanover" />
+        <span className="wide:hidden">
+          <Brand place="Hanover" />
+        </span>
         <h1 className="text-3xl font-extrabold tracking-tight">{title}</h1>
       </div>
       {firstName ? (

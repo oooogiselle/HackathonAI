@@ -13,6 +13,7 @@ import { StepHeader } from "@/components/ask/step-header";
 import { Button, buttonVariants } from "@/components/ui/button";
 import type { AskPart } from "@/lib/ask/types";
 import { draftAsk } from "@/server/actions/ask";
+import { NAV } from "@/lib/ask/nav";
 
 export default function DraftPage() {
   const router = useRouter();
@@ -46,7 +47,7 @@ export default function DraftPage() {
     const part = parts[activePart];
     if (!part) return;
     update({ ask: part.text.trim(), where: undefined, scrub: undefined, groupId: undefined });
-    router.push("/check");
+    router.push("/check", { transitionTypes: NAV.forward });
   }
 
   const many = parts.length > 1;
