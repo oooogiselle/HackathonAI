@@ -25,6 +25,7 @@ pnpm dev                     # http://localhost:3000
 - `ANTHROPIC_MODEL` picks the model for the Ask steps (default `claude-sonnet-5-5`).
 - Gate before committing: `pnpm lint`, `pnpm typecheck` and `pnpm test` (Vitest).
 - **After every prompt that changes code, run `pnpm test:e2e` before reporting done.** It's a Playwright test of the demo path (`e2e/demo-path.spec.ts`): the board at `/` → Ask for help → form at `/ask` → Where → Share (anonymous) → post to the board + a group → a second phone (own browser context) opens the card from the board, signs in with the mocked Dartmouth SSO and claims it → a third sees "Already taken" → asker confirms → pays $16.81 to hold → helper taps Done → asker confirms done → thank-you, plus the essay and crisis redirects. It starts its own dev server on :3100 (build folder `.next-e2e`) with bot and AI keys blanked and `ASK_DB` unset (local PGlite, never Supabase), so it runs next to `pnpm dev`, never posts to the real GroupMe, and uses the canned AI fallbacks. When you change a flow screen or add one (sign-in, board, Pay), update the spec in the same change. If it fails, fix it or report the failure output; don't say it works until it passes. First time on a machine: `pnpm exec playwright install chromium`.
+- `pnpm bot:intro <groupId>` posts the bot intro once when it joins a group. It reads `.env.local`, so with `GROUPME_BOT_ID` set it posts to the real GroupMe.
 - Demo tip: use two browsers (or a normal + private window) so asker and helper have different sign-ins. Post from one; open the card on the board (or the `/h/<token>` link from the GroupMe post) in the other and tap Claim.
 - Local data (PGlite) resets when the dev server restarts. The old group-first actions (`postAsk` / `claimAsk` / `getPostStatus` / `saveThanks`) are deprecated and no screen calls them.
 
@@ -49,6 +50,7 @@ src/lib/ai/ask/            one small AI function per step: safety-check, clarify
 src/lib/ask/               types, mock-data (Dartmouth campus, fictional people/groups), store (old flow, in-memory),
                            format (exact posted message, shared by preview + server)
 src/lib/groups/            postToGroup(group, text) + one adapter per platform (groupme, slack, mock)
+src/lib/notify/            notify(event, to, data): emails for the 3 PRD events; console adapter only tonight
 src/server/actions/ask.ts  server actions for the ask flow; re-checks safety + rate limit before any post
 src/server/actions/board.ts board card lifecycle: listBoard, getCard, postToBoard, claimCard, confirmHelper,
                            payToHold, markHelperDone, markDone, reportProblem, saveCardThanks, shareCardToGroup, extendCard, cancelCard,

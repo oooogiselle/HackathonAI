@@ -13,7 +13,8 @@
     "format": "prettier --write .",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "bot:intro": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/bot-intro.mts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.92",

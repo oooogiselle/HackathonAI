@@ -141,6 +141,9 @@ Until it lands, write a stub with the same name and signature in your component 
 
 - **Payment (revised Oct 30, late):** hold, then release. The asker taps "Pay $X and hold" right after confirming the helper (`payToHold`). The helper taps Done (`markHelperDone`); the asker confirms (`markDone`) to release it, or it auto-releases 48 h after the helper's Done unless the asker reports a problem (`reportProblem`). Cancelling before the helper's Done refunds it. Replaces the earlier "pay after done" note, which left helpers unpaid if the asker never tapped Pay. All mocked; no money moves.
 - **No ratings:** the design's "Rate your helper" screen is the thank-you note (`saveCardThanks`), with no stars or score.
+- **Posting path:** the board flow is `postToBoard` (explicit tap) → optional `shareCardToGroup` (explicit tap). `postAsk` / `claimAsk` in `ask.ts` are the old group-first flow (in-memory); don't use them for new screens.
+- **Emails:** `notify()` in `src/lib/notify/` (console only tonight, `[mock:email]` in the server log). Sent after the winning update for exactly three events: a private ask reaches a helper (`sendPrivately`), someone says "I can help" (`claimCard`, `respondToRequest`), and the other side marks done (`markHelperDone` → asker, `markDone` → helper). Skipped when the user turned email notifications off; never names the asker. Nothing for the screens to call.
+- **Bot intro:** `pnpm bot:intro <groupId>` posts "I post asks from Ask. I can't read your messages. Remove me anytime." once, by hand, when the bot joins a group. Never sent with regular posts.
 - **Sign-in:** mocked for now (`mockSignIn` behind a mocked "Sign in with Dartmouth" button: first name + `@dartmouth.edu` email only, no codes). The design's phone + two-code Verify screen is not built (TODO(auth)).
 
 ## Storage

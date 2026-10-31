@@ -76,10 +76,12 @@ The PRD's demo path is board-first: Home → Clarify → Your ask with a price �
       Done when: `/h/[token]` first asks for first name + school (.edu) email (mocked sign-up, no verification; TODO(auth)); for a paid card it then shows a mocked helper setup ("I can accept payment" toggle + payout account field) and refuses to claim if they can't accept payment; free cards skip the setup; lint + typecheck pass.
       Done as a mocked "Sign in with Dartmouth" step (`/signin`, @dartmouth.edu only, TODO(auth) real SSO) plus the inline helper setup for paid asks on `/h/[token]`.
 
-- [ ] Email notifications (console only tonight)
+- [x] Email notifications (console only tonight)
+      Done: `src/lib/notify/` (`notify(event, to, data)` + console adapter). Board-store queues emails inside the winning transaction and sends after commit; respects `emailNotifications`. Tests: `src/lib/ask/notify-events.test.ts` (10 parallel claims → 1 email, private send, done both ways, opt-out).
       Done when: `src/lib/notify/` has a `notify(event, to, data)` interface with a console adapter (same adapter pattern as `src/lib/groups/`), called for exactly three events: matched ask → helper, ask claimed → asker, other side marked done → both (with a confirm link); only the request that won the state update sends; no message reveals an anonymous asker; lint + typecheck pass.
 
-- [ ] Bot intro message
+- [x] Bot intro message
+      Done: `pnpm bot:intro <groupId>` (`scripts/bot-intro.mts`, text in `BOT_INTRO_MESSAGE` in `src/lib/ask/format.ts`). Reads `.env.local`, so it posts to the real GroupMe when `GROUPME_BOT_ID` is set.
       Done when: a one-time action or script (`pnpm bot:intro <groupId>`) posts "I post asks from Ask. I can't read your messages. Remove me anytime." through `postToGroup`; it is never sent with regular posts; lint + typecheck pass.
 
 - [x] Bot shares the board card to GroupMe
