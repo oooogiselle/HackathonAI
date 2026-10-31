@@ -23,7 +23,7 @@ function makeHelper(id: string, overrides: Partial<Helper> = {}): Helper {
 const SAT_10AM = new Date(2026, 10, 7, 10, 0).toISOString();
 
 const ride = (overrides: Partial<MatchInput> = {}): MatchInput => ({
-  text: "Ride to Bradley Airport Saturday morning",
+  text: "Ride to Lebanon airport Saturday morning",
   interests: ["rides"],
   needs: ["car"],
   startsAt: SAT_10AM,

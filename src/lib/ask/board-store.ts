@@ -38,6 +38,7 @@ import {
 } from "@/db/schema";
 
 import { type AskDb, getAskDb } from "./db";
+import { paymentBreakdown } from "./fees";
 import { MEETING_SPOTS } from "./mock-data";
 import type {
   AskCategory,
@@ -52,6 +53,8 @@ import type {
   PaymentMethod,
   PublicCard,
 } from "./types";
+
+export { paymentBreakdown };
 
 export const MAX_POSTS_PER_GROUP_PER_DAY = 3;
 export const MAX_PRIVATE_RECIPIENTS = 3;
@@ -432,21 +435,6 @@ export async function confirmCard(
         ? "This ask has expired"
         : "There's no helper to confirm yet.",
   );
-}
-
-/** Mocked fee breakdown: 10% platform fee plus an estimated processing fee. */
-export function paymentBreakdown(price: number, method: PaymentMethod) {
-  const amountCents = price * 100;
-  const platformFeeCents = Math.round(amountCents * 0.1);
-  const base = amountCents + platformFeeCents;
-  const processingFeeCents =
-    method === "venmo" ? Math.round(base * 0.019) : Math.round(base * 0.029) + 30;
-  return {
-    amountCents,
-    platformFeeCents,
-    processingFeeCents,
-    totalCents: amountCents + platformFeeCents + processingFeeCents,
-  };
 }
 
 /**

@@ -42,10 +42,10 @@ let helpers: string[];
 
 beforeAll(async () => {
   await openTestDb();
-  asker = (await signInUser("Lin", "lin@northfield.edu")).user.id;
+  asker = (await signInUser("Lin", "lin@dartmouth.edu")).user.id;
   helpers = [];
   for (let i = 0; i < 10; i++) {
-    const { user } = await signInUser(`H${i}`, `h${i}@northfield.edu`);
+    const { user } = await signInUser(`H${i}`, `h${i}@dartmouth.edu`);
     await saveHelperSetup(user.id, { canAcceptPayment: true, payoutAccount: `@h${i}` });
     helpers.push(user.id);
   }
@@ -54,7 +54,7 @@ beforeAll(async () => {
 function card(overrides: Partial<NewCard> = {}) {
   return createCard({
     askerId: asker,
-    title: "Ride to Bradley Airport",
+    title: "Ride to Lebanon airport",
     text: "Saturday morning, one suitcase.",
     category: "errands",
     payType: "pay",
@@ -247,7 +247,7 @@ describe("board store (Postgres)", () => {
   });
 
   it("never sends a paid private ask to someone who can't accept payment", async () => {
-    const { user } = await signInUser("Nadia", "nadia-f1@northfield.edu");
+    const { user } = await signInUser("Nadia", "nadia-f1@dartmouth.edu");
     await updateProfile(user.id, { canAcceptPayment: false });
     const { token } = await card({ private: true });
     expect(await sendPrivately(token, asker, [user.id])).toEqual({
@@ -264,7 +264,7 @@ describe("board store (Postgres)", () => {
     expect((await listOpenCards(helpers[6])).some((c) => c.token === token)).toBe(false);
     expect("error" in (await holdCard(token, helpers[6]))).toBe(true);
     const blocked = await listBlocked(helpers[6]);
-    expect(blocked[0].label).toBe("The asker of “Ride to Bradley Airport”");
+    expect(blocked[0].label).toBe("The asker of “Ride to Lebanon airport”");
     expect(JSON.stringify(blocked)).not.toContain("Lin");
     await unblock(helpers[6], blocked[0].key);
     expect("card" in (await holdCard(token, helpers[6]))).toBe(true);
@@ -307,7 +307,7 @@ describe("board store (Postgres)", () => {
     const full = (await getBoardCard(token))!;
     const pub = toPublicCard(full, null);
     const json = JSON.stringify(pub);
-    expect(json).not.toContain("northfield.edu");
+    expect(json).not.toContain("dartmouth.edu");
     expect(json).not.toContain(asker);
     expect(json).not.toContain(helpers[0]);
     expect(json).not.toContain("Lin");

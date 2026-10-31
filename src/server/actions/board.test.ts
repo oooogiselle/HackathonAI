@@ -23,9 +23,9 @@ const setup = { canAcceptPayment: true, payoutAccount: "@sam-venmo" };
 
 beforeAll(async () => {
   await openTestDb();
-  asker = (await signInUser("Lin", "lin@northfield.edu")).user;
+  asker = (await signInUser("Lin", "lin@dartmouth.edu")).user;
   for (let i = 1; i <= 3; i++) {
-    helpers.push((await signInUser(`H${i}`, `h${i}@northfield.edu`)).user);
+    helpers.push((await signInUser(`H${i}`, `h${i}@dartmouth.edu`)).user);
   }
 });
 
@@ -155,7 +155,7 @@ describe("board actions", () => {
     expect(card?.status).toBe("done");
     expect(card?.viewer).toBe("asker");
     expect(card?.heldByFirstName).toBe("H2");
-    expect(JSON.stringify(card)).not.toContain("northfield.edu");
+    expect(JSON.stringify(card)).not.toContain("dartmouth.edu");
 
     // The helper's inbox shows the released payment.
     currentUser = helpers[1];

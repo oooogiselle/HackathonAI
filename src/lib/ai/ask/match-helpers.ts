@@ -41,7 +41,7 @@ const INSTRUCTIONS = `Pick the ${MAX_PICKS} peers best placed to help with this 
 Everyone listed is already free at that time and has room this week; just pick the best fit.
 For each, write a one-line reason (under 12 words) that references their profile.
 Never mention their calendar, payment status or how busy they are.
-Don't use he or she; start with what they do (e.g. "Drives to Bradley Airport most breaks")`;
+Don't use he or she; start with what they do (e.g. "Drives to Lebanon airport most breaks")`;
 
 const toMinutes = (hhmm: string) => {
   const [h, m] = hhmm.split(":").map(Number);

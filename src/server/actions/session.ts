@@ -1,9 +1,10 @@
-// Mocked sign-in actions. Anyone can view the board; posting and taking an ask
+// Mocked sign-in actions ("Sign in with Dartmouth" is a mocked SSO step). Anyone can view the board; posting and taking an ask
 // need this sign-in. No email is sent and nothing is verified (TODO(auth)).
 "use server";
 
 import { z } from "zod";
 
+import { SCHOOL_EMAIL_DOMAIN } from "@/lib/ask/mock-data";
 import { getCurrentUser, signIn, signOut } from "@/lib/ask/mock-session";
 import { type BlockedEntry, INTERESTS, type Profile, type Result } from "@/lib/ask/types";
 import {
@@ -21,7 +22,11 @@ const signInSchema = z.object({
     .trim()
     .toLowerCase()
     .email("That doesn't look like an email.")
-    .refine((e) => e.endsWith(".edu"), "Please use your school (.edu) email."),
+    // Only this school's accounts tonight (mocked SSO; TODO(auth): real Dartmouth SSO).
+    .refine(
+      (e) => e.endsWith(`@${SCHOOL_EMAIL_DOMAIN}`),
+      `Use your @${SCHOOL_EMAIL_DOMAIN} account.`,
+    ),
 });
 
 export type Me = { firstName: string; email: string };

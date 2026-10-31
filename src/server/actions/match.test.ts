@@ -17,13 +17,13 @@ const board = await import("./board");
 const { matchHelpers } = await import("./private");
 
 // Seeded helpers (src/lib/ask/mock-data.ts) with a car: Mei and Chloe, both free Saturday morning.
-const MEI: SessionUser = { id: "mei", firstName: "Mei", email: "mei@northfield.edu" };
+const MEI: SessionUser = { id: "mei", firstName: "Mei", email: "mei@dartmouth.edu" };
 
 // Saturday Nov 7 2026, 10:00 server-local time.
 const SAT_10AM = new Date(2026, 10, 7, 10, 0).getTime();
 
 const ride = {
-  text: "Ride to Bradley Airport Saturday morning, two suitcases",
+  text: "Ride to Lebanon airport Saturday morning, two suitcases",
   minutes: 60,
   price: 15,
   startsAt: SAT_10AM,
@@ -38,7 +38,7 @@ let asker: SessionUser;
 
 beforeAll(async () => {
   await openTestDb();
-  asker = (await signInUser("Lin", "lin@northfield.edu")).user;
+  asker = (await signInUser("Lin", "lin@dartmouth.edu")).user;
 });
 
 beforeEach(() => {
@@ -54,14 +54,14 @@ describe("listHelperProfiles", () => {
   });
 
   it("treats a helper who hasn't answered about payment as unable to accept it", async () => {
-    const newbie = (await signInUser("Ana", "ana@northfield.edu")).user;
+    const newbie = (await signInUser("Ana", "ana@dartmouth.edu")).user;
     await updateProfile(newbie.id, { interests: ["rides"] });
     const ana = (await listHelperProfiles(null)).find((h) => h.id === newbie.id);
     expect(ana?.canAcceptPayment).toBe(false);
   });
 
   it("leaves out people blocked either way", async () => {
-    const viewer = (await signInUser("Kai", "kai@northfield.edu")).user;
+    const viewer = (await signInUser("Kai", "kai@dartmouth.edu")).user;
     const db = await getAskDb();
     await db.insert(blocks).values([
       { blockerId: viewer.id, blockedId: "chloe" },

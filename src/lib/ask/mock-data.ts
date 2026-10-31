@@ -1,8 +1,9 @@
-// Fictional campus, people, and group chats for the demo. All names are made up.
+// Demo data for Dartmouth. The campus and its public places are real; every
+// person (helpers, the seed asker) is made up, with no real contact details.
 import type { BoardCard, Group, Helper, Office } from "./types";
 
-export const CAMPUS = "Northfield University";
-export const SCHOOL_EMAIL_DOMAIN = "northfield.edu";
+export const CAMPUS = "Dartmouth College";
+export const SCHOOL_EMAIL_DOMAIN = "dartmouth.edu";
 
 // 16 seeded helpers. Some can't accept payment (e.g. F-1 students), so they only see $0 favors.
 // `busy` is seeded weekly free/busy (no event titles), standing in for Google Calendar tonight.
@@ -11,7 +12,7 @@ export const HELPERS: Helper[] = [
     id: "mei",
     firstName: "Mei",
     year: "Junior",
-    blurb: "Has a car, drives to Bradley Airport most breaks",
+    blurb: "Has a car, drives to Lebanon and Manchester airports most breaks",
     tags: ["ride", "airport", "car", "drive", "break", "luggage"],
     interests: ["rides"],
     busy: [
@@ -40,7 +41,7 @@ export const HELPERS: Helper[] = [
     id: "priya",
     firstName: "Priya",
     year: "Sophomore",
-    blurb: "RA in Kessler Hall, has a dolly for moving",
+    blurb: "RA in East Wheelock, has a dolly for moving",
     tags: ["move", "moving", "fridge", "furniture", "lift", "dorm", "storage"],
     interests: ["moving"],
     busy: [
@@ -251,21 +252,21 @@ export const HELPERS: Helper[] = [
 export const GROUPS: Group[] = [
   {
     id: "intl",
-    name: "Northfield International Students",
+    name: "Dartmouth International Students",
     platform: "groupme",
     members: 412,
     description: "Partner group run by the International Student Association",
   },
   {
     id: "rides",
-    name: "Northfield Rides & Errands",
+    name: "Dartmouth Rides & Errands",
     platform: "slack",
     members: 238,
     description: "Partner Slack channel for rides, errands, and quick favors",
   },
   {
     id: "kessler",
-    name: "Kessler Hall Residents",
+    name: "East Wheelock Residents",
     platform: "groupme",
     members: 96,
     description: "Your dorm's group chat",
@@ -279,10 +280,11 @@ export const OFFICES: Office[] = [
   { name: "Student Health Center", why: "Appointments, prescriptions, and insurance" },
 ];
 
+// Public, well-lit places to meet.
 export const MEETING_SPOTS = [
-  "Front steps of Hadley Library",
-  "Campus Center main lobby",
-  "Kessler Hall front desk",
+  "Front steps of Baker-Berry Library",
+  "Collis Center lobby",
+  "Hopkins Center main entrance",
 ];
 
 // Open asks already on the board, so the landing page isn't empty. All anonymous,
@@ -296,13 +298,13 @@ export type SeedCard = Pick<
   expiresInHours: number;
 };
 
-export const SEED_ASKER = { id: "seed", firstName: "A classmate", email: "seed@northfield.edu" };
+export const SEED_ASKER = { id: "seed", firstName: "A classmate", email: "seed@dartmouth.edu" };
 
 export const SEED_CARDS: SeedCard[] = [
   {
     token: "seed-airport-ride",
-    title: "Ride to Bradley Airport",
-    text: "Saturday morning, two suitcases. Pick up at the Campus Center, about 45 minutes.",
+    title: "Ride to Lebanon airport",
+    text: "Saturday morning, two suitcases. Pick up at Collis Center, about 45 minutes.",
     category: "errands",
     payType: "pay",
     minutes: 45,
@@ -324,7 +326,7 @@ export const SEED_CARDS: SeedCard[] = [
   {
     token: "seed-storage-boxes",
     title: "Carry 4 boxes to storage",
-    text: "From my dorm to the storage place on Elm St, Friday afternoon.",
+    text: "From my dorm to the storage place in West Lebanon, Friday afternoon.",
     category: "errands",
     payType: "pay",
     minutes: 30,
@@ -357,17 +359,27 @@ export const SEED_CARDS: SeedCard[] = [
 ];
 
 // Used by the fallback privacy scrub to catch dorm names.
-export const DORMS = ["Kessler Hall", "Hadley House", "Birch Hall", "Oakwood Hall"];
+export const DORMS = [
+  "Massachusetts Hall",
+  "Fayerweather",
+  "McLaughlin",
+  "East Wheelock",
+  "Russell Sage",
+];
 
 export const CRISIS_RESOURCES = [
   { name: "988 Suicide & Crisis Lifeline", detail: "Call or text 988 (US), 24/7" },
-  { name: "Northfield Counseling Center", detail: "Same-day appointments, (555) 010-2400" },
-  { name: "Campus Safety", detail: "Emergencies: (555) 010-9111, or call 911" },
+  // TODO(human): confirm the real numbers before recording (see tasks.md). Never guess one.
+  { name: "Dartmouth Counseling Center", detail: "Number to confirm before recording" },
+  { name: "Safety and Security", detail: "Number to confirm before recording. Emergencies: 911" },
 ];
 
 export const TUTORING_RESOURCES = [
-  { name: "Northfield Writing Center", detail: "Free 1:1 sessions to help you write it yourself" },
-  { name: "Peer Tutoring (Hadley Library, 2nd floor)", detail: "Drop-in, Sun–Thu 6–10pm" },
+  { name: "Dartmouth Writing Center", detail: "Free 1:1 sessions to help you write it yourself" },
+  {
+    name: "Peer tutoring (Academic Skills Center)",
+    detail: "Book a session to work through it yourself",
+  },
   { name: "Your professor's office hours", detail: "Ask for an extension if you're overwhelmed" },
 ];
 
