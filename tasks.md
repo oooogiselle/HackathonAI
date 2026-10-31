@@ -21,14 +21,8 @@ claude -p "Do the next unchecked task in tasks.md following AGENTS.md" --max-tur
 - [ ] Unit-test postAsk guards
       Done when: tests show `postAsk` rejects sensitive text, rejects an unknown group, and returns an error on the 4th post to the same group in a day (mock adapter, no network); `pnpm test` passes.
 
-- [ ] Persist posts in Postgres
-      Done when: a `posts` table (token, group_id, text, anonymous, created_at, claim fields, thanks) exists in `src/db/schema/` with a generated migration; `src/lib/ask/store.ts` reads/writes it via Drizzle; the flow still works end to end locally; lint + typecheck pass. Do not run migrations against the shared DB.
-
-- [ ] Back the rate limit with the database
-      Done when: `takeRateLimit` counts today's rows in `posts` for the group instead of the in-memory map; limit stays 3/group/day; lint + typecheck pass. Depends on "Persist posts in Postgres".
-
 - [ ] Show which details the safety check flagged
-      Done when: for sensitive asks, `/where` shows the reason string from `safetyCheck` above the offices list; lint + typecheck pass.
+      Done when: for sensitive asks, the screen after the draft shows the reason string from `safetyCheck` above the offices list; lint + typecheck pass.
 
 - [ ] Verify the helper's school email before a claim counts
       Done when: `/h/[token]` sends a Supabase magic link to the entered .edu email and the claim is only saved after the link is clicked; the "✅ Covered" follow-up posts only after verification; lint + typecheck pass.
@@ -36,8 +30,8 @@ claude -p "Do the next unchecked task in tasks.md following AGENTS.md" --max-tur
 - [ ] Add a Discord adapter
       Done when: `src/lib/groups/discord.ts` posts via a Discord webhook from `DISCORD_WEBHOOK_URL`, falls back to the mock adapter when unset, is registered in `src/lib/groups/index.ts`, and one mock Discord group exists in `mock-data.ts`; `.env.example` documents the var; lint + typecheck pass.
 
-- [ ] Let the user copy the ask for a direct message
-      Done when: each helper card on `/where` has a "Copy ask" button that copies the drafted ask to the clipboard and shows a toast; nothing is sent; lint + typecheck pass.
+- [ ] Copy / share-sheet fallback for groups without the bot
+      Done when: the Share preview has "Copy" (clipboard + toast) and, where `navigator.share` exists, "Share…" buttons that hand over the exact preview text; nothing is sent by Ask; works for every group, bot or not; lint + typecheck pass.
 
 - [ ] Remember the user's first name between asks
       Done when: the name typed on `/share` is saved to localStorage (wrapped in try/catch) and pre-filled next time; it's never used when "Post anonymously" is selected; lint + typecheck pass.
@@ -45,21 +39,70 @@ claude -p "Do the next unchecked task in tasks.md following AGENTS.md" --max-tur
 - [ ] Replace polling on the Matched page
       Done when: `/matched/[token]` gets the claim through Supabase Realtime (or server-sent events) instead of `setInterval`, with polling kept as a fallback; lint + typecheck pass.
 
-## PRD gaps (see `docs/PRD.md`)
+## New PRD: demo path (Giselle/Yvonne own these tonight; agents only if still unclaimed)
+
+The PRD's demo path is board-first: Home → Clarify → Your ask with a price → public board → bot posts the same card to GroupMe → claim in the browser → "Already taken" + "Covered" → Matched → mocked "Pay $15" → Thank you. No Stripe API, no Google API. Do these in order.
+
+- [ ] Seed 15–20 fictional helpers with free/busy and payment eligibility
+      Done when: `HELPERS` in `src/lib/ask/mock-data.ts` has 15–20 fictional Northfield helpers, each with `interests` (from: rides, moving stuff, US paperwork, cooking, language practice, course advice, been through OPT), seeded `busy` time ranges (free/busy only, no event titles), `weeklyLimit`, and `canAcceptPayment` (some false); the `Helper` type in `src/lib/ask/types.ts` has these fields; lint + typecheck pass.
+
+- [ ] Suggested price on Your ask
+      Done when: `draftAsk` also returns `minutes` and `suggestedPrice` (`{ min, max }` in whole dollars, from the time needed); `/draft` shows a price field pre-filled from it with a "$0 = favor" option; the price is stored in flow state; academic asks never show a price; lint + typecheck pass.
+
+- [ ] Public board: one ask, one card
+      Done when: posting from the flow (explicit tap) creates a board card in the store (ask, minutes, price, anonymous by default, run through `privacyScrub` with the removed list + Undo); `/board` lists open cards; the first "I can help" holds the card and everyone else sees "Already taken"; the asker confirms the helper (explicit tap); the server rejects crisis, sensitive and academic asks for the board; paid cards are hidden from helpers with `canAcceptPayment: false`; lint + typecheck pass.
+
+- [ ] Postgres store for asks and claims, with atomic updates
+      Done when: `asks` and `claims` tables exist in `src/db/schema/` (plus a group/day post counter) with a generated migration (do not run it against the shared DB; a human applies it); `src/lib/ask/store.ts` uses Drizzle when `DATABASE_URL` is set and the in-memory store otherwise; claim, confirm, pay and the rate limit are each one guarded `UPDATE … WHERE <expected state> RETURNING` (or `INSERT … ON CONFLICT … WHERE n < 3 RETURNING` for the counter), never read-then-write; two browsers see the same card state; lint + typecheck pass.
+
+- [ ] Save the card before posting its link
+      Done when: `postAsk` in `src/server/actions/ask.ts` saves the card (status open) before calling `postToGroup`, and marks it failed/removed if the post fails, so a helper who taps the GroupMe link instantly never sees "expired"; a failed post gives back its rate-limit slot; lint + typecheck pass.
+
+- [ ] Concurrency tests
+      Done when: a test fires 10 parallel `claimAsk` calls on one card and exactly 1 succeeds, 9 get "Already taken", and exactly one "Covered" is posted (mock adapter); repeated confirm and pay calls are no-ops after the first; 4 parallel posts to one group yield exactly 3 successes; runs against the in-memory store, and against Postgres when `DATABASE_URL` is set; `pnpm test` passes. Depends on "Add a test runner and safety tests".
+
+- [ ] Ask deadline and expiry
+      Done when: every ask has `expiresAt` (from the drafted time, default 24 h); expired cards are hidden from `/board`, the claim page shows "This ask has expired", and the claim's atomic update includes `expires_at > now()`; lint + typecheck pass.
+
+- [ ] Mocked school-email sign-up + helper setup on the claim page
+      Done when: `/h/[token]` first asks for first name + school (.edu) email (mocked sign-up, no verification; TODO(auth)); for a paid card it then shows a mocked helper setup ("I can accept payment" toggle + payout account field) and refuses to claim if they can't accept payment; free cards skip the setup; lint + typecheck pass.
+
+- [ ] Email notifications (real email + console fallback)
+      Done when: `src/lib/notify/` has a `notify(event, to, data)` interface with an email adapter (provider + key from env, documented in `.env.example`) and a console adapter used when the key is unset (same pattern as `src/lib/groups/`); called for exactly three events: matched ask → helper, ask claimed → asker, other side marked done → both (with a confirm link); only the request that won the state update sends; no email reveals an anonymous asker; demo emails go only to teammates' addresses; lint + typecheck pass.
+
+- [ ] Bot intro message
+      Done when: a one-time action or script (`pnpm bot:intro <groupId>`) posts "I post asks from Ask. I can't read your messages. Remove me anytime." through `postToGroup`; it is never sent with regular posts; lint + typecheck pass.
+
+- [ ] Bot shares the board card to GroupMe
+      Done when: "Share to GroupMe" (explicit tap) calls `postToGroup` with the card's text and a link that opens that same card (reuse `/h/[token]` as the card page); claiming from the link and from `/board` hit the same hold, so a card can't be taken twice; the demo card is $15, so the link goes through the mocked sign-up and helper setup before claiming (free cards need only sign-up); after the asker confirms, the bot posts "Covered" without naming an anonymous asker; existing guards (safety re-check, rate limit) still apply; lint + typecheck pass.
+
+- [ ] `matchHelpers` on seeded data replaces `suggestWhere`
+      Done when: `src/lib/ai/ask/match-helpers.ts` returns 2–3 helpers with a one-line why; excludes helpers busy at the ask's time (seeded free/busy; asks with no time skip this), at their weekly limit, or with `canAcceptPayment: false` when price > 0; prefers helpers with fewer active matches; returns an empty list (no throw) when nobody fits; has a no-key fallback; lint + typecheck pass.
+
+- [ ] Matched, mocked "Pay $15", Thank you
+      Done when: after the asker confirms a helper, Matched shows the helper's first name and a public meeting spot; for paid asks a "Pay $X" mock screen (explicit tap, no payment API, clearly labeled demo) marks the card paid; $0 asks skip it; Thank you still has the user write their own note; lint + typecheck pass.
+
+- [ ] Private inbox mock (told in the story, not demoed)
+      Done when: from Your ask, "Ask privately" lists `matchHelpers` results; tapping "Ask {firstName}" (explicit tap) adds a request to that helper's mock inbox at `/inbox?helper=<id>` (no auth; TODO(auth)); the inbox shows text, minutes and price with "I can help" / "Not this time" (no reason field); no group post happens; lint + typecheck pass.
+
+- [ ] Contact info only after both say yes
+      Done when: neither side's contact details are returned by any read until the helper has said yes and the asker has confirmed; lint + typecheck pass.
+
+## PRD gaps: small fixes (see `docs/PRD.md`)
 
 - [ ] Rename the safe safety category from `ok` to `none`
       Done when: `SafetyCategory` in `src/lib/ask/types.ts` uses `"none"` instead of `"ok"` (matching the PRD's AI functions table), every usage and the safetyCheck zod enum/prompt are updated, and `rg '"ok"' src/lib/ask src/lib/ai/ask src/server/actions/ask.ts "src/app/(flow)"` finds no safety-category uses; lint + typecheck pass.
 
 - [ ] Add the extension-email option to the "write my essay" redirect
-      Done when: `/resources?type=tutoring` shows a third option, "Ask your professor for an extension", with a short editable email template the user can copy (nothing is sent); tutoring and writing center options stay; lint + typecheck pass.
-
-- [ ] Private match route: ask one helper directly
-      Done when: each helper card on `/where` has an "Ask {firstName}" button that goes to a private preview (exact message, no group), and on an explicit tap creates a post with no `groupId` in the store and goes to `/matched/[token]`; the "coming soon" note is removed; sensitive asks can use this route but still never get group chats; `postToGroup` is never called for private asks; lint + typecheck pass.
-
-- [ ] Asker accepts before helper contact info is shared
-      Done when: a claim on `/h/[token]` is saved as pending; `/matched/[token]` shows "{firstName} offered to help" with Accept / Not this time; the helper's email and the meeting spot appear only after Accept; the "Covered" follow-up posts only after Accept; `getPostStatus` never returns the helper email before acceptance; lint + typecheck pass.
+      Done when: `/resources?type=tutoring` shows a third option, "Ask your professor for an extension", with a short editable email template the user can copy (nothing is sent); tutoring and writing center options stay; an academic ask can never get a price or be matched; lint + typecheck pass.
 
 ## Needs a human (agents: skip)
+
+- [ ] Pick the email service and add its key
+      Done when: the team has chosen an email provider, created an account with a verified sender, and put its API key in `.env.local` (never committed).
+
+- [ ] Set up the test GroupMe group and bot (Sophia)
+      Done when: a test GroupMe group exists with teammates in it, a bot is created for it with **no callback URL**, and its `GROUPME_BOT_ID` is in `.env.local` on the demo machine.
 
 - [ ] Put the real campus counseling number on the crisis screen
       Done when: `CRISIS_RESOURCES` in `src/lib/ask/mock-data.ts` has the real counseling center name and number (confirmed by the team, see PRD open questions) alongside 988; lint + typecheck pass.
