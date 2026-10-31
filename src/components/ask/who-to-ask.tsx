@@ -2,11 +2,12 @@
 
 // "Who to ask" for one ask: the AI's one-line why, must-have and nice-to-have
 // chips, and how many seeded helpers fit. The form also lets the student pick
-// interests themselves.
-import { countFits, INTEREST_LABELS, INTERESTS } from "@/lib/ask/helper-fit";
+// interests themselves; the first one picked (or a typed Other) is the category.
+import { countFits } from "@/lib/ask/helper-fit";
 import type { HelperPrefs, Interest } from "@/lib/ask/types";
 
-import { RemovableChip, ToggleChip } from "./form-bits";
+import { RemovableChip } from "./form-bits";
+import { InterestPicker } from "./interest-picker";
 
 export function WhoToAsk({
   helper,
@@ -15,7 +16,8 @@ export function WhoToAsk({
 }: {
   helper: HelperPrefs;
   onChange: (helper: HelperPrefs) => void;
-  pickInterests?: boolean;
+  // The form's picker: suggestions ranked against askText, plus a typed Other.
+  pickInterests?: { askText: string; custom: string; onCustom: (category: string) => void };
 }) {
   function set(interests: Interest[], needs: string[], nice = helper.nice) {
     onChange({ ...helper, interests, needs, nice, ...countFits(interests, needs) });
@@ -35,16 +37,11 @@ export function WhoToAsk({
       <h3 className="text-sm font-semibold">Who to ask</h3>
       {helper.why && <p className="text-sm text-muted-foreground">{helper.why}</p>}
       {pickInterests && (
-        <div className="flex flex-wrap gap-2">
-          {INTERESTS.map((interest) => (
-            <ToggleChip
-              key={interest}
-              label={INTEREST_LABELS[interest]}
-              pressed={helper.interests.includes(interest)}
-              onClick={() => toggleInterest(interest)}
-            />
-          ))}
-        </div>
+        <InterestPicker
+          interests={helper.interests}
+          onToggle={toggleInterest}
+          {...pickInterests}
+        />
       )}
       {(helper.needs.length > 0 || helper.nice.length > 0) && (
         <div className="flex flex-wrap gap-2">

@@ -1,9 +1,13 @@
-// Ask categories are free text: a set of presets, plus anything the asker types
-// under "Other". Suggestions rank presets and categories already on the board
-// (embeddings when OPENAI_API_KEY is set, else these keywords). Client-safe.
+// Ask categories are free text: the "Who to ask" interests as presets, plus
+// anything the asker types under "Other". Suggestions rank presets and categories
+// already on the board (embeddings when OPENAI_API_KEY is set, else these
+// keywords). Client-safe.
+import type { Interest } from "./types";
 
 export type CategoryPreset = {
   label: string;
+  // The helper interest this preset matches (same label as on Who to ask).
+  interest: Interest;
   // What the category covers; embedded for suggestions.
   about: string;
   keywords: string[];
@@ -13,74 +17,51 @@ export type CategoryPreset = {
 export const CATEGORY_PRESETS: CategoryPreset[] = [
   {
     label: "Rides",
+    interest: "rides",
     about: "a ride or lift in a car: airport, bus station, store, appointment",
     keywords: ["ride", "drive", "airport", "car", "lift", "bus", "pick up", "drop off", "lebanon", "boston"],
     style: "bg-[#ffead5] text-[#9a4300]",
   },
   {
-    label: "Moving",
+    label: "Moving stuff",
+    interest: "moving",
     about: "carrying boxes, furniture or luggage, moving rooms, storage",
-    keywords: ["move", "moving", "boxes", "carry", "furniture", "storage", "suitcase", "lift"],
+    keywords: ["move", "moving", "boxes", "carry", "furniture", "storage", "suitcase", "luggage"],
     style: "bg-[#ffead5] text-[#9a4300]",
   },
   {
-    label: "Errands",
-    about: "picking something up, shopping, mail, returning things, borrowing or lending items",
-    keywords: ["errand", "pick up", "groceries", "store", "package", "mail", "borrow", "lend", "return"],
-    style: "bg-[#ffead5] text-[#9a4300]",
-  },
-  {
-    label: "Paperwork",
+    label: "US paperwork",
+    interest: "us-paperwork",
     about: "US paperwork and systems: SSN, bank account, phone plan, forms, taxes, insurance",
     keywords: ["ssn", "bank", "form", "paperwork", "tax", "insurance", "phone plan", "license", "apply"],
     style: "bg-[#e2eeff] text-[#1d5fb8]",
   },
   {
-    label: "Food",
-    about: "cooking, recipes, kitchen help, where to eat",
-    keywords: ["cook", "cooking", "food", "rice", "recipe", "kitchen", "eat", "meal", "dumpling"],
+    label: "Cooking",
+    interest: "cooking",
+    about: "cooking, recipes, kitchen help, groceries",
+    keywords: ["cook", "cooking", "food", "rice", "recipe", "kitchen", "meal", "dumpling", "groceries"],
     style: "bg-pay text-secondary-foreground",
   },
   {
-    label: "Language",
+    label: "Language practice",
+    interest: "language",
     about: "English or language practice, conversation, pronunciation",
     keywords: ["english", "language", "conversation", "practice", "pronunciation", "speak", "chinese", "spanish"],
     style: "bg-[#ede7ff] text-[#5b3cc4]",
   },
   {
-    label: "Tech help",
-    about: "fixing a laptop or phone, wifi, printer, software setup",
-    keywords: ["laptop", "computer", "phone", "wifi", "printer", "install", "setup", "tech"],
-    style: "bg-[#ede7ff] text-[#5b3cc4]",
-  },
-  {
-    label: "Coding",
-    about: "programming help, debugging, learning a coding tool",
-    keywords: ["code", "coding", "python", "java", "bug", "debug", "program", "git"],
-    style: "bg-[#ede7ff] text-[#5b3cc4]",
-  },
-  {
-    label: "Writing",
-    about: "feedback on writing such as an email, cover letter or resume",
-    keywords: ["write", "writing", "email", "resume", "cover letter", "proofread", "feedback"],
-    style: "bg-pay text-secondary-foreground",
-  },
-  {
-    label: "Lab",
-    about: "lab equipment, science lab skills, research lab questions",
-    keywords: ["lab", "experiment", "microscope", "research", "chemistry", "biology"],
-    style: "bg-[#e2eeff] text-[#1d5fb8]",
-  },
-  {
     label: "Course advice",
+    interest: "course-advice",
     about: "which classes to take, majors, professors, registration",
     keywords: ["course", "class", "major", "professor", "registration", "schedule", "advice"],
     style: "bg-[#e2eeff] text-[#1d5fb8]",
   },
   {
-    label: "Winter gear",
-    about: "winter clothes, coats, boots, getting ready for cold weather",
-    keywords: ["coat", "winter", "boots", "jacket", "cold", "snow", "gloves"],
+    label: "Been through OPT",
+    interest: "opt",
+    about: "OPT, CPT, internships and work authorization for international students",
+    keywords: [" opt ", " cpt ", "internship", "work authorization", "ead"],
     style: "bg-[#e2eeff] text-[#1d5fb8]",
   },
 ];
@@ -93,6 +74,15 @@ const OTHER_STYLE = "bg-muted text-muted-foreground";
 function findPreset(label: string) {
   const key = label.trim().toLowerCase();
   return CATEGORY_PRESETS.find((p) => p.label.toLowerCase() === key);
+}
+
+/** The helper interest behind a preset category, if it is one. */
+export function interestForCategory(label: string) {
+  return findPreset(label)?.interest;
+}
+
+export function categoryForInterest(interest: Interest) {
+  return CATEGORY_PRESETS.find((p) => p.interest === interest)!.label;
 }
 
 /** Tidy a typed category: collapse spaces, cap length, capitalize, reuse a preset's spelling. */

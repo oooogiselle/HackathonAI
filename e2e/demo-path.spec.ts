@@ -44,13 +44,14 @@ test("a posted ask is claimed by another student and closed with a thank-you", a
 
   await page.getByLabel("What do you need?").fill("Ride to Manchester airport");
   await page.getByLabel("Details").fill("I have two suitcases and my flight is at 10am Saturday.");
-  // Category: suggestions only, picked on a tap. Typing under Other offers a similar one.
+  // Who to ask: suggestions only, picked on a tap. Typing under Other offers a similar one.
   await expect(page.getByText("Suggested for your ask")).toBeVisible();
-  const category = page.getByRole("group", { name: "Category" });
-  await category.getByRole("button", { name: "Other", exact: true }).click();
+  const whoToAsk = page.getByRole("group", { name: "Who to ask" });
+  await expect(whoToAsk.getByRole("button", { name: "Rides" })).toHaveAttribute("aria-pressed", "false");
+  await whoToAsk.getByRole("button", { name: "Other", exact: true }).click();
   await page.getByLabel("Your category").fill("Airport pickup");
   await page.getByText("Similar:").locator("..").getByRole("button", { name: "Rides" }).click();
-  await expect(category.getByRole("button", { name: "Rides" })).toHaveAttribute("aria-pressed", "true");
+  await expect(whoToAsk.getByRole("button", { name: "Rides" })).toHaveAttribute("aria-pressed", "true");
   await page.getByLabel("Where").fill("From East Wheelock");
   await page.getByLabel("Price in dollars").fill("15");
   await page.getByRole("button", { name: "Continue" }).click();
