@@ -82,18 +82,40 @@ test("Claimed and Inbox show the asker's next step after a claim", async ({
   await expect(page.getByRole("link", { name: /Omar/ }).first()).toBeVisible();
 });
 
-test("Me saves helper settings and explains a missing payout", async ({ page }) => {
+test("Me autosaves helper settings and explains a missing payout", async ({ page }) => {
   await page.goto(`/signin?next=${encodeURIComponent("/me")}`);
   await signIn(page, "Kai");
   await expect(page).toHaveURL(/\/me$/);
+  await page.getByRole("button", { name: "Edit" }).click();
   const paySwitch = page.getByRole("switch", { name: /I can accept payment/ });
   if ((await paySwitch.getAttribute("aria-checked")) !== "true") await paySwitch.click();
   await page.getByLabel(/Venmo username|Last 4 digits/).fill("");
-  await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByText("Add where your payouts go, or turn payment off.")).toBeVisible();
+  // Done doesn't leave edit mode while something needs fixing.
+  await page.getByRole("button", { name: "Done" }).click();
+  await expect(page.getByLabel(/Venmo username|Last 4 digits/)).toBeFocused();
   await page.getByLabel(/Venmo username|Last 4 digits/).fill("@kai");
-  await page.getByRole("button", { name: "Save" }).click();
-  await expect(page.getByText("Saved")).toBeVisible();
+  await page.getByRole("button", { name: "Cooking" }).click();
+  await expect(page.getByText("Saved", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Done" }).click();
+  await expect(page.getByText(/I can accept payment \(.* @kai\)/)).toBeVisible();
+  // It stuck: a reload shows the saved values.
+  await page.reload();
+  await expect(page.getByText(/I can accept payment \(.* @kai\)/)).toBeVisible();
+});
+
+test("the board puts asks matching your interests first", async ({ page }) => {
+  await page.goto(`/signin?next=${encodeURIComponent("/me")}`);
+  await signIn(page, "Rae");
+  await page.getByRole("button", { name: "Edit" }).click();
+  await page.getByRole("button", { name: "Language practice" }).click();
+  await expect(page.getByText("Saved", { exact: true })).toBeVisible();
+  await page.goto("/");
+  const forYou = page.getByRole("region", { name: "For you" });
+  await expect(
+    forYou.getByRole("link", { name: "English conversation over coffee" }),
+  ).toBeVisible();
+  await expect(page.getByRole("region", { name: "More asks" })).toBeVisible();
 });
 
 test("a personal topic goes only to helpers the asker picks", async ({ page }) => {

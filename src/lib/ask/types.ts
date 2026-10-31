@@ -223,6 +223,8 @@ export type PublicCard = Omit<BoardCard, "askerId" | "heldBy" | "payment"> & {
   // Only the asker and the helper see payment details.
   payment?: Payment;
   viewer: CardViewer;
+  // On the board only: matches what the signed-in viewer said they'd enjoy helping with.
+  forYou?: boolean;
 };
 
 export type InboxKind = "action" | "update";

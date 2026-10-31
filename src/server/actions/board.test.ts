@@ -70,6 +70,20 @@ describe("board actions", () => {
     expect(await board.claimCard({ token, setup })).toEqual({ error: "Sign in to post or help." });
   });
 
+  it("puts asks matching the viewer's interests first", async () => {
+    const token = await postDemoCard(0);
+    currentUser = helpers[2];
+    expect((await board.listBoard()).some((c) => c.forYou)).toBe(false);
+
+    await updateProfile(helpers[2].id, { interests: ["rides"] });
+    const cards = await board.listBoard();
+    const firstOther = cards.findIndex((c) => !c.forYou);
+    expect(cards[0].forYou).toBe(true);
+    expect(cards.slice(firstOther).some((c) => c.forYou)).toBe(false);
+    expect(cards.find((c) => c.token === token)?.forYou).toBe(true);
+    await updateProfile(helpers[2].id, { interests: [] });
+  });
+
   it("keeps sensitive asks off the board but allows them privately", async () => {
     currentUser = asker;
     const visa = {

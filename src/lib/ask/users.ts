@@ -7,6 +7,7 @@ import { and, eq, or } from "drizzle-orm";
 
 import { asks, blocks, claims, sessions, users } from "@/db/schema";
 
+import type { ViewerPrefs } from "./board-rank";
 import { getAskDb } from "./db";
 import type { BlockedEntry, HelperSetup, Profile } from "./types";
 
@@ -65,6 +66,16 @@ export async function getProfile(userId: string): Promise<Profile | null> {
     weeklyLimit: u.weeklyLimit,
     emailNotifications: u.emailNotifications,
   };
+}
+
+/** What the board ranks by: interests and seeded free/busy. null with no interests picked. */
+export async function getViewerPrefs(userId: string): Promise<ViewerPrefs | null> {
+  const db = await getAskDb();
+  const [u] = await db
+    .select({ interests: users.interests, busy: users.busy })
+    .from(users)
+    .where(eq(users.id, userId));
+  return u && u.interests.length > 0 ? u : null;
 }
 
 export type ProfileUpdate = Partial<Omit<Profile, "email">>;
