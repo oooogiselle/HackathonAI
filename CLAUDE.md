@@ -89,6 +89,7 @@ The rest of the repo (`/app`, `/login`, items, chat, Supabase, Drizzle) is the o
 - Calendar: free/busy only, never event titles or details. Tonight it's seeded in mock helpers; no Google API or OAuth.
 - Matching respects each helper's weekly limit and spreads load. "Not this time" never asks for a reason.
 - Contact info is shared only after both sides say yes.
+- Scam guard on messages (`src/lib/ask/scam-check.ts`, `src/lib/ai/ask/message-check.ts`): paying outside Ask or an ID number gets a warning for the sender ("Send anyway" is a tap, never a silent block) and a note for the receiver. Keywords always run; the model can only add a flag. The flag is computed on the server and stored on the message.
 - No ratings, streaks or leaderboards. (The design's "Rate your helper" screen and trust points are out; the thank-you note stays.)
 - Real campus (Dartmouth College); every person is fictional; no real student names or contact details. Crisis numbers are confirmed by the team, never guessed.
 - To add a chat platform: add an adapter in `src/lib/groups/`, register it in `index.ts`, add the platform to `Platform` in `src/lib/ask/types.ts`.
