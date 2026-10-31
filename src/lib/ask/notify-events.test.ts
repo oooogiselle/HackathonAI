@@ -46,7 +46,7 @@ const card = (overrides: { private?: boolean; price?: number } = {}) =>
     askerId: asker,
     title: "Ride to Lebanon airport",
     text: "Saturday morning, one suitcase.",
-    category: "errands",
+    category: "Errands",
     payType: "pay",
     price: 15,
     minutes: 45,

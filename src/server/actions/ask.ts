@@ -11,10 +11,15 @@ import { clarify } from "@/lib/ai/ask/clarify";
 import { draftAsk as draftAskAI } from "@/lib/ai/ask/draft-ask";
 import { privacyScrub } from "@/lib/ai/ask/privacy-scrub";
 import { safetyCheck } from "@/lib/ai/ask/safety-check";
+import { suggestCategories as suggestCategoriesAI } from "@/lib/ai/ask/suggest-category";
 import { suggestWhere as suggestWhereAI } from "@/lib/ai/ask/suggest-where";
 import { COVERED_MESSAGE, formatPostMessage } from "@/lib/ask/format";
 import { findGroup, HELPERS, MEETING_SPOTS } from "@/lib/ask/mock-data";
-import { MAX_POSTS_PER_GROUP_PER_DAY, takeRateLimit } from "@/lib/ask/board-store";
+import {
+  listBoardCategories,
+  MAX_POSTS_PER_GROUP_PER_DAY,
+  takeRateLimit,
+} from "@/lib/ask/board-store";
 import { getPost, savePost } from "@/lib/ask/store";
 import type { AssistSuggestions, ClarifyAnswer, DraftResult, Post } from "@/lib/ask/types";
 import { postToGroup } from "@/lib/groups";
@@ -60,6 +65,14 @@ export async function assistAsk(input: z.input<typeof assistInput>): Promise<Ass
   if (category === "crisis") return { redirect: "crisis" };
   if (category === "academic") return { redirect: "tutoring" };
   return { suggestions: await assistAskAI(fields) };
+}
+
+// The form's Category row: ranks presets and categories already on the board
+// against the ask (or the asker's typed "Other"). Shown only; picked on a tap.
+export async function suggestCategories(input: string): Promise<string[]> {
+  const value = z.string().trim().max(1000).parse(input);
+  if (value.length < 3) return [];
+  return suggestCategoriesAI(value, await listBoardCategories());
 }
 
 export async function suggestWhere(ask: string) {

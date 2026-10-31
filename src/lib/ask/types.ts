@@ -141,8 +141,8 @@ export type DraftResult = { parts: AskPart[] };
 // Any state before done can become cancelled; open/held read as expired after expiresAt.
 export type CardStatus = "open" | "held" | "confirmed" | "done" | "expired" | "cancelled";
 
-export const ASK_CATEGORIES = ["writing", "coding", "lab", "errands", "other"] as const;
-export type AskCategory = (typeof ASK_CATEGORIES)[number];
+// Free text: a preset ("Rides") or whatever the asker typed. See ./categories.ts.
+export type AskCategory = string;
 
 // pay: asker pays the helper. fund: paid by a club or office. trade: swap help. free: a favor.
 export const PAY_TYPES = ["pay", "fund", "trade", "free"] as const;
