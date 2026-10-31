@@ -8,7 +8,7 @@
 import { Check, Lock, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useId, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { type ExpiryChoice, useRequireNeed } from "@/components/ask/flow-provider";
@@ -115,7 +115,9 @@ export default function WherePage() {
               <Lock className="size-3.5" /> Private topic
             </span>
           ) : (
-            "✓ Everyday ask"
+            <span className="flex items-center gap-1">
+              <Check aria-hidden className="size-4" /> Everyday ask
+            </span>
           )
         }
         title={isPrivate ? "This one stays private" : "Where should it go?"}
@@ -132,7 +134,9 @@ export default function WherePage() {
         <Option
           title="Needs board"
           detail={
-            isPrivate ? "Not available for private asks" : "Classmates browsing the board can claim it"
+            isPrivate
+              ? "Not available for private asks"
+              : "Classmates browsing the board can claim it"
           }
           checked={!isPrivate && state.toBoard}
           disabled={isPrivate}
@@ -154,15 +158,18 @@ export default function WherePage() {
           onToggle={toggleGroup}
           action={
             !isPrivate && state.toBoard ? (
-              <Link href="/share" className="text-sm font-semibold text-primary">
+              <Link
+                href="/share"
+                className="flex min-h-11 items-center px-1 text-sm font-semibold text-primary"
+              >
                 Preview
               </Link>
             ) : undefined
           }
         />
-        <div className="flex items-center gap-3 p-4">
+        <div className="flex items-center gap-3 py-4 pl-4">
           <span className="flex size-6 shrink-0 items-center justify-center text-primary">
-            <Users className="size-5" />
+            <Users aria-hidden className="size-5" />
           </span>
           <span className="flex flex-1 flex-col">
             <span className="font-semibold">Ask matched helpers privately</span>
@@ -173,11 +180,11 @@ export default function WherePage() {
           <Link
             href="/private"
             className={buttonVariants({
-              variant: isPrivate ? "default" : "outline",
-              className: "h-9 px-4",
+              variant: "outline",
+              className: "mr-4 px-4",
             })}
           >
-            {isPrivate ? "Choose helpers" : "Choose"}
+            Choose
           </Link>
         </div>
       </section>
@@ -185,9 +192,7 @@ export default function WherePage() {
       {!isPrivate && (
         <>
           <section className="flex flex-col gap-2">
-            <h2 className="text-[15px] font-bold">
-              Expires in
-            </h2>
+            <h2 className="text-[15px] font-bold">Expires in</h2>
             <div className="grid grid-cols-4 gap-1 rounded-2xl bg-card p-1">
               {EXPIRY.map((e) => (
                 <button
@@ -196,7 +201,7 @@ export default function WherePage() {
                   aria-pressed={state.expiry === e.value}
                   disabled={e.value === "deadline" && !deadline}
                   onClick={() => update({ expiry: e.value })}
-                  className={`rounded-xl py-2 text-sm font-semibold ${
+                  className={`min-h-11 rounded-xl text-sm font-semibold disabled:opacity-40 ${
                     state.expiry === e.value
                       ? "bg-primary text-primary-foreground"
                       : "text-muted-foreground"
@@ -264,7 +269,11 @@ export default function WherePage() {
       )}
 
       <div className="mt-auto flex flex-col gap-2">
-        {isPrivate ? null : me === null ? (
+        {isPrivate ? (
+          <Link href="/private" className={buttonVariants({ size: "lg", className: "text-base" })}>
+            Choose helpers
+          </Link>
+        ) : me === null ? (
           <Link
             href="/signin?next=/where"
             className={buttonVariants({ size: "lg", className: "h-12 text-base" })}
@@ -278,7 +287,11 @@ export default function WherePage() {
             disabled={!me || posting || scrubbing || !state.toBoard}
             onClick={post}
           >
-            {posting ? "Posting…" : group ? `Post to the board and ${group.name}` : "Post to the board"}
+            {posting
+              ? "Posting…"
+              : group
+                ? `Post to the board and ${group.name}`
+                : "Post to the board"}
           </Button>
         )}
         <p className="text-center text-xs text-muted-foreground">
@@ -317,27 +330,34 @@ function Option({
   onToggle: () => void;
   action?: React.ReactNode;
 }) {
+  const id = useId();
   return (
-    <div
-      className={`flex items-center gap-3 p-4 ${disabled ? "opacity-60" : ""}`}
-    >
+    <div className={`flex items-center gap-3 pr-4 ${disabled ? "opacity-60" : ""}`}>
       <button
         type="button"
         role="checkbox"
         aria-checked={checked}
         aria-label={title}
+        aria-describedby={`${id}-detail`}
         disabled={disabled}
         onClick={onToggle}
-        className={`flex size-6 shrink-0 items-center justify-center rounded-lg border-2 ${
-          checked ? "border-primary bg-primary text-primary-foreground" : "border-input"
-        }`}
+        className="flex flex-1 items-center gap-3 p-4 text-left"
       >
-        {disabled ? <Lock className="size-3" /> : checked && <Check className="size-4" />}
+        <span
+          aria-hidden
+          className={`flex size-6 shrink-0 items-center justify-center rounded-lg border-2 ${
+            checked ? "border-primary bg-primary text-primary-foreground" : "border-input"
+          }`}
+        >
+          {disabled ? <Lock className="size-3" /> : checked && <Check className="size-4" />}
+        </span>
+        <span className="flex flex-1 flex-col">
+          <span className="font-semibold">{title}</span>
+          <span id={`${id}-detail`} className="text-sm text-muted-foreground">
+            {detail}
+          </span>
+        </span>
       </button>
-      <span className="flex flex-1 flex-col">
-        <span className="font-semibold">{title}</span>
-        <span className="text-sm text-muted-foreground">{detail}</span>
-      </span>
       {action}
     </div>
   );

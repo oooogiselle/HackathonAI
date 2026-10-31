@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { useAskFlow } from "@/components/ask/flow-provider";
 import { StepHeader } from "@/components/ask/step-header";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { saveCardThanks } from "@/server/actions/board";
 
@@ -53,10 +54,7 @@ export default function ThanksPage({ searchParams }: PageProps<"/thanks">) {
   if (sent) {
     return (
       <>
-        <StepHeader
-          title="Thank-you sent"
-          subtitle="Asking for help takes courage. Nice work."
-        />
+        <StepHeader title="Thank-you sent" subtitle="Asking for help takes courage. Nice work." />
         <div className="mt-auto flex flex-col gap-2">
           {nextPart >= 0 && (
             <Button size="lg" className="h-12 text-base" onClick={sendNext}>
@@ -86,7 +84,14 @@ export default function ThanksPage({ searchParams }: PageProps<"/thanks">) {
         subtitle="In your own words. A sentence is plenty."
         backHref={token ? `/h/${token}` : "/"}
       />
+      <Label
+        htmlFor="thanks-note"
+        className="-mb-4 text-[13px] font-semibold text-muted-foreground"
+      >
+        Your note
+      </Label>
       <Textarea
+        id="thanks-note"
         value={note}
         onChange={(e) => setNote(e.target.value)}
         placeholder="Thank you so much for the ride!"
@@ -95,7 +100,7 @@ export default function ThanksPage({ searchParams }: PageProps<"/thanks">) {
       />
       <Button
         size="lg"
-        className="mt-auto h-12 text-base"
+        className="mt-auto text-base"
         disabled={!note.trim() || pending || !token}
         onClick={send}
       >

@@ -8,17 +8,14 @@ import Link from "next/link";
 import { AskCard } from "@/components/ask/ask-card";
 import { TabBar } from "@/components/ask/tab-bar";
 import { TopBar } from "@/components/ask/top-bar";
-import {
-  askerLabel,
-  durationLabel,
-  expiresLabel,
-  expiresSoon,
-} from "@/lib/ask/card-format";
+import { askerLabel, durationLabel, expiresLabel, expiresSoon } from "@/lib/ask/card-format";
+import { buttonVariants } from "@/components/ui/button";
 import { listBoard } from "@/server/actions/board";
+import { countUnread } from "@/server/actions/inbox";
 import { getMe } from "@/server/actions/session";
 
 export default async function BoardPage() {
-  const [cards, me] = await Promise.all([listBoard(), getMe()]);
+  const [cards, me, unread] = await Promise.all([listBoard(), getMe(), countUnread()]);
   // Rendered per request (listBoard reads the session cookie), so this is "now".
   // eslint-disable-next-line react-hooks/purity
   const now = Date.now();
@@ -32,9 +29,14 @@ export default async function BoardPage() {
       </p>
 
       {cards.length === 0 ? (
-        <p className="rounded-3xl border border-dashed border-input p-6 text-center text-sm text-muted-foreground">
-          No open asks right now. Be the first to ask.
-        </p>
+        <div className="flex flex-col items-center gap-3 rounded-3xl border border-dashed border-input p-6 text-center">
+          <p className="text-sm text-muted-foreground">
+            No open asks right now. Be the first to ask.
+          </p>
+          <Link href="/ask" className={buttonVariants({ variant: "outline" })}>
+            Ask for help
+          </Link>
+        </div>
       ) : (
         <ul className="flex flex-col gap-4">
           {cards.map((card) => (
@@ -79,7 +81,7 @@ export default async function BoardPage() {
         </ul>
       )}
 
-      <TabBar active="Feed" />
+      <TabBar active="Feed" unread={unread} />
     </>
   );
 }

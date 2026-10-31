@@ -47,7 +47,7 @@ export function PriceField({
           <button
             type="button"
             onClick={() => set(price.suggested)}
-            className="text-sm text-muted-foreground underline"
+            className="min-h-11 px-1 text-sm text-muted-foreground underline"
           >
             Use ${price.suggested}
           </button>
