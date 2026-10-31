@@ -22,7 +22,7 @@ export default async function PayPage({ params }: PageProps<"/h/[token]/pay">) {
     redirect(`/h/${token}`);
   }
 
-  const helperName = card.heldByFirstName ?? "your helper";
+  const helperName = card.heldByAlias ?? "your helper";
   const fees = paymentBreakdown(card.price, "card");
   const steps = [
     "You pay now. Stripe holds it; nothing is sent yet.",

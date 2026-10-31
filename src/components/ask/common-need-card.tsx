@@ -26,7 +26,8 @@ export function CommonNeedCard({ match }: { match: CommonNeedMatch }) {
       <figure className="flex flex-col gap-1.5 rounded-2xl bg-background p-3">
         <blockquote className="text-[15px]">&ldquo;{match.tip}&rdquo;</blockquote>
         <figcaption className="text-sm text-muted-foreground">
-          {match.from.firstName}, {match.from.year} · helper
+          {match.from.alias}
+          {match.from.year ? `, ${match.from.year}` : ""} · helper
         </figcaption>
       </figure>
     </section>

@@ -3,10 +3,12 @@ import "server-only";
 
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 
-import { asks, claims, messages, notifications, users } from "@/db/schema";
+import { asks, claims, messages, notifications } from "@/db/schema";
 
+import { aliasFor } from "./alias";
 import { settleDue } from "./board-store";
 import { getAskDb } from "./db";
+import { MESSAGE_FLAGS, type MessageFlag } from "./scam-check";
 import type { InboxItem, InboxKind, InboxTopic, Message } from "./types";
 import { isBlockedBetween } from "./users";
 
@@ -76,45 +78,41 @@ async function threadFor(token: string): Promise<Thread | null> {
   return row ?? null;
 }
 
-// Messages open only after both say yes (the asker confirmed the helper), so
-// names and contact details are never shared before that. A cancelled ask
-// keeps its thread readable but closed.
+// Messages open only after both say yes (the asker confirmed the helper). Both
+// sides see each other's alias, never a name. A cancelled ask keeps its thread
+// readable but closed.
 const OPEN = new Set(["confirmed", "done"]);
 const NO_THREAD = { error: "Messages open once you've both said yes." };
 
 export async function listMessages(
   token: string,
   userId: string,
-): Promise<{ messages: Message[]; otherFirstName: string } | { error: string }> {
+): Promise<{ messages: Message[]; otherAlias: string } | { error: string }> {
   const thread = await threadFor(token);
   if (!thread || (userId !== thread.askerId && userId !== thread.helperId)) return NO_THREAD;
   if (!OPEN.has(thread.status) && thread.status !== "cancelled") return NO_THREAD;
   const db = await getAskDb();
   const otherId = userId === thread.askerId ? thread.helperId : thread.askerId;
-  const [other] = await db
-    .select({ firstName: users.firstName })
-    .from(users)
-    .where(eq(users.id, otherId));
   const rows = await db
     .select({
       id: messages.id,
       senderId: messages.senderId,
-      firstName: users.firstName,
       body: messages.body,
+      flag: messages.flag,
       createdAt: messages.createdAt,
     })
     .from(messages)
-    .innerJoin(users, eq(users.id, messages.senderId))
     .where(eq(messages.askToken, token))
     .orderBy(messages.createdAt);
   return {
-    otherFirstName: other?.firstName ?? "",
+    otherAlias: aliasFor(otherId),
     messages: rows.map((m) => ({
       id: m.id,
       fromMe: m.senderId === userId,
-      senderFirstName: m.firstName,
+      senderAlias: aliasFor(m.senderId),
       body: m.body,
       createdAt: m.createdAt.getTime(),
+      flag: MESSAGE_FLAGS.find((f) => f === m.flag) ?? null,
     })),
   };
 }
@@ -123,6 +121,8 @@ export async function sendMessage(
   token: string,
   userId: string,
   body: string,
+  // From the scam guard, computed on the server (src/lib/ai/ask/message-check.ts).
+  flag: MessageFlag | null = null,
 ): Promise<{ error: string } | null> {
   const thread = await threadFor(token);
   if (!thread || (userId !== thread.askerId && userId !== thread.helperId)) return NO_THREAD;
@@ -133,18 +133,14 @@ export async function sendMessage(
 
   const db = await getAskDb();
   await db.transaction(async (tx) => {
-    await tx.insert(messages).values({ askToken: token, senderId: userId, body });
-    const [me] = await tx
-      .select({ firstName: users.firstName })
-      .from(users)
-      .where(eq(users.id, userId));
+    await tx.insert(messages).values({ askToken: token, senderId: userId, body, flag });
     await tx.insert(notifications).values({
       userId: other,
       askToken: token,
       kind: "action",
       topic: "tasks",
       title: `Reply about “${thread.title}”`,
-      body: `${me?.firstName}: “${body.length > 80 ? `${body.slice(0, 79)}…` : body}”`,
+      body: `${aliasFor(userId)}: “${body.length > 80 ? `${body.slice(0, 79)}…` : body}”`,
     });
   });
   return null;

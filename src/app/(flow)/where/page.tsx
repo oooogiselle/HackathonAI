@@ -13,6 +13,7 @@ import { toast } from "sonner";
 
 import { type ExpiryChoice, useRequireNeed } from "@/components/ask/flow-provider";
 import { PartTicket } from "@/components/ask/part-ticket";
+import { ScrubNotice } from "@/components/ask/scrub-notice";
 import { StepHeader } from "@/components/ask/step-header";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { guessCategory, whenLabel } from "@/lib/ask/card-format";
@@ -52,21 +53,16 @@ export default function WherePage() {
     getMe().then(setMe);
   }, []);
 
-  // Anonymous is on by default, so run the privacy check as soon as it's needed.
+  // Every ask is anonymous, so run the privacy check as soon as it's needed.
   useEffect(() => {
-    if (isPrivate || !state.anonymous || state.scrub || !state.ask) return;
+    if (isPrivate || state.scrub || !state.ask) return;
     startScrub(async () => update({ scrub: await scrubForAnonymous(state.ask) }));
-  }, [isPrivate, state.anonymous, state.scrub, state.ask, update]);
+  }, [isPrivate, state.scrub, state.ask, update]);
 
   if (!part) return null;
-  const useScrubbed = state.anonymous && state.scrub && !undoScrub;
+  const useScrubbed = state.scrub && !undoScrub;
   const text = useScrubbed ? state.scrub!.text : state.ask;
   const backHref = "/check";
-
-  function setAnonymous(anonymous: boolean) {
-    update({ anonymous });
-    setUndoScrub(false);
-  }
 
   function toggleGroup() {
     if (group) return update({ groupId: undefined });
@@ -88,7 +84,7 @@ export default function WherePage() {
         payType: part.payType,
         minutes: part.minutes,
         price: part.priceSet,
-        anonymous: state.anonymous,
+        anonymous: true,
         startsAt: toMs(part.startsAt),
         neededBy: deadline,
         ...expiry,
@@ -213,57 +209,25 @@ export default function WherePage() {
             </div>
             <p className="text-xs text-muted-foreground">
               {state.expiry === "deadline" && deadline
-                ? `Comes down ${whenLabel(deadline)}, your Needed by time. `
+                ? `Comes down ${whenLabel(deadline)}, the time you picked. `
                 : ""}
               After that it leaves the board, and the GroupMe link says it expired.
             </p>
           </section>
 
           <section className="flex flex-col gap-3 rounded-3xl bg-card p-4 text-sm">
-            <button
-              type="button"
-              aria-pressed={state.anonymous}
-              onClick={() => setAnonymous(!state.anonymous)}
-              className="flex items-center gap-3 text-left"
-            >
-              <span className="flex flex-1 flex-col">
-                <span className="font-semibold">Post anonymously</span>
-                <span className="text-muted-foreground">
-                  {state.anonymous
-                    ? "Your name is hidden on the board and in the group"
-                    : `Shown as ${me?.firstName ?? "your first name"}`}
-                </span>
+            <div className="flex flex-col">
+              <span className="font-semibold">Posted anonymously</span>
+              <span className="text-muted-foreground">
+                Nobody sees your name on the board or in the group. Helpers only see the ask.
               </span>
-              <Switch on={state.anonymous} />
-            </button>
-            {state.anonymous &&
-              (scrubbing ? (
-                <p className="text-muted-foreground">Checking for identifying details…</p>
-              ) : state.scrub && state.scrub.removed.length > 0 ? (
-                <div className="flex flex-col gap-1 rounded-2xl bg-muted p-3">
-                  <p className="font-semibold">
-                    {undoScrub ? "Kept your original wording:" : "Removed identifying details:"}
-                  </p>
-                  <ul className="ml-5 list-disc text-muted-foreground">
-                    {state.scrub.removed.map((r) => (
-                      <li key={r}>{r}</li>
-                    ))}
-                  </ul>
-                  <Button
-                    variant="link"
-                    className="self-start px-0"
-                    onClick={() => setUndoScrub(!undoScrub)}
-                  >
-                    {undoScrub ? "Remove them again" : "Undo"}
-                  </Button>
-                </div>
-              ) : (
-                state.scrub && (
-                  <p className="flex items-center gap-1.5 text-muted-foreground">
-                    <Check className="size-4 text-primary" /> No identifying details found
-                  </p>
-                )
-              ))}
+            </div>
+            <ScrubNotice
+              checking={scrubbing}
+              removed={state.scrub?.removed}
+              undone={undoScrub}
+              onToggle={() => setUndoScrub(!undoScrub)}
+            />
           </section>
         </>
       )}
@@ -299,19 +263,6 @@ export default function WherePage() {
         </p>
       </div>
     </>
-  );
-}
-
-function Switch({ on }: { on: boolean }) {
-  return (
-    <span
-      aria-hidden
-      className={`flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition-colors ${
-        on ? "justify-end bg-primary" : "justify-start bg-input"
-      }`}
-    >
-      <span className="size-5 rounded-full bg-white shadow" />
-    </span>
   );
 }
 

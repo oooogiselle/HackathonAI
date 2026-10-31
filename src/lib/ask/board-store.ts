@@ -39,6 +39,7 @@ import {
 
 import { type NotifyData, type NotifyEvent, notify } from "@/lib/notify";
 
+import { aliasFor } from "./alias";
 import { type AskDb, getAskDb } from "./db";
 import { paymentBreakdown } from "./fees";
 import { MEETING_SPOTS } from "./mock-data";
@@ -90,24 +91,12 @@ const ms = (d: Date | null | undefined) => (d ? d.getTime() : undefined);
 async function hydrate(db: AskDb, rows: AskRow[], now: number): Promise<BoardCard[]> {
   if (!rows.length) return [];
   const tokens = rows.map((r) => r.token);
-  const askerIds = [...new Set(rows.map((r) => r.askerId))];
 
-  const [askers, held, shares, pays] = await Promise.all([
-    db
-      .select({
-        id: users.id,
-        firstName: users.firstName,
-        year: users.classYear,
-        showYear: users.showClassYear,
-      })
-      .from(users)
-      .where(inArray(users.id, askerIds)),
+  const [held, shares, pays] = await Promise.all([
     db
       .select({
         token: claims.askToken,
         userId: users.id,
-        firstName: users.firstName,
-        email: users.email,
         year: users.classYear,
         showYear: users.showClassYear,
         heldAt: claims.heldAt,
@@ -119,12 +108,10 @@ async function hydrate(db: AskDb, rows: AskRow[], now: number): Promise<BoardCar
     db.select().from(payments).where(inArray(payments.askToken, tokens)),
   ]);
 
-  const askerById = new Map(askers.map((a) => [a.id, a]));
   const heldByToken = new Map(held.map((h) => [h.token, h]));
   const payByToken = new Map(pays.map((p) => [p.askToken, p]));
 
   return rows.map((row) => {
-    const asker = askerById.get(row.askerId);
     const holder = heldByToken.get(row.token);
     const pay = payByToken.get(row.token);
     const payment: Payment | undefined = pay && {
@@ -149,8 +136,6 @@ async function hydrate(db: AskDb, rows: AskRow[], now: number): Promise<BoardCar
       price: row.price,
       anonymous: row.anonymous,
       private: row.private,
-      askerFirstName: row.anonymous ? undefined : asker?.firstName,
-      askerYear: asker?.showYear ? (asker.year ?? undefined) : undefined,
       status: effectiveStatus(row, now),
       createdAt: row.createdAt.getTime(),
       startsAt: ms(row.startsAt),
@@ -161,8 +146,7 @@ async function hydrate(db: AskDb, rows: AskRow[], now: number): Promise<BoardCar
         .map((s) => ({ groupId: s.groupId, postedAt: s.postedAt.getTime() })),
       heldBy: holder && {
         userId: holder.userId,
-        firstName: holder.firstName,
-        email: holder.email,
+        alias: aliasFor(holder.userId),
         year: holder.showYear ? (holder.year ?? undefined) : undefined,
         heldAt: holder.heldAt.getTime(),
       },
@@ -263,7 +247,7 @@ export function toPublicCard(
   viewerId: string | null,
   invited = false,
 ): PublicCard {
-  const { askerId, heldBy, askerFirstName, payment, ...rest } = card;
+  const { askerId, heldBy, payment, ...rest } = card;
   let viewer: CardViewer = "signed-out";
   if (viewerId) {
     if (viewerId === askerId) viewer = "asker";
@@ -275,9 +259,7 @@ export function toPublicCard(
   return {
     ...rest,
     shares: rest.shares.map((s) => ({ ...s })),
-    ...(card.anonymous ? {} : { askerFirstName }),
-    heldByFirstName: heldBy?.firstName,
-    heldByYear: heldBy?.year,
+    ...(viewer === "asker" && heldBy ? { heldByAlias: heldBy.alias, heldByYear: heldBy.year } : {}),
     ...(party && payment ? { payment } : {}),
     viewer,
   };
@@ -340,7 +322,8 @@ export async function createCard(input: NewCard, now = Date.now()): Promise<Boar
       payType: input.payType,
       price: input.price,
       minutes: input.minutes,
-      anonymous: input.anonymous,
+      // Every ask is anonymous: students only ever see each other's alias.
+      anonymous: true,
       private: input.private,
       startsAt: input.startsAt ? new Date(input.startsAt) : null,
       neededBy: input.neededBy ? new Date(input.neededBy) : null,
@@ -404,18 +387,18 @@ export async function holdCard(
       .returning();
     if (!row) return null;
     await tx.insert(claims).values({ askToken: token, helperId, heldAt: new Date(now) });
-    const [helper] = await tx.select().from(users).where(eq(users.id, helperId));
+    const helper = aliasFor(helperId);
     await addInboxNote(tx, row.askerId, {
       askToken: token,
       kind: "action",
       topic: "tasks",
-      title: `${helper?.firstName ?? "Someone"} can help`,
-      body: `${helper?.firstName ?? "A helper"} said yes to “${row.title}”. Confirm to lock it in.`,
+      title: `${helper} can help`,
+      body: `${helper} said yes to “${row.title}”. Confirm to lock it in.`,
     });
     mail.push({
       event: "claimed",
       userId: row.askerId,
-      data: { askToken: token, title: row.title, helperFirstName: helper?.firstName },
+      data: { askToken: token, title: row.title, helperAlias: helper },
     });
     return row;
   });
@@ -993,7 +976,11 @@ export async function sendPrivately(
         title: "A classmate asked you",
         body: `“${row.title}”, about ${row.minutes} min${row.price ? `, $${row.price}` : ", a favor"}.`,
       });
-      mail.push({ event: "private-ask", userId: helperId, data: { askToken: token, title: row.title } });
+      mail.push({
+        event: "private-ask",
+        userId: helperId,
+        data: { askToken: token, title: row.title },
+      });
     }
     return null;
   });
@@ -1110,7 +1097,7 @@ export async function listHelperProfiles(viewerId: string | null): Promise<Helpe
   return rows.map((u) => ({
     id: u.id,
     firstName: u.firstName,
-    year: u.classYear ?? "",
+    year: u.showClassYear ? (u.classYear ?? "") : "",
     blurb: u.blurb ?? "",
     tags: u.tags,
     interests: u.interests,

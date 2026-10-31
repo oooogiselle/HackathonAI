@@ -30,7 +30,7 @@ export function AskerConfirmed({
   const { pending, run } = useTaskAction();
   const [reporting, setReporting] = useState(false);
   const [note, setNote] = useState("");
-  const helperName = card.heldByFirstName ?? "Your helper";
+  const helperName = card.heldByAlias ?? "Your helper";
   const doneByHelper = Boolean(card.helperDoneAt);
 
   const facts: [React.ReactNode, React.ReactNode][] = [];
@@ -64,7 +64,9 @@ export function AskerConfirmed({
             {card.meetingSpot}
             {card.startsAt ? ` · ${whenLabel(card.startsAt)}` : ""}
           </p>
-          <p className="text-muted-foreground">A public spot. Your school email stays hidden.</p>
+          <p className="text-muted-foreground">
+            A public spot. Names and contact details stay private.
+          </p>
         </Panel>
       )}
 

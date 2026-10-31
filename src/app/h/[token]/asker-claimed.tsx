@@ -12,7 +12,7 @@ import { cancelCard } from "@/server/actions/board";
 
 export function AskerClaimed({ card, messages }: { card: PublicCard; messages: React.ReactNode }) {
   const { pending, run } = useTaskAction();
-  const helperName = card.heldByFirstName ?? "Your helper";
+  const helperName = card.heldByAlias ?? "Your helper";
 
   return (
     <>

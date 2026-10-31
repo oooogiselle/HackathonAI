@@ -6,6 +6,7 @@ vi.stubEnv("ANTHROPIC_API_KEY", "");
 vi.stubEnv("OPENAI_API_KEY", "");
 
 const { findCommonNeed } = await import("./ask");
+const { aliasFor } = await import("@/lib/ask/alias");
 
 describe("findCommonNeed", () => {
   it("returns the need with a tip and only the helper's public fields", async () => {
@@ -13,7 +14,8 @@ describe("findCommonNeed", () => {
     expect(match).toMatchObject({ id: "airport", askedLastTerm: 14 });
     expect(match?.tip).toMatch(/week before break/);
     // No free/busy, tags, weekly limit or payment status.
-    expect(match?.from).toEqual({ id: "mei", firstName: "Mei", year: "Junior" });
+    // An alias, never the helper's name.
+    expect(match?.from).toEqual({ id: "mei", alias: aliasFor("mei"), year: "Junior" });
   });
 
   it("returns null when nothing matches", async () => {

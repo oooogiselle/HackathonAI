@@ -18,7 +18,7 @@ export default async function MessagesPage({ params }: PageProps<"/h/[token]/mes
   const result = await listMessages(token);
   if ("error" in result) redirect(taskPath);
 
-  const name = result.otherFirstName || "your match";
+  const name = result.otherAlias || "your match";
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col">
@@ -51,7 +51,7 @@ export default async function MessagesPage({ params }: PageProps<"/h/[token]/mes
 
       <Thread
         token={token}
-        otherFirstName={name}
+        otherAlias={name}
         initial={result.messages}
         closed={card.status === "cancelled"}
       />

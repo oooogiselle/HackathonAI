@@ -13,7 +13,7 @@ import { formatCents } from "@/lib/ask/fees";
 import type { PublicCard } from "@/lib/ask/types";
 
 export function AskerDone({ card }: { card: PublicCard }) {
-  const helperName = card.heldByFirstName ?? "your helper";
+  const helperName = card.heldByAlias ?? "your helper";
   return (
     <>
       <TaskHeader status="Done" title="All done" subtitle={`${helperName} helped you out.`} />

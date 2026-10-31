@@ -84,7 +84,7 @@ describe("matchHelpers action", () => {
     const picks = await matchHelpers(ride);
     expect(ids(picks)).toEqual(["chloe", "mei"]);
     for (const p of picks) {
-      expect(Object.keys(p.helper).sort()).toEqual(["firstName", "id", "year"]);
+      expect(Object.keys(p.helper).sort()).toEqual(["alias", "id", "year"]);
       expect(p.why).not.toBe("");
     }
   });

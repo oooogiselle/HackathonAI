@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 
 import { AskCard } from "@/components/ask/ask-card";
-import { askerLabel, durationLabel, whenLabel } from "@/lib/ask/card-format";
+import { ASKER_LABEL, durationLabel, whenLabel } from "@/lib/ask/card-format";
 import type { PublicCard } from "@/lib/ask/types";
 import { cn } from "cn";
 
@@ -59,7 +59,7 @@ export function TaskTicket({
       text={withText ? card.text : undefined}
       action={action}
       meta={[
-        { kind: "who", label: askerLabel(card) },
+        { kind: "who", label: ASKER_LABEL },
         { kind: "time", label: durationLabel(card.minutes) },
         ...(card.startsAt ? [{ kind: "when" as const, label: whenLabel(card.startsAt) }] : []),
       ]}
@@ -123,7 +123,7 @@ export function Initial({ name }: { name: string }) {
 
 /** Who the helper is. No ratings: helpers aren't scored. */
 export function HelperLine({ card }: { card: PublicCard }) {
-  const name = card.heldByFirstName ?? "Your helper";
+  const name = card.heldByAlias ?? "Your helper";
   return <PersonLine name={[name, card.heldByYear].filter(Boolean).join(", ")} />;
 }
 

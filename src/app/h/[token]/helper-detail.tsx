@@ -18,7 +18,7 @@ import { useTaskAction } from "@/components/task/use-task-action";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { askerLabel, whenLabel } from "@/lib/ask/card-format";
+import { ASKER_LABEL, whenLabel } from "@/lib/ask/card-format";
 import type { PublicCard } from "@/lib/ask/types";
 import { claimCard } from "@/server/actions/board";
 
@@ -54,7 +54,7 @@ export function HelperDetail({
       <Progress card={card} />
 
       <Panel className="gap-3">
-        <PersonLine name={askerLabel(card)} />
+        <PersonLine name={ASKER_LABEL} />
         <p className="text-sm text-muted-foreground">
           You can message each other once they confirm you.
         </p>

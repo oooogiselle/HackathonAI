@@ -26,7 +26,7 @@ export function AskerWaiting({ card }: { card: PublicCard }) {
   const { pending, run } = useTaskAction();
   const { token } = card;
   const held = card.status === "held";
-  const helperName = card.heldByFirstName ?? "Your helper";
+  const helperName = card.heldByAlias ?? "Your helper";
 
   const postedTo: [string, string][] = [
     [card.private ? "Asked privately" : "Needs board", clockLabel(card.createdAt)],
@@ -49,7 +49,7 @@ export function AskerWaiting({ card }: { card: PublicCard }) {
         title={held ? `${helperName} can help` : "Waiting for a helper"}
         subtitle={
           held
-            ? "It's held for you. Confirm to lock it in; you'll get each other's first name and a chat."
+            ? "It's held for you. Confirm to lock it in; you'll talk in the thread, and names and contact details stay private."
             : "We'll update this page when someone says yes."
         }
       />

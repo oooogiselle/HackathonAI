@@ -13,12 +13,12 @@ type StepCard = Pick<
   | "payment"
   | "helperDoneAt"
   | "problemReportedAt"
-  | "heldByFirstName"
+  | "heldByAlias"
   | "thanks"
 >;
 
 export function nextStep(card: StepCard): NextStep {
-  const helper = card.heldByFirstName ?? "Your helper";
+  const helper = card.heldByAlias ?? "Your helper";
   const paid = card.price > 0;
   const held = card.payment?.status === "held";
   const wait = (label: string) => ({ label, yourTurn: false });

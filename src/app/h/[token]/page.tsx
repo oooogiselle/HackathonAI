@@ -52,11 +52,7 @@ export default async function TaskPage({ params }: PageProps<"/h/[token]">) {
       ? await listMessages(token)
       : null;
   const messages = thread && "messages" in thread && (
-    <MessagesRow
-      token={token}
-      otherFirstName={thread.otherFirstName}
-      latest={thread.messages.at(-1)}
-    />
+    <MessagesRow token={token} otherAlias={thread.otherAlias} latest={thread.messages.at(-1)} />
   );
 
   return (

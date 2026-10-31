@@ -10,7 +10,7 @@ export function HelperOffered({ card }: { card: PublicCard }) {
   const pay = card.price > 0 ? `$${card.price}` : null;
   const steps = [
     pay ? `The asker confirms you and holds the ${pay}.` : "The asker confirms you.",
-    "You both get each other's first name and a chat. Your school email stays hidden.",
+    "You get a chat thread with the asker. Names and contact details stay private.",
     pay
       ? `After you help, the asker confirms it's done and the ${pay} goes to you.`
       : "You help, and you both mark it done.",

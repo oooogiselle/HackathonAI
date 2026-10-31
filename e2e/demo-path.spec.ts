@@ -4,7 +4,7 @@
 // it ("I can help") -> a third sees "Already taken" -> the asker confirms, they
 // message each other, the asker pays to hold (/h/[token]/pay) -> the helper
 // taps Done -> only then can the asker confirm done -> thank-you.
-// Plus the two safety redirects. See playwright.config.ts for the server setup.
+// Plus the safety redirects (Home and a typed Clarify answer). See playwright.config.ts for the server setup.
 import { type Browser, devices, expect, type Page, test } from "@playwright/test";
 
 /** Mocked "Sign in with Dartmouth", then back to `next`. */
@@ -59,7 +59,31 @@ test("a posted ask is claimed by another student and closed with a thank-you", a
     "aria-pressed",
     "true",
   );
+  // When: the calendar is connected on Me (mocked); the draft survives the trip.
+  await page.getByRole("button", { name: /See when you're free/ }).click();
+  await expect(page).toHaveURL(/\/me\?next=/);
+  await page.getByRole("switch", { name: /Connect Google Calendar/ }).click();
+  await page.getByRole("link", { name: "Back to your ask" }).click();
+  await expect(page).toHaveURL(/\/ask$/);
+  await expect(page.getByLabel("What do you need?")).toHaveValue("Ride to Manchester airport");
+  await expect(whoToAsk.getByRole("button", { name: "Rides" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  // A free time from the calendar makes it a set time.
+  const freeTimes = page.getByRole("radiogroup", { name: "Free times from your calendar" });
+  await freeTimes.getByRole("radio").first().click();
+  await expect(freeTimes.getByRole("radio").first()).toHaveAttribute("aria-checked", "true");
+  await expect(page.getByRole("button", { name: "At a set time" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   await page.getByLabel("Where").fill("From East Wheelock");
+  await page.getByRole("button", { name: "1 h", exact: true }).click();
+  await expect(page.getByRole("button", { name: "1 h", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   await page.getByLabel("Price in dollars").fill("15");
   await page.getByRole("button", { name: "Continue" }).click();
 
@@ -71,19 +95,18 @@ test("a posted ask is claimed by another student and closed with a thank-you", a
   await expect(commonNeed).toContainText(
     "students asked about rides to the airport at break last term",
   );
-  await expect(commonNeed).toContainText("Mei, Junior · helper");
+  // Helpers show up by alias, never by name.
+  await expect(commonNeed).toContainText(/[A-Z][a-z]+ [A-Z][a-z]+ \d{2}, Junior · helper/);
+  await expect(commonNeed).not.toContainText("Mei");
   await page.getByRole("button", { name: "Continue" }).click();
 
-  // Where it goes: board + a GroupMe group, anonymous by default.
+  // Where it goes: board + a GroupMe group. Every ask is anonymous.
   await expect(page).toHaveURL(/\/where$/);
   await page.getByRole("link", { name: "Preview" }).click();
   await expect(page).toHaveURL(/\/share$/);
   await page.getByRole("button", { name: "Use this group" }).click();
   await expect(page).toHaveURL(/\/where$/);
-  await expect(page.getByRole("button", { name: /Post anonymously/ })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
+  await expect(page.getByText("Posted anonymously")).toBeVisible();
   await expect(
     page.getByText(/Removed identifying details|No identifying details found/),
   ).toBeVisible();
@@ -116,38 +139,60 @@ test("a posted ask is claimed by another student and closed with a thank-you", a
   await expect(late.getByText("Already taken")).toBeVisible();
   await expect(late.getByRole("link", { name: "I can help" })).toHaveCount(0);
 
-  // Asker: the page refreshes on its own and shows who said yes.
-  await expect(page.getByRole("heading", { name: "Rina can help" })).toBeVisible();
-  await page.getByRole("button", { name: "Confirm Rina" }).click();
+  // Asker: the page refreshes on its own and shows who said yes, by alias only.
+  const canHelp = page.getByRole("heading", { name: / can help$/ });
+  await expect(canHelp).toBeVisible();
+  const helperAlias = (await canHelp.textContent())!.replace(" can help", "");
+  expect(helperAlias).toMatch(/^[A-Z][a-z]+ [A-Z][a-z]+ \d{2}$/);
+  await expect(page.getByText(/\bRina\b/)).toHaveCount(0);
+  await page.getByRole("button", { name: `Confirm ${helperAlias}` }).click();
+
   // Claimed: both said yes, so messages open. The next step is holding the pay.
-  await expect(page.getByRole("heading", { name: "Rina is helping" })).toBeVisible();
-  await page.getByRole("link", { name: /^Rina/ }).click();
+  await expect(page.getByRole("heading", { name: `${helperAlias} is helping` })).toBeVisible();
+  await page.getByRole("link", { name: new RegExp(`^${helperAlias}`) }).click();
   await expect(page).toHaveURL(new RegExp(`${taskPath}/messages$`));
   await expect(page.getByText("You both said yes. Plan the details here.")).toBeVisible();
-  await page.getByLabel("Message Rina").fill("I'm at the Collis porch");
+  await page.getByLabel(`Message ${helperAlias}`).fill("I'm at the Collis porch");
   await page.getByRole("button", { name: "Send" }).click();
   await expect(page.getByText("I'm at the Collis porch")).toBeVisible();
-  await expect(page.getByLabel("Message Rina")).toHaveValue("");
+  await expect(page.getByLabel(`Message ${helperAlias}`)).toHaveValue("");
+  await expect(page.getByText(/\bRina\b/)).toHaveCount(0);
 
+  // The helper never sees the asker's name either.
   await helper.reload();
-  await helper.getByRole("link", { name: /^Lin/ }).click();
+  await helper.locator(`a[href="${taskPath}/messages"]`).click();
   await expect(helper.getByText("I'm at the Collis porch")).toBeVisible();
-  await helper.getByLabel("Message Lin").fill("On my way");
+  await expect(helper.getByText(/\bLin\b/)).toHaveCount(0);
+  await helper.getByLabel(/^Message /).fill("On my way");
   await helper.keyboard.press("Enter");
   await expect(helper.getByText("On my way")).toBeVisible();
   // The asker's thread picks up the reply on its own.
   await expect(page.getByText("On my way")).toBeVisible();
 
+  // Scam guard: paying outside Ask asks the sender first, and the receiver sees a note.
+  await helper.getByLabel(/^Message /).fill("You can just Venmo me instead");
+  await helper.keyboard.press("Enter");
+  // (Next.js's route announcer is an alert too, so match the warning by its text.)
+  await expect(
+    helper.getByRole("alert").filter({ hasText: "Paying outside Ask isn't protected" }),
+  ).toBeVisible();
+  await helper.getByRole("button", { name: "Send anyway" }).click();
+  await expect(helper.getByText("You can just Venmo me instead")).toBeVisible();
+  await expect(page.getByText("You can just Venmo me instead")).toBeVisible();
+  await expect(page.getByRole("note")).toContainText("Pay only through Ask");
+
   await page.getByRole("link", { name: "Task" }).click();
   await expect(page).toHaveURL(new RegExp(`${taskPath}$`));
-  await expect(page.getByRole("link", { name: /^Rina/ })).toContainText("On my way");
+  await expect(page.getByRole("link", { name: new RegExp(`^${helperAlias}`) })).toContainText(
+    "You can just Venmo me instead",
+  );
   await helper.getByRole("link", { name: "Task" }).click();
 
   await page.getByRole("link", { name: "Hold $15 to start" }).click();
   await expect(page).toHaveURL(new RegExp(`${taskPath}/pay$`));
   await page.getByRole("button", { name: "Pay $17.28 and hold" }).click();
   await expect(page).toHaveURL(new RegExp(`${taskPath}$`));
-  await expect(page.getByRole("heading", { name: "Rina is on it" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: `${helperAlias} is on it` })).toBeVisible();
   await expect(page.getByText("Meet here")).toBeVisible();
   // "Confirm done" waits for the helper's Done.
   await expect(page.getByRole("button", { name: "Confirm done" })).toHaveCount(0);
@@ -158,14 +203,14 @@ test("a posted ask is claimed by another student and closed with a thank-you", a
   await expect(helper.getByRole("heading", { name: "Marked done" })).toBeVisible();
 
   // Asker: confirms, which releases the payment.
-  await expect(page.getByRole("heading", { name: "Rina marked it done" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: `${helperAlias} marked it done` })).toBeVisible();
   await page.getByRole("button", { name: "Confirm done" }).click();
-  await expect(page.getByText("$15.00 released to Rina.")).toBeVisible();
+  await expect(page.getByText(`$15.00 released to ${helperAlias}.`)).toBeVisible();
   await expect(helper.getByText("$15.00 released to you.")).toBeVisible();
 
   await page.getByRole("link", { name: "Write a thank-you" }).click();
   await expect(page).toHaveURL(/\/thanks\?token=/);
-  await page.getByPlaceholder("Thank you so much for the ride!").fill("Thanks for the ride, Rina!");
+  await page.getByPlaceholder("Thank you so much for the ride!").fill("Thanks for the ride!");
   await page.getByRole("button", { name: "Send thank-you" }).click();
   await expect(page.getByRole("heading", { name: /Thank-you sent/ })).toBeVisible();
 });
@@ -188,4 +233,23 @@ test("a crisis message shows professional resources only", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "You don't have to handle this alone" }),
   ).toBeVisible();
+});
+
+test("Clarify takes a typed answer, and checks it for safety", async ({ page }) => {
+  await page.goto("/describe");
+  await page
+    .getByLabel("What you need, in your own words")
+    .fill("i need a ride to the airport next month");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page).toHaveURL(/\/clarify$/);
+  const ownAnswer = page.getByPlaceholder("Or type your own").first();
+  await ownAnswer.fill("Boston Logan, Dec 18 around 6am");
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page).toHaveURL(/\/draft$/);
+
+  await page.goBack();
+  await expect(page).toHaveURL(/\/clarify$/);
+  await page.getByPlaceholder("Or type your own").first().fill("honestly I want to die");
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page).toHaveURL(/\/resources\?type=crisis$/);
 });

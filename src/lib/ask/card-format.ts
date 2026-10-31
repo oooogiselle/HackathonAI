@@ -37,9 +37,8 @@ export function whenLabel(ms: number) {
   });
 }
 
-export function askerLabel(card: Pick<PublicCard, "askerFirstName" | "askerYear">) {
-  return card.askerFirstName ?? card.askerYear ?? "A classmate";
-}
+// Every ask is anonymous: askers aren't shown by name, alias or year.
+export const ASKER_LABEL = "A classmate";
 
 // A best guess for the AI path, where nobody picked a category.
 export function guessCategory(part: Pick<AskPart, "what" | "text">): AskCategory {

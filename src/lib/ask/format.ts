@@ -1,8 +1,8 @@
 // The exact text posted to a group. Shared by the Share preview (client) and
-// postAsk (server) so the preview always matches what's sent.
-export function formatPostMessage(text: string, name: string | null, claimUrl: string) {
-  const signature = name ? `— ${name} (via DartAsk)` : "— a fellow student (via DartAsk)";
-  return `${text}\n${signature}\n\nCan help? Tap: ${claimUrl}`;
+// shareCardToGroup (server) so the preview always matches what's sent. Never
+// signed with a name: every ask is anonymous.
+export function formatPostMessage(text: string, claimUrl: string) {
+  return `${text}\n— a fellow student (via DartAsk)\n\nCan help? Tap: ${claimUrl}`;
 }
 
 export const COVERED_MESSAGE = "Covered, thanks to whoever helped!";

@@ -7,7 +7,7 @@ const base = {
   viewer: "asker",
   status: "open",
   price: 15,
-  heldByFirstName: "Maya",
+  heldByAlias: "Steady Loon 42",
 } as Parameters<typeof nextStep>[0];
 
 const card = (patch: Partial<PublicCard>) => nextStep({ ...base, ...patch });
@@ -19,7 +19,7 @@ describe("nextStep", () => {
 
   it("asker confirms a helper who claimed it", () => {
     expect(card({ status: "held" })).toEqual({
-      label: "Maya can help. Confirm to lock it in",
+      label: "Steady Loon 42 can help. Confirm to lock it in",
       yourTurn: true,
     });
   });
@@ -30,7 +30,7 @@ describe("nextStep", () => {
 
   it("a favor skips the pay step", () => {
     expect(card({ status: "confirmed", price: 0 })).toEqual({
-      label: "Maya is on it",
+      label: "Steady Loon 42 is on it",
       yourTurn: false,
     });
   });
