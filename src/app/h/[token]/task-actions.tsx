@@ -57,11 +57,20 @@ export function TaskActions({
     return () => clearInterval(id);
   }, [party, live, router]);
 
-  function run(action: () => Promise<Result | Result<object>>, success?: string) {
+  function run(
+    action: () => Promise<Result | Result<object>>,
+    success?: string,
+    { reload = false } = {},
+  ) {
     startTransition(async () => {
       const result = await action();
       if ("error" in result) toast.error(result.error);
-      else if (success) toast.success(success);
+      else if (reload) {
+        // A first claim turns a visitor into the helper; on Vercel the soft
+        // refresh left the button on "Claiming…", so load the page fresh.
+        window.location.reload();
+        return;
+      } else if (success) toast.success(success);
       router.refresh();
     });
   }
@@ -360,7 +369,11 @@ function ShareLink({ token, title }: { token: string; title: string }) {
   );
 }
 
-type Run = (action: () => Promise<Result | Result<object>>, success?: string) => void;
+type Run = (
+  action: () => Promise<Result | Result<object>>,
+  success?: string,
+  options?: { reload?: boolean },
+) => void;
 
 function ClaimSection({
   card,
@@ -430,6 +443,7 @@ function ClaimSection({
                   : undefined,
               }),
             "You offered to help",
+            { reload: true },
           )
         }
       >
