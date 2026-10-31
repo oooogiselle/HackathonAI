@@ -67,8 +67,8 @@ The PRD's demo path is board-first: Home → Clarify → Your ask with a price �
 - [ ] Mocked school-email sign-up + helper setup on the claim page
       Done when: `/h/[token]` first asks for first name + school (.edu) email (mocked sign-up, no verification; TODO(auth)); for a paid card it then shows a mocked helper setup ("I can accept payment" toggle + payout account field) and refuses to claim if they can't accept payment; free cards skip the setup; lint + typecheck pass.
 
-- [ ] Email notifications (real email + console fallback)
-      Done when: `src/lib/notify/` has a `notify(event, to, data)` interface with an email adapter (provider + key from env, documented in `.env.example`) and a console adapter used when the key is unset (same pattern as `src/lib/groups/`); called for exactly three events: matched ask → helper, ask claimed → asker, other side marked done → both (with a confirm link); only the request that won the state update sends; no email reveals an anonymous asker; demo emails go only to teammates' addresses; lint + typecheck pass.
+- [ ] Email notifications (console only tonight)
+      Done when: `src/lib/notify/` has a `notify(event, to, data)` interface with a console adapter (same adapter pattern as `src/lib/groups/`), called for exactly three events: matched ask → helper, ask claimed → asker, other side marked done → both (with a confirm link); only the request that won the state update sends; no message reveals an anonymous asker; lint + typecheck pass.
 
 - [ ] Bot intro message
       Done when: a one-time action or script (`pnpm bot:intro <groupId>`) posts "I post asks from Ask. I can't read your messages. Remove me anytime." through `postToGroup`; it is never sent with regular posts; lint + typecheck pass.
@@ -96,10 +96,15 @@ The PRD's demo path is board-first: Home → Clarify → Your ask with a price �
 - [ ] Add the extension-email option to the "write my essay" redirect
       Done when: `/resources?type=tutoring` shows a third option, "Ask your professor for an extension", with a short editable email template the user can copy (nothing is sent); tutoring and writing center options stay; an academic ask can never get a price or be matched; lint + typecheck pass.
 
-## Needs a human (agents: skip)
+## Later (not tonight)
 
-- [ ] Pick the email service and add its key
-      Done when: the team has chosen an email provider, created an account with a verified sender, and put its API key in `.env.local` (never committed).
+- [ ] Real email via Gmail SMTP
+      Done when: a Gmail adapter in `src/lib/notify/` (nodemailer over Gmail SMTP, `GMAIL_USER` + `GMAIL_APP_PASSWORD`) is used when both are set, the console adapter otherwise; `.env.example` documents both; lint + typecheck pass.
+
+- [ ] (Human) Create a Gmail app password for Ask's sender address
+      Done when: a Gmail account for Ask (ideally a new one, not personal) has 2-Step Verification on, an app password is created at https://myaccount.google.com/apppasswords, and `GMAIL_USER` + `GMAIL_APP_PASSWORD` are in `.env.local` and in Vercel's environment variables (never committed).
+
+## Needs a human (agents: skip)
 
 - [ ] Set up the test GroupMe group and bot (Sophia)
       Done when: a test GroupMe group exists with teammates in it, a bot is created for it with **no callback URL**, and its `GROUPME_BOT_ID` is in `.env.local` on the demo machine.
