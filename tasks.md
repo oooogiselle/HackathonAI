@@ -4,11 +4,7 @@ Small, specific tasks for overnight agent runs. Rules for agents are in `AGENTS.
 
 Each task needs a clear "Done when". Leave out anything vague like "make it better".
 
-Runner (inside the sandbox container):
-
-```sh
-claude -p "Do the next unchecked task in tasks.md following AGENTS.md" --max-turns 30
-```
+Runner: `pnpm overnight` (see `scripts/overnight/README.md`). It picks open tasks from the sections above "Later", designs and builds each one in Docker, and opens a draft PR per task. `pnpm overnight --dry-run` shows what it would pick and why it skips the rest. Tasks marked `BLOCKED:` or `SKIP:`, or under "Proposed by overnight run", wait for a human.
 
 ## Tasks
 

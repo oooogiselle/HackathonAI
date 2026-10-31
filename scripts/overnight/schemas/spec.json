@@ -1,0 +1,17 @@
+{
+  "type": "object",
+  "required": ["markdown", "acceptance_criteria", "open_questions", "blocked_reason"],
+  "properties": {
+    "markdown": { "type": "string", "description": "The full mini-PRD in Markdown" },
+    "acceptance_criteria": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Each one testable"
+    },
+    "open_questions": { "type": "array", "items": { "type": "string" } },
+    "blocked_reason": {
+      "type": "string",
+      "description": "Empty unless only a human can unblock this task"
+    }
+  }
+}

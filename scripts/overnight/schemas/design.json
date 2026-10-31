@@ -1,0 +1,24 @@
+{
+  "type": "object",
+  "required": ["markdown", "files", "test_plan"],
+  "properties": {
+    "markdown": { "type": "string", "description": "The full architecture design in Markdown" },
+    "files": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Every file to change or add, repo-relative"
+    },
+    "test_plan": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["criterion", "test", "kind"],
+        "properties": {
+          "criterion": { "type": "string" },
+          "test": { "type": "string", "description": "Test file and test name" },
+          "kind": { "type": "string", "enum": ["unit", "e2e"] }
+        }
+      }
+    }
+  }
+}

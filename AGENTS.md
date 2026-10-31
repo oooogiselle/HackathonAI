@@ -10,7 +10,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Overnight / headless task runs
 
-When running unattended (`claude -p` in a loop), follow these rules:
+The pipeline is `pnpm overnight` (`scripts/overnight/README.md`): ideate and critique, then per task a spec, design and analysis before any code, then implement, gate, break-it, review and fix, in a Docker sandbox. It runs the gate, commits, pushes and opens the draft PRs itself; an agent stage must not. When running unattended, follow these rules:
 
 - **Task source:** work comes from `tasks.md`, one task per run. Only pick tasks that have a clear "Done when". Skip vague ones and add a note under them saying why.
 - **Isolation:** each task gets its own branch `agent/<task-slug>`, ideally in its own git worktree. Never commit to or push `main`.

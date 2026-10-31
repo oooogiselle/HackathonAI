@@ -18,6 +18,9 @@
 /.next-e2e-*/
 /.next-shot/
 
+# overnight pipeline runs (logs, reports, prompts)
+/.overnight/
+
 # next.js
 /.next/
 /out/

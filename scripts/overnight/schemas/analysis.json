@@ -1,0 +1,38 @@
+{
+  "type": "object",
+  "required": [
+    "verdict",
+    "summary",
+    "rule_violations",
+    "risks",
+    "simpler_alternative",
+    "scope_creep",
+    "missing_tests",
+    "required_changes"
+  ],
+  "properties": {
+    "verdict": { "type": "string", "enum": ["approve", "revise", "reject"] },
+    "summary": { "type": "string" },
+    "rule_violations": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "CLAUDE.md or PRD rules the spec or design breaks"
+    },
+    "risks": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Pre-mortem: how this fails in the demo"
+    },
+    "simpler_alternative": {
+      "type": "string",
+      "description": "Empty if the design is already the simplest that works"
+    },
+    "scope_creep": { "type": "array", "items": { "type": "string" } },
+    "missing_tests": { "type": "array", "items": { "type": "string" } },
+    "required_changes": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "What must change before approval; empty when approved"
+    }
+  }
+}

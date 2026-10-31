@@ -14,7 +14,9 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "bot:intro": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/bot-intro.mts"
+    "bot:intro": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/bot-intro.mts",
+    "overnight": "tsx scripts/overnight/run.mts",
+    "overnight:image": "docker build -t ask-overnight scripts/overnight"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.92",
@@ -53,6 +55,7 @@
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.9.10",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^5.0.5"
   },

@@ -1,0 +1,54 @@
+{
+  "type": "object",
+  "required": ["ideas"],
+  "properties": {
+    "ideas": {
+      "type": "array",
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "required": ["title", "why", "prd_line", "done_when", "files", "size", "risk_tags"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Short imperative task title, like the ones in tasks.md"
+          },
+          "why": {
+            "type": "string",
+            "description": "Which gap or demo problem it fixes, with evidence (file:line, failing check)"
+          },
+          "prd_line": {
+            "type": "string",
+            "description": "The docs/PRD.md or CLAUDE.md line it serves, quoted"
+          },
+          "done_when": {
+            "type": "string",
+            "description": "Testable Done when, in the tasks.md style, ending with the gate"
+          },
+          "files": { "type": "array", "items": { "type": "string" } },
+          "size": { "type": "string", "enum": ["S", "M", "L"] },
+          "risk_tags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "safety",
+                "crisis",
+                "payments",
+                "bot-posting",
+                "auth",
+                "schema",
+                "privacy",
+                "ui",
+                "ai",
+                "tests",
+                "docs",
+                "other"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "type": "object",
+  "required": ["summary", "verified", "deviations", "blocked_reason"],
+  "properties": {
+    "summary": { "type": "string", "description": "What you changed" },
+    "verified": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Commands you ran and their result"
+    },
+    "deviations": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Where you departed from the approved design, and why"
+    },
+    "blocked_reason": {
+      "type": "string",
+      "description": "Empty unless only a human can unblock this"
+    }
+  }
+}

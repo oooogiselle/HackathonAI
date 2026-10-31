@@ -1,0 +1,23 @@
+{
+  "type": "object",
+  "required": ["summary", "tried", "found_bugs"],
+  "properties": {
+    "summary": { "type": "string" },
+    "tried": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["scenario", "test", "result"],
+        "properties": {
+          "scenario": { "type": "string" },
+          "test": { "type": "string", "description": "File and test name" },
+          "result": { "type": "string", "enum": ["pass", "fail"] }
+        }
+      }
+    },
+    "found_bugs": {
+      "type": "boolean",
+      "description": "True if any new test fails because the code is wrong"
+    }
+  }
+}
