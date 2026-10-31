@@ -1,0 +1,53 @@
+{
+  "type": "object",
+  "required": ["items"],
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["title", "kind", "verdict", "score", "reasons", "done_when", "risk_tags"],
+        "properties": {
+          "title": { "type": "string", "description": "Exactly the title you were given" },
+          "kind": { "type": "string", "enum": ["idea", "existing"] },
+          "verdict": {
+            "type": "string",
+            "enum": ["accept", "revise", "reject", "needs-human", "stale"],
+            "description": "stale = an existing task that is already done or contradicts a later decision"
+          },
+          "score": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10,
+            "description": "Value for the demo and the PRD, after risk"
+          },
+          "reasons": { "type": "array", "items": { "type": "string" } },
+          "done_when": {
+            "type": "string",
+            "description": "The sharpened Done when (same as given if it was already good)"
+          },
+          "risk_tags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "safety",
+                "crisis",
+                "payments",
+                "bot-posting",
+                "auth",
+                "schema",
+                "privacy",
+                "ui",
+                "ai",
+                "tests",
+                "docs",
+                "other"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

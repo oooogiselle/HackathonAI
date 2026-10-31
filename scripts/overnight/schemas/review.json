@@ -1,0 +1,39 @@
+{
+  "type": "object",
+  "required": [
+    "verdict",
+    "done_when_met",
+    "summary",
+    "issues",
+    "bad_tests",
+    "suggestions",
+    "next_prompt"
+  ],
+  "properties": {
+    "verdict": { "type": "string", "enum": ["pass", "fix", "blocked"] },
+    "done_when_met": { "type": "boolean" },
+    "summary": { "type": "string" },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["file", "problem", "fix"],
+        "properties": {
+          "file": { "type": "string" },
+          "problem": { "type": "string" },
+          "fix": { "type": "string" }
+        }
+      }
+    },
+    "bad_tests": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Break-it tests that are wrong (not the code); file and test name"
+    },
+    "suggestions": { "type": "array", "maxItems": 5, "items": { "type": "string" } },
+    "next_prompt": {
+      "type": "string",
+      "description": "A complete, self-contained prompt for a fresh agent in this worktree"
+    }
+  }
+}
