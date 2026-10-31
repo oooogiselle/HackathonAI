@@ -31,6 +31,11 @@ export async function listInbox(filter: z.input<typeof filterSchema> = {}): Prom
   return listInboxInStore(user.id, parsed.success ? parsed.data : {});
 }
 
+/** The Inbox tab's badge. 0 when signed out. */
+export async function countUnread(): Promise<number> {
+  return (await listInbox()).filter((item) => !item.read).length;
+}
+
 /** "Mark all read" (no ids) or mark the given items read. */
 export async function markInboxRead(ids?: string[]): Promise<Result> {
   const user = await getCurrentUser();

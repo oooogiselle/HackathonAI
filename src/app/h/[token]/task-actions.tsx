@@ -228,6 +228,7 @@ export function TaskActions({
             </p>
           )}
         </Note>
+        {!card.private && <ShareLink token={token} title={card.title} />}
         <div className="mt-auto flex flex-col gap-2">
           <Button
             variant="outline"
@@ -323,6 +324,41 @@ export function TaskActions({
   );
 }
 
+// After posting: one link that works anywhere (any group chat, a DM), so a
+// group without the bot still sees the same card. Uses the phone's share sheet
+// when there is one.
+function ShareLink({ token, title }: { token: string; title: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function share() {
+    const url = `${window.location.origin}/h/${token}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, text: `Can anyone help? ${title}`, url });
+        return;
+      } catch {
+        // Closed the sheet, or sharing is blocked: fall back to copying.
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Couldn't copy. Copy the link from the address bar instead.");
+    }
+  }
+
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-xl border p-4 text-sm">
+      <span className="text-muted-foreground">Share the link in any group chat</span>
+      <Button variant="secondary" onClick={share} aria-live="polite">
+        {copied ? "Link copied" : "Share link"}
+      </Button>
+    </div>
+  );
+}
+
 type Run = (action: () => Promise<Result | Result<object>>, success?: string) => void;
 
 function ClaimSection({
@@ -351,12 +387,12 @@ function ClaimSection({
               students can&apos;t; leave this off if that&apos;s you.
             </p>
           </div>
-          <label className="flex items-center gap-2">
+          <label className="-mx-1 flex min-h-11 items-center gap-3 rounded-lg px-1 font-semibold">
             <input
               type="checkbox"
               checked={canAcceptPayment}
               onChange={(e) => setCanAcceptPayment(e.target.checked)}
-              className="size-4"
+              className="size-5 accent-primary"
             />
             I can accept payment
           </label>
@@ -398,6 +434,13 @@ function ClaimSection({
       >
         {pending ? "Claiming…" : "Claim this task"}
       </Button>
+      {setupBlocked && (
+        <p className="text-center text-sm text-muted-foreground">
+          {canAcceptPayment
+            ? "Add your payout account to claim."
+            : 'Turn on "I can accept payment" to claim this paid ask.'}
+        </p>
+      )}
       {card.price > 0 && (
         <p className="text-center text-xs text-muted-foreground">
           Payment is held when the asker confirms, and released to you when it&apos;s done.
@@ -421,9 +464,9 @@ function PaySection({ card, pending, run }: { card: PublicCard; pending: boolean
       <div>
         <h2 className="font-medium">Pay to hold the task</h2>
         <p className="text-muted-foreground">
-          Stripe holds your payment; it isn&apos;t sent yet. It&apos;s released to your helper
-          when you confirm the help is done, or 48 h after they mark it done unless you report a
-          problem. Cancel before then for a full refund.
+          Stripe holds your payment; it isn&apos;t sent yet. It&apos;s released to your helper when
+          you confirm the help is done, or 48 h after they mark it done unless you report a problem.
+          Cancel before then for a full refund.
         </p>
       </div>
       <dl className="flex flex-col gap-1">
