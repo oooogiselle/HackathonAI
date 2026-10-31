@@ -10,7 +10,7 @@ Full product spec: `docs/PRD.md` (loaded below). It wins on product questions.
 
 @docs/PRD.md
 
-Hackathon demo: one ask, start to finish. **Sign-in is mocked:** first name + school (.edu) email, no verification (`src/server/actions/session.ts`, TODO(auth)). Anyone can view the board and a card; posting, claiming and every asker step need the mock sign-in, checked inside each server action. Asks and claims move to a small Postgres store (the existing Drizzle + Supabase setup in `src/db/`) so two phones see the same card; until that lands, state is in memory. Payments, calendar and school-email sign-up are mocked.
+Hackathon demo: one ask, start to finish. **Sign-in is mocked:** first name + school (.edu) email, no verification (`src/server/actions/session.ts`, TODO(auth)). Anyone can view the board and a card; posting, claiming and every asker step need the mock sign-in, checked inside each server action. Asks, claims, users, inbox, messages and mocked payments are in Postgres (`src/db/schema/ask.ts`). Locally that's an in-process PGlite database (migrated + seeded on first use, reset on restart); set `ASK_DB=postgres` to use the shared Supabase database so two phones and every Vercel instance see the same card (apply `drizzle/` migrations first; a human runs them). Payments, calendar and school-email sign-up are mocked.
 
 ## Run
 
@@ -25,7 +25,7 @@ pnpm dev                     # http://localhost:3000
 - `ANTHROPIC_MODEL` picks the model for the Ask steps (default `claude-sonnet-5-5`).
 - Gate before committing: `pnpm lint`, `pnpm typecheck` and `pnpm test` (Vitest).
 - Demo tip: after posting, the Matched page links to the helper's claim page (`/h/<token>`). Open it in another tab to claim.
-- In-memory data resets when the dev server restarts.
+- Local data (PGlite) resets when the dev server restarts. The old group-first flow (`postAsk` / `claimAsk`) still keeps its posts in memory.
 
 ## Flow
 
@@ -44,14 +44,17 @@ src/app/h/[token]/         public claim page ("I can help": first name + school 
 src/components/ask/        flow-provider (client state, sessionStorage) + small UI pieces
 src/lib/ai/ask/            one small AI function per step: safety-check, clarify, draft-ask,
                            suggest-where, privacy-scrub; fallback.ts = no-key / error path
-src/lib/ask/               types, mock-data (fictional campus/people/groups), store (in-memory),
+src/lib/ask/               types, mock-data (fictional campus/people/groups), store (old flow, in-memory),
                            format (exact posted message, shared by preview + server)
 src/lib/groups/            postToGroup(group, text) + one adapter per platform (groupme, slack, mock)
 src/server/actions/ask.ts  server actions for the ask flow; re-checks safety + rate limit before any post
 src/server/actions/board.ts board card lifecycle: listBoard, getCard, postToBoard, claimCard, confirmHelper,
                            markDone, markPaid, saveCardThanks, shareCardToGroup (sign-in + ownership checked)
-src/server/actions/session.ts mocked sign-in: mockSignIn, mockSignOut, getMe (cookie → in-memory session)
-src/lib/ask/board-store.ts in-memory cards; every transition is a synchronous check-and-set
+src/server/actions/session.ts mocked sign-in (cookie → sessions table), profile, blocking
+src/server/actions/private.ts private asks: sendPrivately, listMyRequests, respondToRequest
+src/server/actions/inbox.ts  inbox notifications and per-ask messages
+src/db/schema/ask.ts       Ask tables; src/lib/ask/db.ts picks PGlite (local) or Supabase (ASK_DB=postgres)
+src/lib/ask/board-store.ts cards; every transition is a guarded UPDATE … RETURNING (+ inbox row) in one transaction
 docs/contract.md           backend ↔ frontend contract: every server action, its input/output, status
 ```
 
@@ -69,7 +72,7 @@ The rest of the repo (`/app`, `/login`, items, chat, Supabase, Drizzle) is the o
 - The bot is post-only: no GroupMe callback URL, nothing reads group messages.
 - The "✅ Covered" follow-up never names the asker (or the helper).
 - Rate limit: 3 posts per group per day (`src/lib/ask/store.ts`).
-- **Concurrency:** state changes on asks, claims, payments and counters are atomic check-and-set: a guarded `UPDATE … WHERE <expected state> RETURNING` in Postgres, or synchronous code with no `await` between check and set in the in-memory store. Side effects (bot posts, emails) run only for the request that won the update, so "Covered" is posted exactly once. Save state _before_ posting anything that links to it. The in-memory store is only correct on a single server process; any multi-instance deploy needs Postgres.
+- **Concurrency:** state changes on asks, claims, payments and counters are atomic check-and-set: a guarded `UPDATE … WHERE <expected state> RETURNING` (or an insert guarded by a primary key / `SELECT … FOR UPDATE`) in Postgres. Side effects (bot posts, emails) run only for the request that won the update, so "Covered" is posted exactly once. Save state _before_ posting anything that links to it. Local PGlite is only correct on a single server process; any multi-instance deploy needs `ASK_DB=postgres`.
 - Asks expire at their deadline: expired cards leave the board and can't be claimed (check expiry inside the same atomic claim).
 - Email notifications go through one `notify()` interface. **Tonight they are console-logged only** (decided Oct 30, per the PRD's "logged to the console" option); a Gmail SMTP adapter can be added later behind the same interface. Only the three PRD events trigger them, and they never reveal an anonymous asker.
 - The bot posts its intro ("I post asks from Ask. I can't read your messages. Remove me anytime.") once when added to a group, never on every post.
@@ -80,7 +83,7 @@ The rest of the repo (`/app`, `/login`, items, chat, Supabase, Drizzle) is the o
 - Calendar: free/busy only, never event titles or details. Tonight it's seeded in mock helpers; no Google API or OAuth.
 - Matching respects each helper's weekly limit and spreads load. "Not this time" never asks for a reason.
 - Contact info is shared only after both sides say yes.
-- No ratings, streaks or leaderboards.
+- No ratings, streaks or leaderboards. (The design's "Rate your helper" screen and trust points are out; the thank-you note stays.)
 - Fictional names and campus only (Northfield University).
 - To add a chat platform: add an adapter in `src/lib/groups/`, register it in `index.ts`, add the platform to `Platform` in `src/lib/ask/types.ts`.
 
