@@ -37,6 +37,8 @@ import {
   users,
 } from "@/db/schema";
 
+import { type NotifyData, type NotifyEvent, notify } from "@/lib/notify";
+
 import { type AskDb, getAskDb } from "./db";
 import { paymentBreakdown } from "./fees";
 import { MEETING_SPOTS } from "./mock-data";
@@ -272,9 +274,25 @@ export function toPublicCard(
 
 type Note = { askToken?: string; kind: InboxKind; topic: InboxTopic; title: string; body: string };
 
-async function notify(db: AskDb, userId: string, note: Note) {
-  // TODO(notifications): also email via notify() for the 3 PRD events.
+async function addInboxNote(db: AskDb, userId: string, note: Note) {
   await db.insert(notifications).values({ userId, ...note });
+}
+
+// Emails for the 3 PRD events. Queued inside the winning transaction and sent
+// only after it commits, so each event emails once.
+type Mail = { event: NotifyEvent; userId: string; data: NotifyData };
+
+async function sendMail(mail: Mail[]) {
+  if (!mail.length) return;
+  const db = await getAskDb();
+  const rows = await db
+    .select({ id: users.id, email: users.email, on: users.emailNotifications })
+    .from(users)
+    .where(inArray(users.id, [...new Set(mail.map((m) => m.userId))]));
+  for (const m of mail) {
+    const user = rows.find((u) => u.id === m.userId);
+    if (user?.on) await notify(m.event, user.email, m.data);
+  }
 }
 
 const dollars = (cents: number) => `$${(cents / 100).toFixed(2).replace(/\.00$/, "")}`;
@@ -317,7 +335,7 @@ export async function createCard(input: NewCard, now = Date.now()): Promise<Boar
       createdAt: new Date(now),
     });
     if (!input.private) {
-      await notify(tx, input.askerId, {
+      await addInboxNote(tx, input.askerId, {
         askToken: token,
         kind: "update",
         topic: "tasks",
@@ -344,6 +362,7 @@ export async function holdCard(
   now = Date.now(),
 ): Promise<Transition> {
   const db = await getAskDb();
+  const mail: Mail[] = [];
   const won = await db.transaction(async (tx) => {
     const [row] = await tx
       .update(asks)
@@ -373,16 +392,24 @@ export async function holdCard(
     if (!row) return null;
     await tx.insert(claims).values({ askToken: token, helperId, heldAt: new Date(now) });
     const [helper] = await tx.select().from(users).where(eq(users.id, helperId));
-    await notify(tx, row.askerId, {
+    await addInboxNote(tx, row.askerId, {
       askToken: token,
       kind: "action",
       topic: "tasks",
       title: `${helper?.firstName ?? "Someone"} can help`,
       body: `${helper?.firstName ?? "A helper"} said yes to “${row.title}”. Confirm to lock it in.`,
     });
+    mail.push({
+      event: "claimed",
+      userId: row.askerId,
+      data: { askToken: token, title: row.title, helperFirstName: helper?.firstName },
+    });
     return row;
   });
-  if (won) return { card: (await readCard(db, token, now))! };
+  if (won) {
+    await sendMail(mail);
+    return { card: (await readCard(db, token, now))! };
+  }
 
   return explain(db, token, now, (card) => {
     if (card.status === "expired") return "This ask has expired";
@@ -417,7 +444,7 @@ export async function confirmCard(
     if (!row) return null;
     const [claim] = await tx.select().from(claims).where(eq(claims.askToken, token));
     if (claim) {
-      await notify(tx, claim.helperId, {
+      await addInboxNote(tx, claim.helperId, {
         askToken: token,
         kind: "update",
         topic: "tasks",
@@ -474,7 +501,7 @@ export async function holdPayment(
       .onConflictDoNothing()
       .returning();
     if (!paid) return { error: "Already paid." };
-    await notify(tx, claim.helperId, {
+    await addInboxNote(tx, claim.helperId, {
       askToken: token,
       kind: "update",
       topic: "payments",
@@ -506,6 +533,7 @@ export async function markHelperDone(
   now = Date.now(),
 ): Promise<Transition> {
   const db = await getAskDb();
+  const mail: Mail[] = [];
   const won = await db.transaction(async (tx) => {
     const [row] = await tx
       .update(asks)
@@ -526,7 +554,7 @@ export async function markHelperDone(
       )
       .returning();
     if (!row) return null;
-    await notify(tx, row.askerId, {
+    await addInboxNote(tx, row.askerId, {
       askToken: token,
       kind: "action",
       topic: row.price > 0 ? "payments" : "tasks",
@@ -536,9 +564,17 @@ export async function markHelperDone(
           ? `Your helper finished “${row.title}”. Confirm to release ${dollars(row.price * 100)}, or report a problem. It confirms automatically in 48 h.`
           : `Your helper finished “${row.title}”. Confirm, or report a problem. It confirms automatically in 48 h.`,
     });
+    mail.push({
+      event: "done",
+      userId: row.askerId,
+      data: { askToken: token, title: row.title, by: "helper" },
+    });
     return row;
   });
-  if (won) return { card: (await readCard(db, token, now))! };
+  if (won) {
+    await sendMail(mail);
+    return { card: (await readCard(db, token, now))! };
+  }
   return explain(db, token, now, (card) => {
     if (card.heldBy?.userId !== helperId) return "Only the helper on this ask can do that.";
     if (card.helperDoneAt) return "Already marked done.";
@@ -562,7 +598,7 @@ async function release(
     .set({ status: "released", releasedAt: new Date(now) })
     .where(and(eq(payments.askToken, row.token), eq(payments.status, "held")))
     .returning();
-  await notify(tx, helperId, {
+  await addInboxNote(tx, helperId, {
     askToken: row.token,
     kind: "update",
     topic: released ? "payments" : "tasks",
@@ -578,6 +614,7 @@ export async function markCardDone(
   now = Date.now(),
 ): Promise<Transition> {
   const db = await getAskDb();
+  const mail: Mail[] = [];
   const won = await db.transaction(async (tx) => {
     const [row] = await tx
       .update(asks)
@@ -593,10 +630,20 @@ export async function markCardDone(
       .returning();
     if (!row) return null;
     const [claim] = await tx.select().from(claims).where(eq(claims.askToken, token));
-    if (claim) await release(tx, row, claim.helperId, now, false);
+    if (claim) {
+      await release(tx, row, claim.helperId, now, false);
+      mail.push({
+        event: "done",
+        userId: claim.helperId,
+        data: { askToken: token, title: row.title, by: "asker" },
+      });
+    }
     return row;
   });
-  if (won) return { card: (await readCard(db, token, now))! };
+  if (won) {
+    await sendMail(mail);
+    return { card: (await readCard(db, token, now))! };
+  }
   return explain(db, token, now, (card) => {
     if (card.askerId !== userId) return NOT_YOURS.error;
     if (card.status === "confirmed" && card.price > 0) return "Pay to hold the task first.";
@@ -640,7 +687,7 @@ export async function settleDue(db: AskDb, now: number, token?: string) {
       if (!row) return;
       const [claim] = await tx.select().from(claims).where(eq(claims.askToken, dueToken));
       if (claim) await release(tx, row, claim.helperId, now, true);
-      await notify(tx, row.askerId, {
+      await addInboxNote(tx, row.askerId, {
         askToken: dueToken,
         kind: "update",
         topic: row.price > 0 ? "payments" : "tasks",
@@ -675,7 +722,7 @@ export async function reportProblem(
     if (!row) return null;
     const [claim] = await tx.select().from(claims).where(eq(claims.askToken, token));
     if (claim) {
-      await notify(tx, claim.helperId, {
+      await addInboxNote(tx, claim.helperId, {
         askToken: token,
         kind: "update",
         topic: "payments",
@@ -729,7 +776,7 @@ export async function cancelCard(
       .returning();
     const [claim] = await tx.select().from(claims).where(eq(claims.askToken, token));
     if (claim) {
-      await notify(tx, claim.helperId, {
+      await addInboxNote(tx, claim.helperId, {
         askToken: token,
         kind: "update",
         topic: refunded ? "payments" : "tasks",
@@ -828,7 +875,7 @@ export async function addSharedGroup(
       .onConflictDoNothing()
       .returning();
     if (!added) return { error: "Already shared to that group." };
-    await notify(tx, userId, {
+    await addInboxNote(tx, userId, {
       askToken: token,
       kind: "update",
       topic: "groups",
@@ -895,6 +942,7 @@ export async function sendPrivately(
   now = Date.now(),
 ): Promise<Transition> {
   const db = await getAskDb();
+  const mail: Mail[] = [];
   const result = await db.transaction(async (tx): Promise<{ error: string } | null> => {
     const [row] = await tx.select().from(asks).where(eq(asks.token, token)).for("update");
     if (!row) return NOT_FOUND;
@@ -925,17 +973,20 @@ export async function sendPrivately(
       .insert(askRecipients)
       .values(fresh.map((helperId) => ({ askToken: token, helperId, sentAt: new Date(now) })));
     for (const helperId of fresh) {
-      await notify(tx, helperId, {
+      await addInboxNote(tx, helperId, {
         askToken: token,
         kind: "action",
         topic: "tasks",
         title: "A classmate asked you",
         body: `“${row.title}”, about ${row.minutes} min${row.price ? `, $${row.price}` : ", a favor"}.`,
       });
+      mail.push({ event: "private-ask", userId: helperId, data: { askToken: token, title: row.title } });
     }
     return null;
   });
-  return result ?? { card: (await readCard(db, token, now))! };
+  if (result) return result;
+  await sendMail(mail);
+  return { card: (await readCard(db, token, now))! };
 }
 
 /** A helper's private requests, newest first. */
