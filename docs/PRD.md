@@ -151,7 +151,7 @@ Ask is a web app, so email is how people hear back when they're not looking at i
 - Helpers set their own limits; no one gets flooded
 - Stripe holds payment until both sides confirm the help is done (auto-release after 48 hours unless the asker reports a problem); paid asks never reach helpers who can't accept payment
 - Calendar access is free/busy only
-- No ratings, streaks or leaderboards
+- Ratings after done (stars, tags, comment, optional tip on paid asks) and earned-only trust points (decided Oct 31). No streaks or leaderboards
 
 ### Stack
 
@@ -170,7 +170,7 @@ Tonight we ship one ask end to end: privately to matched helpers, on the public 
 
 **In the MVP:** the demo path (Home → Clarify → Your ask with a price → public board → bot posts to GroupMe → claim in the browser → Matched → mocked Pay + Thank you), safety check, matching on seeded helpers (with seeded free/busy), "Already taken" across board and GroupMe. The private inbox ships as a simple mock and is told in the story, not demoed.
 
-**Not now:** the Stripe API and Stripe Connect (payment is a mock screen), the Google Calendar API and OAuth (free/busy is seeded), real school-email verification (sign-up is mocked), push notifications, an iOS app, reading group messages.
+**Not now:** the Stripe API and Stripe Connect (payment is a mock screen), the Google Calendar API and OAuth (free/busy is seeded), real Dartmouth SSO (accounts use a password plus school-email and phone codes), push notifications, an iOS app, reading group messages.
 
 **Our differentiator: the group chat bot (built second).** It gets an ask into the right chat and reaches people beyond the asker's own circle, which also answers cold start. We build it only after the core flow works end to end.
 

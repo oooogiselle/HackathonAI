@@ -148,7 +148,7 @@ export type AskCategory = string;
 export const PAY_TYPES = ["pay", "fund", "trade", "free"] as const;
 export type PayType = (typeof PAY_TYPES)[number];
 
-export type PaymentMethod = "venmo" | "card";
+export type PaymentMethod = "venmo" | "paypal" | "card";
 export type PaymentStatus = "held" | "released" | "refunded";
 
 // Mocked: no money moves. All amounts in cents.
@@ -259,6 +259,8 @@ export type Profile = {
   interests: Interest[];
   weeklyLimit: number;
   emailNotifications: boolean;
+  // Show my ratings to askers.
+  showReviews: boolean;
 };
 
 // "Blocked people". Labels never reveal an anonymous asker.
@@ -289,4 +291,41 @@ export type Post = {
   createdAt: number;
   claim?: Claim;
   thanks?: string;
+};
+
+// ---------- ratings ----------
+
+// "What went well" chips on Rate your helper.
+export const REVIEW_TAGS = [
+  "On time",
+  "Easy pickup",
+  "Friendly",
+  "Thorough",
+  "Fast reply",
+] as const;
+export type ReviewTag = (typeof REVIEW_TAGS)[number];
+
+export type Review = {
+  stars: number;
+  tags: ReviewTag[];
+  comment?: string;
+  showName: boolean;
+  tipCents: number;
+  tipFeeCents: number;
+  createdAt: number;
+  // Reviews can be edited for 24 h.
+  editableUntil: number;
+};
+
+// What an asker sees about a helper (only when the helper shows reviews).
+export type HelperRating = { average: number; count: number; onTime: number };
+
+// The helper's own ratings, on the Me tab.
+export type MyRatings = HelperRating & {
+  // Last 90 days; all time for tags, points and tips.
+  tagCounts: { tag: ReviewTag; count: number }[];
+  trustPoints: number;
+  tipsCents: number;
+  recent: { stars: number; comment: string; by: string; at: number }[];
+  showReviews: boolean;
 };

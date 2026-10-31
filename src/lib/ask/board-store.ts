@@ -478,6 +478,48 @@ export async function confirmCard(
 }
 
 /**
+ * held → open: the helper lets go before the asker confirms ("Let go of this
+ * ask"), so someone else can help. Only the helper holding it, only while held.
+ */
+export async function releaseHold(
+  token: string,
+  helperId: string,
+  now = Date.now(),
+): Promise<Transition> {
+  const db = await getAskDb();
+  const won = await db.transaction(async (tx) => {
+    const [row] = await tx
+      .update(asks)
+      .set({ status: "open" })
+      .where(
+        and(
+          eq(asks.token, token),
+          eq(asks.status, "held"),
+          exists(
+            tx
+              .select({ one: sql`1` })
+              .from(claims)
+              .where(and(eq(claims.askToken, token), eq(claims.helperId, helperId))),
+          ),
+        ),
+      )
+      .returning();
+    if (!row) return null;
+    await tx.delete(claims).where(eq(claims.askToken, token));
+    await addInboxNote(tx, row.askerId, {
+      askToken: token,
+      kind: "update",
+      topic: "tasks",
+      title: "Your helper let go",
+      body: `“${row.title}” is open again for someone else to help.`,
+    });
+    return row;
+  });
+  if (won) return { card: (await readCard(db, token, now))! };
+  return explain(db, token, now, () => "Only the helper holding this ask can let it go.");
+}
+
+/**
  * Mocked "Pay $X and hold", right after the asker confirms a helper. The money
  * is held (not sent) until the asker confirms the help is done, or 48 h after
  * the helper's "Done". No money moves (TODO(stripe): Stripe Connect hold).
@@ -993,7 +1035,11 @@ export async function sendPrivately(
         title: "A classmate asked you",
         body: `“${row.title}”, about ${row.minutes} min${row.price ? `, $${row.price}` : ", a favor"}.`,
       });
-      mail.push({ event: "private-ask", userId: helperId, data: { askToken: token, title: row.title } });
+      mail.push({
+        event: "private-ask",
+        userId: helperId,
+        data: { askToken: token, title: row.title },
+      });
     }
     return null;
   });

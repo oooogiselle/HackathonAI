@@ -20,12 +20,12 @@ const SAFETY_SEVERITY: Record<SafetyCategory, number> = {
 const KEYWORDS: [SafetyCategory, RegExp, string][] = [
   [
     "crisis",
-    /suicid|kill myself|end my life|want to die|self[- ]?harm|hurt myself|overdos|being abused|assault/i,
+    /suicid|kill myself|end my life|want to die|self[- ]?harm|(hurt|harm|cut)(ing)? myself|no reason to live|don'?t want to (live|be alive)|overdos|being abused|assault/i,
     "This sounds serious. Please reach out to people trained to help.",
   ],
   [
     "academic",
-    /\b(write|do|finish)\b.{0,20}\b(essay|paper|homework|assignment|problem set|thesis)\b|\btake my (exam|test|quiz)\b/i,
+    /\b(write|do|finish|complete|solve)\b.{0,25}\b(essay|paper|homework|hw|assignment|problem set|p-?set|thesis|lab report|worksheet)\b|\btake\b.{0,20}\b(exam|test|quiz|midterm)\b.{0,10}\bfor me\b|\btake my (\w+ ){0,2}(exam|test|quiz|midterm|final)\b/i,
     "Ask can't do coursework for you, but tutors can help you do it yourself.",
   ],
   [

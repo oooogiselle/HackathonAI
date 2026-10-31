@@ -139,7 +139,8 @@ describe("board actions", () => {
 
     expect("error" in (await board.markDone(token))).toBe(true); // pay to hold first
     const paid = await board.payToHold(token);
-    expect("ok" in paid && paid.card.payment?.totalCents).toBe(1728);
+    // Venmo by default (the design's first choice): $15 + 10% + 1.9%.
+    expect("ok" in paid && paid.card.payment?.totalCents).toBe(1681);
     expect("ok" in paid && paid.card.payment?.status).toBe("held");
     expect("error" in (await board.payToHold(token))).toBe(true);
 

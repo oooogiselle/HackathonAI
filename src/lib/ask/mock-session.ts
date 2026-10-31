@@ -1,26 +1,43 @@
-// Mocked sign-in for the demo: first name + school email, no verification.
-// The cookie holds only a random session id; the user and session live in the
-// database, so nobody can edit a cookie to act as someone else's account.
-// TODO(auth): replace with real sign-in + .edu (and phone) verification.
+// Sessions. Real accounts sign in with a password (src/lib/ask/accounts.ts);
+// the mocked "Sign in with Dartmouth" (first name + school email, no checks)
+// works only in demo mode. The cookie holds only a random session id; the user
+// and session live in the database, so nobody can edit a cookie to act as
+// someone else's account.
 import "server-only";
 
 import { cookies } from "next/headers";
 
-import { deleteSession, getSessionUser, type SessionUser, signInUser } from "./users";
+import {
+  createSession,
+  deleteSession,
+  getSessionUser,
+  type SessionUser,
+  signInUser,
+} from "./users";
 
 export type MockUser = SessionUser;
 
 export const SESSION_COOKIE = "ask_session";
 
-export async function signIn(firstName: string, email: string): Promise<MockUser> {
-  const { sessionId, user } = await signInUser(firstName, email);
+async function setSessionCookie(sessionId: string) {
   (await cookies()).set(SESSION_COOKIE, sessionId, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     maxAge: 60 * 60 * 24 * 7,
   });
+}
+
+/** Mocked sign-in (demo mode only; the caller checks). */
+export async function signIn(firstName: string, email: string): Promise<MockUser> {
+  const { sessionId, user } = await signInUser(firstName, email);
+  await setSessionCookie(sessionId);
   return user;
+}
+
+/** After a verified sign-up or a correct password. */
+export async function startSession(userId: string) {
+  await setSessionCookie(await createSession(userId));
 }
 
 export async function signOut() {

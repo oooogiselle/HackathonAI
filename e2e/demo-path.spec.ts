@@ -47,11 +47,17 @@ test("a posted ask is claimed by another student and closed with a thank-you", a
   // Who to ask: suggestions only, picked on a tap. Typing under Other offers a similar one.
   await expect(page.getByText("Suggested for your ask")).toBeVisible();
   const whoToAsk = page.getByRole("group", { name: "Who to ask" });
-  await expect(whoToAsk.getByRole("button", { name: "Rides" })).toHaveAttribute("aria-pressed", "false");
+  await expect(whoToAsk.getByRole("button", { name: "Rides" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
   await whoToAsk.getByRole("button", { name: "Other", exact: true }).click();
   await page.getByLabel("Your category").fill("Airport pickup");
   await page.getByText("Similar:").locator("..").getByRole("button", { name: "Rides" }).click();
-  await expect(whoToAsk.getByRole("button", { name: "Rides" })).toHaveAttribute("aria-pressed", "true");
+  await expect(whoToAsk.getByRole("button", { name: "Rides" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   await page.getByLabel("Where").fill("From East Wheelock");
   await page.getByLabel("Price in dollars").fill("15");
   await page.getByRole("button", { name: "Continue" }).click();
@@ -127,6 +133,11 @@ test("a posted ask is claimed by another student and closed with a thank-you", a
   await expect(page).toHaveURL(new RegExp(`${taskPath}$`));
   await expect(page.getByRole("link", { name: /^Rina/ })).toContainText("On my way");
   await helper.getByRole("link", { name: "Task" }).click();
+  // Venmo is picked first ($16.81); PayPal and cards cost a bit more.
+  await expect(page.getByRole("radio", { name: /Venmo/ })).toHaveAttribute("aria-checked", "true");
+  await expect(page.getByRole("button", { name: "Pay $16.81 and hold" })).toBeVisible();
+  await expect(page.getByRole("radio", { name: /Credit or debit card/ })).toBeVisible();
+  await page.getByRole("radio", { name: /PayPal/ }).click();
   await page.getByRole("button", { name: "Pay $17.28 and hold" }).click();
   await expect(page.getByText("Rina is on it")).toBeVisible();
 
@@ -141,6 +152,27 @@ test("a posted ask is claimed by another student and closed with a thank-you", a
   await expect(page.getByText("$15.00 released to Rina.")).toBeVisible();
   await expect(helper.getByText("$15.00 released to you.")).toBeVisible();
 
+  // Rate your helper: 4 stars, "On time", a $2 tip charged to the PayPal used to hold.
+  await page.getByRole("link", { name: "Rate your helper" }).click();
+  await expect(page).toHaveURL(/\/review\?token=/);
+  await expect(page.getByText("Payment released")).toBeVisible();
+  await page.getByRole("radio", { name: "4 stars" }).click();
+  await expect(page.getByText("+10")).toBeVisible();
+  await page.getByRole("button", { name: "On time" }).click();
+  await page.getByLabel("Comment").fill("Right on time with two suitcases. Thank you!");
+  await page.getByRole("button", { name: "$2" }).click();
+  await expect(page.getByText(/to the PayPal you used/)).toBeVisible();
+  await page.getByRole("button", { name: "Submit review" }).click();
+  await expect(page).toHaveURL(new RegExp(`${taskPath}$`));
+  await expect(page.getByText("You rated Rina 4 of 5.")).toBeVisible();
+
+  // The helper sees it on Me: rating, trust points (10 + 2 for finishing) and the tip.
+  await helper.goto("/me");
+  await expect(helper.getByText("From 1 review as a helper")).toBeVisible();
+  await expect(helper.getByText("Right on time with two suitcases. Thank you!")).toBeVisible();
+  await expect(helper.getByText("12", { exact: true })).toBeVisible();
+  await expect(helper.getByText("$17.00")).toBeVisible();
+
   await page.getByRole("link", { name: "Write a thank-you" }).click();
   await expect(page).toHaveURL(/\/thanks\?token=/);
   await page.getByPlaceholder("Thank you so much for the ride!").fill("Thanks for the ride, Rina!");
@@ -148,12 +180,27 @@ test("a posted ask is claimed by another student and closed with a thank-you", a
   await expect(page.getByRole("heading", { name: /Thank-you sent/ })).toBeVisible();
 });
 
-test('"Write my essay" goes to tutoring, not the board', async ({ page }) => {
+test('"Write my essay" is never posted: an honest rewrite or tutoring', async ({ page }) => {
   await page.goto("/ask");
   await page.getByLabel("What do you need?").fill("Write my essay");
   await page.getByLabel("Details").fill("History class, due Friday.");
   await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page).toHaveURL(/\/check$/);
+  await expect(page.getByRole("heading", { name: "We can't post this" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Continue" })).toHaveCount(0);
+
+  // Canned rewrite (no AI key in e2e), keeping the subject.
+  await expect(
+    page.getByText("Talk through my history essay outline", { exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Book tutoring" }).click();
   await expect(page).toHaveURL(/\/resources\?type=tutoring$/);
+
+  // Back on Quick check, the rewrite passes as an everyday ask.
+  await page.goBack();
+  await page.getByRole("button", { name: "Use this rewrite" }).click();
+  await expect(page.getByRole("heading", { name: "Everyday ask" })).toBeVisible();
+  await expect(page.getByText("Not graded schoolwork")).toBeVisible();
 });
 
 test("a crisis message shows professional resources only", async ({ page }) => {

@@ -1,15 +1,21 @@
 // notify(event, to, data): the only way Ask emails anyone. Exactly the three PRD
 // events. Call it only after the request that won the state update has
 // committed, so each event sends once. Messages never name the asker.
-// To add a channel (e.g. Gmail SMTP): write an adapter and put it first below.
+// Gmail SMTP is used when its env vars are set; otherwise the console adapter.
+// sendVerificationEmail is the one other email: sign-up codes.
 import "server-only";
 
 import { siteUrl } from "@/lib/site-url";
 
 import { consoleAdapter } from "./console";
+import { gmailAdapter } from "./gmail";
 import type { Email, EmailAdapter } from "./types";
 
-const adapters: EmailAdapter[] = [];
+const adapters: EmailAdapter[] = [gmailAdapter];
+
+function pickAdapter() {
+  return adapters.find((a) => a.isConfigured()) ?? consoleAdapter;
+}
 
 export type NotifyEvent =
   // A helper was picked for a private ask.
@@ -60,8 +66,23 @@ function compose(event: NotifyEvent, to: string, data: NotifyData): Email {
 
 /** Never throws: a failed email must not undo a claim that already happened. */
 export async function notify(event: NotifyEvent, to: string, data: NotifyData): Promise<void> {
-  const adapter = adapters.find((a) => a.isConfigured()) ?? consoleAdapter;
-  await adapter.send(compose(event, to, data)).catch((error) => {
-    console.error(`notify(${event}) failed:`, error);
+  await pickAdapter()
+    .send(compose(event, to, data))
+    .catch((error) => {
+      console.error(`notify(${event}) failed:`, error);
+    });
+}
+
+/**
+ * Sign-up code to a school email. Returns true when a real adapter sent it,
+ * false when it was only logged to the console (no email keys set).
+ */
+export async function sendVerificationEmail(to: string, code: string): Promise<boolean> {
+  const adapter = pickAdapter();
+  await adapter.send({
+    to,
+    subject: `${code} is your DartAsk code`,
+    text: `Your DartAsk school email code is ${code}. It expires in 10 minutes.\nIf you didn't sign up, ignore this email.`,
   });
+  return adapter !== consoleAdapter;
 }

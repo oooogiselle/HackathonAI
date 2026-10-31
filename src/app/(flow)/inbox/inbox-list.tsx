@@ -103,7 +103,15 @@ function RequestCard({
   );
 }
 
-export function InboxList({ items }: { items: InboxItem[] }) {
+export function InboxList({
+  items,
+  title = "Updates",
+  empty = "Nothing yet. When someone claims your ask or it's marked done, you'll see it here.",
+}: {
+  items: InboxItem[];
+  title?: string;
+  empty?: string;
+}) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const unread = items.some((i) => !i.read);
@@ -118,7 +126,7 @@ export function InboxList({ items }: { items: InboxItem[] }) {
   if (items.length === 0) {
     return (
       <p className="rounded-3xl border border-dashed border-input p-6 text-center text-sm text-muted-foreground">
-        Nothing yet. When someone claims your ask or it&apos;s marked done, you&apos;ll see it here.
+        {empty}
       </p>
     );
   }
@@ -126,7 +134,7 @@ export function InboxList({ items }: { items: InboxItem[] }) {
   return (
     <section className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-xs font-bold tracking-wide text-muted-foreground uppercase">Updates</h2>
+        <h2 className="text-xs font-bold tracking-wide text-muted-foreground uppercase">{title}</h2>
         {unread && (
           <Button
             variant="ghost"

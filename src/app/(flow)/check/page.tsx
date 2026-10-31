@@ -2,9 +2,10 @@
 
 // Quick check: both entry points (Post a need, and the AI path) land here, and
 // checkSafety runs again on the final wording, so the check always sees what
-// will actually be posted. Crisis and schoolwork go to support resources and
-// are never posted or matched; personal topics stay private.
-import { Check, Lock } from "lucide-react";
+// will actually be posted. Crisis goes to support resources. Graded work is
+// never posted or matched: it gets "We can't post this" with an honest rewrite
+// (getRewrite) and tutoring. Personal topics stay private.
+import { Check, Lock, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -13,23 +14,29 @@ import { LoadingLines } from "@/components/ask/loading-line";
 import { PartTicket } from "@/components/ask/part-ticket";
 import { StepHeader } from "@/components/ask/step-header";
 import { Button } from "@/components/ui/button";
+import type { RewriteSuggestion } from "@/lib/ai/ask/suggest-rewrite";
 import type { SafetyResult } from "@/lib/ask/types";
-import { checkSafety } from "@/server/actions/ask";
+import { checkSafety, getRewrite } from "@/server/actions/ask";
 
 export default function QuickCheckPage() {
   const router = useRouter();
   const { state, ready, update } = useRequireNeed();
   const part = state.parts[state.activePart];
   const [safety, setSafety] = useState<SafetyResult | null>(null);
+  // Graded work: the suggested rewrite (undefined while it loads).
+  const [rewrite, setRewrite] = useState<RewriteSuggestion | null>();
 
   useEffect(() => {
     if (!ready || !part) return;
     let live = true;
-    checkSafety(`${part.what}. ${part.text}`).then((result) => {
+    const need = `${part.what}. ${part.text}`;
+    checkSafety(need).then((result) => {
       if (!live) return;
       if (result.category === "crisis") return router.replace("/resources?type=crisis");
-      if (result.category === "academic") return router.replace("/resources?type=tutoring");
       setSafety(result);
+      if (result.category === "academic") {
+        getRewrite(need).then((r) => live && setRewrite(r));
+      }
     });
     return () => {
       live = false;
@@ -41,6 +48,70 @@ export default function QuickCheckPage() {
   if (!part) return null;
   const sensitive = safety?.category === "sensitive";
   const editHref = state.mode === "ai" ? "/draft" : "/ask";
+
+  // Swaps in the rewrite; the effect above checks the new wording again.
+  function applyRewrite(r: RewriteSuggestion) {
+    const parts = state.parts.map((p, i) =>
+      i === state.activePart ? { ...p, what: r.what, text: r.text, minutes: r.minutes } : p,
+    );
+    setSafety(null);
+    setRewrite(undefined);
+    update({ parts, ask: r.text });
+  }
+
+  if (safety?.category === "academic") {
+    return (
+      <>
+        <StepHeader title="Quick check" backHref={editHref} />
+        <PartTicket part={part} />
+        <ul className="flex flex-col divide-y divide-background overflow-hidden rounded-3xl bg-card text-[15px]">
+          <CheckRow ok>Something a classmate can help with</CheckRow>
+          <CheckRow blocked>Asks someone to do graded work for you</CheckRow>
+          <CheckRow ok>Not a personal topic</CheckRow>
+        </ul>
+        <section className="flex flex-col gap-1 rounded-3xl bg-card p-4">
+          <h2 className="text-lg font-bold">We can&apos;t post this</h2>
+          <p className="text-sm text-muted-foreground">
+            Having someone do graded work for you breaks the honor code, so it won&apos;t go to the
+            board, GroupMe or any helper.
+          </p>
+        </section>
+        <section className="flex flex-col gap-3 rounded-3xl bg-pay p-4">
+          <h2 className="text-xs font-bold tracking-wide text-secondary-foreground uppercase">
+            Try this instead
+          </h2>
+          {rewrite === undefined ? (
+            <LoadingLines label="Finding a way a classmate can help…" />
+          ) : rewrite ? (
+            <>
+              <p className="font-semibold">{rewrite.what}</p>
+              <p className="text-sm">&ldquo;{rewrite.text}&rdquo;</p>
+              <Button className="h-11" onClick={() => applyRewrite(rewrite)}>
+                Use this rewrite
+              </Button>
+            </>
+          ) : (
+            <p className="text-sm">Tutors can help you do it yourself.</p>
+          )}
+          <Button
+            variant="outline"
+            className="h-11"
+            onClick={() => router.push("/resources?type=tutoring")}
+          >
+            Book tutoring
+          </Button>
+        </section>
+        <p className="text-xs text-muted-foreground">
+          We also can&apos;t post asks that are unsafe, illegal, or aimed at a specific person.
+        </p>
+        <div className="mt-auto flex flex-col gap-2">
+          <Button size="lg" className="h-12 text-base" onClick={() => router.push(editHref)}>
+            Rewrite my ask
+          </Button>
+        </div>
+      </>
+    );
+  }
 
   function next() {
     if (!safety) return;
@@ -134,15 +205,33 @@ export default function QuickCheckPage() {
   );
 }
 
-function CheckRow({ ok, children }: { ok?: boolean; children: React.ReactNode }) {
+function CheckRow({
+  ok,
+  blocked,
+  children,
+}: {
+  ok?: boolean;
+  blocked?: boolean;
+  children: React.ReactNode;
+}) {
   return (
     <li className="flex items-center gap-3 px-4 py-3.5">
       <span
         className={`flex size-6 shrink-0 items-center justify-center rounded-full ${
-          ok ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
+          ok
+            ? "bg-primary text-primary-foreground"
+            : blocked
+              ? "bg-destructive text-white"
+              : "bg-muted text-foreground"
         }`}
       >
-        {ok ? <Check className="size-3.5" /> : <Lock className="size-3.5" />}
+        {ok ? (
+          <Check className="size-3.5" />
+        ) : blocked ? (
+          <X className="size-3.5" />
+        ) : (
+          <Lock className="size-3.5" />
+        )}
       </span>
       {children}
     </li>

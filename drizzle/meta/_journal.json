@@ -36,6 +36,20 @@
       "when": 1793419550497,
       "tag": "0004_free_text_categories",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793424125943,
+      "tag": "0005_paypal_payments",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793424484375,
+      "tag": "0006_accounts_and_reviews",
+      "breakpoints": true
     }
   ]
 }

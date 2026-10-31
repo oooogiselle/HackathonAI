@@ -1,15 +1,12 @@
-// "Sign in with Dartmouth". The SSO step is mocked tonight (first name + school
-// email, no password); real Dartmouth SSO needs the college to register the app.
-// TODO(auth): swap in real SSO behind the same mockSignIn → session cookie flow.
+// Sign in: username or school email + password (accounts are created and
+// verified at /signup). In demo mode the mocked "Sign in with Dartmouth" is
+// offered too. TODO(auth): real Dartmouth SSO needs the college to register the app.
 import { Brand } from "@/components/ask/brand";
+import { isDemoMode } from "@/lib/ask/demo-mode";
 import { CAMPUS } from "@/lib/ask/mock-data";
+import { safeNext } from "@/lib/safe-next";
 
 import { SignInFlow } from "./sign-in-flow";
-
-/** Only same-site paths, so ?next= can't send someone to another site. */
-function safeNext(next: string | string[] | undefined) {
-  return typeof next === "string" && next.startsWith("/") && !next.startsWith("//") ? next : "/";
-}
 
 export default async function SignInPage({ searchParams }: PageProps<"/signin">) {
   const { next } = await searchParams;
@@ -22,7 +19,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
           {CAMPUS} students only. Anyone can browse the board; you need to sign in to post or help.
         </p>
       </header>
-      <SignInFlow next={safeNext(next)} />
+      <SignInFlow next={safeNext(next)} demo={isDemoMode()} />
     </main>
   );
 }

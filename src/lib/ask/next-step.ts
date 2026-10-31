@@ -1,6 +1,6 @@
 // "What happens next" on one ask, for whoever is looking: the line under a card
 // on the Claimed tab, and whether it's waiting on this person's tap.
-import { formatCents, paymentBreakdown } from "./fees";
+import { DEFAULT_PAYMENT_METHOD, formatCents, paymentBreakdown } from "./fees";
 import type { PublicCard } from "./types";
 
 export type NextStep = { label: string; yourTurn: boolean };
@@ -35,7 +35,9 @@ export function nextStep(card: StepCard): NextStep {
         return tap(`${helper} can help. Confirm to lock it in`);
       case "confirmed":
         if (paid && !held) {
-          return tap(`Pay ${formatCents(paymentBreakdown(card.price, "card").totalCents)} to hold`);
+          return tap(
+            `Pay ${formatCents(paymentBreakdown(card.price, DEFAULT_PAYMENT_METHOD).totalCents)} to hold`,
+          );
         }
         if (card.helperDoneAt && !card.problemReportedAt) {
           return tap(`${helper} marked it done. Confirm`);

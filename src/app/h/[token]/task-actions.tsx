@@ -14,19 +14,26 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { whenLabel } from "@/lib/ask/card-format";
-import { formatCents, paymentBreakdown } from "@/lib/ask/fees";
+import {
+  DEFAULT_PAYMENT_METHOD,
+  formatCents,
+  PAYMENT_METHODS,
+  paymentBreakdown,
+} from "@/lib/ask/fees";
 import { findGroup } from "@/lib/ask/mock-data";
-import type { PublicCard, Result } from "@/lib/ask/types";
+import type { PaymentMethod, PublicCard, Result } from "@/lib/ask/types";
 import {
   cancelCard,
   claimCard,
   confirmHelper,
   extendCard,
+  letGoOfCard,
   markDone,
   markHelperDone,
   payToHold,
   reportProblem,
 } from "@/server/actions/board";
+import { cn } from "cn";
 
 const REFRESH_MS = 3000;
 const HOUR = 3_600_000;
@@ -39,10 +46,13 @@ export function TaskActions({
   card,
   signedIn,
   needsPaymentSetup,
+  myReview,
 }: {
   card: PublicCard;
   signedIn: boolean;
   needsPaymentSetup: boolean;
+  // Asker, done: the review they left, if any.
+  myReview?: { stars: number; editable: boolean } | null;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -72,9 +82,14 @@ export function TaskActions({
         <p className="font-medium">This ask has expired</p>
         <p className="text-muted-foreground">No one claimed it in time, so it left the board.</p>
         {viewer === "asker" && (
-          <Link href="/ask" className={buttonVariants({ className: "mt-2 h-11" })}>
-            Post again
-          </Link>
+          <>
+            <Link href="/ask" className={buttonVariants({ className: "mt-2 h-11" })}>
+              Post again
+            </Link>
+            <Link href="/" className={buttonVariants({ variant: "ghost", className: "h-11" })}>
+              Don&apos;t need it anymore
+            </Link>
+          </>
         )}
       </Note>
     );
@@ -138,10 +153,49 @@ export function TaskActions({
   if (viewer === "helper") {
     if (status === "held") {
       return (
-        <Note>
-          <p className="font-medium">You offered to help</p>
-          <p className="text-muted-foreground">Waiting for the asker to confirm.</p>
-        </Note>
+        <>
+          <Note>
+            <p className="font-medium">You offered to help</p>
+            <p className="text-muted-foreground">Waiting for the asker to confirm.</p>
+            <ol className="mt-2 flex list-decimal flex-col gap-1 pl-5 text-muted-foreground">
+              <li>
+                {paidAsk
+                  ? `The asker confirms you and holds the ${formatCents(card.price * 100)}.`
+                  : "The asker confirms you."}
+              </li>
+              <li>
+                You both get each other&apos;s first name and a chat. Your email stays hidden.
+              </li>
+              <li>
+                {paidAsk
+                  ? `After it's done, the asker confirms and the ${formatCents(card.price * 100)} goes to you.`
+                  : "After it's done, the asker confirms and says thanks."}
+              </li>
+            </ol>
+          </Note>
+          <div className="mt-auto flex flex-col gap-2">
+            <Link
+              href="/claimed"
+              className={buttonVariants({ variant: "outline", className: "h-11" })}
+            >
+              See my claimed tasks
+            </Link>
+            <p className="text-center text-xs text-muted-foreground">
+              Can&apos;t make it anymore? Let go so someone else can help.
+            </p>
+            <Button
+              variant="ghost"
+              disabled={pending}
+              onClick={() => {
+                if (window.confirm("Let go of this ask? It goes back on the board.")) {
+                  run(() => letGoOfCard(token), "You let it go");
+                }
+              }}
+            >
+              Let go of this ask
+            </Button>
+          </div>
+        </>
       );
     }
     if (status === "confirmed") {
@@ -296,6 +350,12 @@ export function TaskActions({
               : "Confirm when the help is done."}
           </p>
           {autoConfirm}
+          {card.shares.length > 0 && (
+            <p className="text-xs text-muted-foreground">
+              GroupMe: the bot posted &ldquo;Covered&rdquo; in{" "}
+              {card.shares.map((s) => findGroup(s.groupId)?.name ?? s.groupId).join(", ")}.
+            </p>
+          )}
         </Note>
         <DoneSection card={card} pending={pending} run={run} />
         {cancelButton}
@@ -313,13 +373,36 @@ export function TaskActions({
             {formatCents(card.payment.amountCents)} released to {helperName}.
           </p>
         )}
+        {myReview && (
+          <p className="text-muted-foreground">
+            You rated {helperName} {myReview.stars} of 5.
+          </p>
+        )}
       </Note>
-      <Link
-        href={`/thanks?token=${encodeURIComponent(token)}`}
-        className={buttonVariants({ size: "lg", className: "mt-auto h-12 text-base" })}
-      >
-        Write a thank-you
-      </Link>
+      <div className="mt-auto flex flex-col gap-2">
+        {(!myReview || myReview.editable) && (
+          <Link
+            href={`/review?token=${encodeURIComponent(token)}`}
+            className={buttonVariants({
+              size: "lg",
+              variant: myReview ? "outline" : "default",
+              className: "h-12 text-base",
+            })}
+          >
+            {myReview ? "Edit your review" : "Rate your helper"}
+          </Link>
+        )}
+        <Link
+          href={`/thanks?token=${encodeURIComponent(token)}`}
+          className={buttonVariants({
+            size: "lg",
+            variant: myReview ? "default" : "outline",
+            className: "h-12 text-base",
+          })}
+        >
+          Write a thank-you
+        </Link>
+      </div>
     </>
   );
 }
@@ -451,12 +534,13 @@ function ClaimSection({
 }
 
 function PaySection({ card, pending, run }: { card: PublicCard; pending: boolean; run: Run }) {
-  // Card or Apple Pay through Stripe (mocked, TODO(stripe)).
-  const fees = paymentBreakdown(card.price, "card");
+  // Venmo, PayPal or a card (all mocked, TODO(stripe)).
+  const [method, setMethod] = useState<PaymentMethod>(DEFAULT_PAYMENT_METHOD);
+  const fees = paymentBreakdown(card.price, method);
   const rows: [string, number][] = [
     ["Task pay (goes to your helper)", fees.amountCents],
     ["Platform fee (10%)", fees.platformFeeCents],
-    ["Card processing (Stripe)", fees.processingFeeCents],
+    ["Payment processing (est.)", fees.processingFeeCents],
   ];
 
   return (
@@ -464,8 +548,8 @@ function PaySection({ card, pending, run }: { card: PublicCard; pending: boolean
       <div>
         <h2 className="font-medium">Pay to hold the task</h2>
         <p className="text-muted-foreground">
-          Stripe holds your payment; it isn&apos;t sent yet. It&apos;s released to your helper when
-          you confirm the help is done, or 48 h after they mark it done unless you report a problem.
+          Your payment is held; it isn&apos;t sent yet. It&apos;s released to your helper when you
+          confirm the help is done, or 48 h after they mark it done unless you report a problem.
           Cancel before then for a full refund.
         </p>
       </div>
@@ -481,18 +565,45 @@ function PaySection({ card, pending, run }: { card: PublicCard; pending: boolean
           <dd>{formatCents(fees.totalCents)}</dd>
         </div>
       </dl>
-      <p className="rounded-lg bg-muted px-3 py-2 font-medium">
-        Card or Apple Pay · secured by Stripe
-      </p>
+      <div role="radiogroup" aria-label="Pay with" className="flex flex-col gap-2">
+        <span className="text-xs font-bold tracking-wide text-muted-foreground uppercase">
+          Pay with
+        </span>
+        {PAYMENT_METHODS.map((m) => (
+          <button
+            key={m.id}
+            type="button"
+            role="radio"
+            aria-checked={method === m.id}
+            onClick={() => setMethod(m.id)}
+            className={cn(
+              "flex items-center justify-between gap-3 rounded-xl border p-3 text-left",
+              method === m.id ? "border-primary bg-pay/50 ring-1 ring-primary" : "border-input",
+            )}
+          >
+            <span className="flex flex-col">
+              <span className="font-semibold">{m.label}</span>
+              <span className="text-xs text-muted-foreground">{m.detail}</span>
+            </span>
+            {m.badge && (
+              <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-[11px] font-bold text-primary-foreground">
+                {m.badge}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
       <Button
         size="lg"
         className="h-12 text-base"
         disabled={pending}
-        onClick={() => run(() => payToHold(card.token, "card"), "Payment held")}
+        onClick={() => run(() => payToHold(card.token, method), "Payment held")}
       >
         Pay {formatCents(fees.totalCents)} and hold
       </Button>
-      <p className="text-center text-xs text-muted-foreground">Demo: no real payment is made.</p>
+      <p className="text-center text-xs text-muted-foreground">
+        Demo: no real payment is made. We never see your card, PayPal or Venmo login.
+      </p>
     </section>
   );
 }

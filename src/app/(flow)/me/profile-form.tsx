@@ -65,6 +65,8 @@ export function ProfileForm({ profile }: { profile: Profile }) {
     interests: profile.interests,
     weeklyLimit: profile.weeklyLimit,
     emailNotifications: profile.emailNotifications,
+    showClassYear: profile.showClassYear,
+    showReviews: profile.showReviews,
   });
   const [error, setError] = useState<{ field: "firstName" | "payoutHandle"; text: string }>();
   const [saving, startSave] = useTransition();
@@ -204,6 +206,25 @@ export function ProfileForm({ profile }: { profile: Profile }) {
             </Field>
           </div>
         )}
+      </Card>
+
+      <Card title="Privacy">
+        <SwitchRow
+          title="Show my class year"
+          detail={
+            profile.classYear
+              ? `Shows "${profile.classYear}" on asks you post, never your name if anonymous.`
+              : "Shows your class year on asks you post, never your name if anonymous."
+          }
+          on={form.showClassYear}
+          onChange={(showClassYear) => set({ showClassYear })}
+        />
+        <SwitchRow
+          title="Show reviews on my profile"
+          detail="Off hides your ratings from askers. You still see them here."
+          on={form.showReviews}
+          onChange={(showReviews) => set({ showReviews })}
+        />
       </Card>
 
       <Card title="Notifications">

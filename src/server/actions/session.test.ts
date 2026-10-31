@@ -45,6 +45,18 @@ describe("mocked sign-in", () => {
     expect(await getMe()).toBeNull();
   });
 
+  it("is off in production unless demo mode is on", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("ASK_DEMO_MODE", "");
+    expect(await mockSignIn({ firstName: "Eve", email: "eve@dartmouth.edu" })).toEqual({
+      error: "Sign in with your DartAsk account.",
+    });
+    vi.stubEnv("ASK_DEMO_MODE", "1");
+    expect("ok" in (await mockSignIn({ firstName: "Eve", email: "eve@dartmouth.edu" }))).toBe(true);
+    vi.unstubAllEnvs();
+    await mockSignOut();
+  });
+
   it("ignores a made-up session cookie", async () => {
     jar.set("ask_session", "not-a-real-session");
     expect(await getCurrentUser()).toBeNull();

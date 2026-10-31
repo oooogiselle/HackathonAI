@@ -2,7 +2,7 @@
 // GroupMe post, or tapping a card on the board. Anyone can view it; claiming
 // and every asker step need sign-in (checked again in each server action).
 import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Star } from "lucide-react";
 
 import { AccountLink } from "@/components/ask/account-link";
 import {
@@ -15,8 +15,10 @@ import {
 import type { PublicCard } from "@/lib/ask/types";
 import { getCard } from "@/server/actions/board";
 import { listMessages } from "@/server/actions/inbox";
+import { getHelperRating, getReviewPage } from "@/server/actions/reviews";
 import { getMe, getMyProfile } from "@/server/actions/session";
 
+import { BlockButton } from "./block-button";
 import { MessagesRow } from "./messages-row";
 import { TaskActions } from "./task-actions";
 
@@ -41,6 +43,19 @@ export default async function TaskPage({ params }: PageProps<"/h/[token]">) {
   const thread =
     card && party && (card.status === "confirmed" || card.status === "done")
       ? await listMessages(token)
+      : null;
+  // The asker sees their helper's rating once someone said yes.
+  const asker = card?.viewer === "asker" && card.status !== "open";
+  const [rating, reviewPage] = await Promise.all([
+    asker ? getHelperRating(token) : null,
+    asker && card.status === "done" ? getReviewPage(token) : null,
+  ]);
+  const myReview =
+    reviewPage && "page" in reviewPage && reviewPage.page.review
+      ? {
+          stars: reviewPage.page.review.stars,
+          editable: reviewPage.page.review.editableUntil > now,
+        }
       : null;
 
   return (
@@ -88,6 +103,24 @@ export default async function TaskPage({ params }: PageProps<"/h/[token]">) {
             card.status !== "expired" &&
             card.status !== "cancelled" && <Progress card={card} />}
 
+          {asker && card.heldByFirstName && (
+            <p className="flex items-center gap-1.5 rounded-xl bg-card px-4 py-3 text-sm">
+              <Star aria-hidden className="size-4 fill-amber-400 text-amber-400" />
+              {rating && rating.count > 0 ? (
+                <span>
+                  <span className="font-semibold">{card.heldByFirstName}</span>: {rating.average}{" "}
+                  from {rating.count} {rating.count === 1 ? "review" : "reviews"}
+                  {rating.onTime > 0 ? ` · On time ${rating.onTime} times` : ""}
+                </span>
+              ) : (
+                <span>
+                  <span className="font-semibold">{card.heldByFirstName}</span>
+                  {rating ? " has no reviews yet" : " keeps their reviews private"}
+                </span>
+              )}
+            </p>
+          )}
+
           {thread && "messages" in thread && (
             <MessagesRow
               token={token}
@@ -102,7 +135,13 @@ export default async function TaskPage({ params }: PageProps<"/h/[token]">) {
             needsPaymentSetup={
               card.price > 0 && !(profile?.canAcceptPayment && profile.payoutHandle)
             }
+            myReview={myReview}
           />
+
+          {/* Once someone said yes, either side can block the other. */}
+          {(card.viewer === "asker" || card.viewer === "helper") && card.status !== "open" && (
+            <BlockButton token={token} />
+          )}
         </>
       )}
     </main>

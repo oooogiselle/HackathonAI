@@ -120,7 +120,8 @@ The PRD's demo path is board-first: Home → Clarify → Your ask with a price �
 
 ## Later (not tonight)
 
-- [ ] Real email via Gmail SMTP
+- [x] Real email via Gmail SMTP
+      Done: `src/lib/notify/gmail.ts` (nodemailer), used by `notify()` and sign-up codes when `GMAIL_USER` + `GMAIL_APP_PASSWORD` are set; console otherwise.
       Done when: a Gmail adapter in `src/lib/notify/` (nodemailer over Gmail SMTP, `GMAIL_USER` + `GMAIL_APP_PASSWORD`) is used when both are set, the console adapter otherwise; `.env.example` documents both; lint + typecheck pass.
 
 - [ ] (Human) Create a Gmail app password for Ask's sender address

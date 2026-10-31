@@ -2,7 +2,8 @@
 // messages, inbox notifications, mocked payments, blocks and the group rate limit.
 //
 // Every state change is a guarded `UPDATE … WHERE <expected state> RETURNING`
-// (see src/lib/ask/board-store.ts). No ratings, reviews or points, by design.
+// (see src/lib/ask/board-store.ts). Reviews (stars, tags, tips) are written by
+// the asker after done; trust points are computed from them, never stored.
 // RLS on + no policies = not reachable via Supabase's public API; the server
 // talks to Postgres directly.
 import { sql } from "drizzle-orm";
@@ -24,13 +25,22 @@ import type { BusySlot, Interest } from "@/lib/ask/types";
 
 const ts = (name: string) => timestamp(name, { withTimezone: true, mode: "date" });
 
-// Sign-up is mocked tonight: nothing is verified, the *_verified_at columns are
-// set by the mock (TODO(auth)). Seeded helpers live here too.
+// Accounts: username + password (scrypt hash), school email and phone each
+// verified with a code (src/lib/ask/accounts.ts). The mocked "Sign in with
+// Dartmouth" (demo mode only) creates rows without a password. Seeded helpers
+// live here too.
 export const users = pgTable(
   "users",
   {
     id: text("id").primaryKey(),
     firstName: text("first_name").notNull(),
+    // Lowercase, unique. null for mock and seeded users.
+    username: text("username").unique(),
+    // "scrypt$<salt>$<hash>"; null = no password (mock or seeded user).
+    passwordHash: text("password_hash"),
+    // Wrong passwords in a row; 5 locks sign-in until sign_in_locked_until.
+    failedSignIns: integer("failed_sign_ins").notNull().default(0),
+    signInLockedUntil: ts("sign_in_locked_until"),
     // Never shown to other members.
     email: text("email").notNull().unique(),
     phone: text("phone"),
@@ -58,6 +68,8 @@ export const users = pgTable(
     payoutMethod: text("payout_method"),
     payoutHandle: text("payout_handle"),
     emailNotifications: boolean("email_notifications").notNull().default(true),
+    // Show my ratings to askers (on their task page and my profile).
+    showReviews: boolean("show_reviews").notNull().default(true),
     createdAt: ts("created_at").notNull().defaultNow(),
   },
   (t) => [
@@ -66,7 +78,31 @@ export const users = pgTable(
   ],
 ).enableRLS();
 
-// Mock sign-in: the cookie holds the session id only.
+// A sign-up waiting for its two codes (school email + phone). Codes are stored
+// hashed; the user row is created only once both are verified.
+export const pendingSignups = pgTable(
+  "pending_signups",
+  {
+    id: text("id").primaryKey(),
+    username: text("username").notNull(),
+    email: text("email").notNull(),
+    phone: text("phone").notNull(),
+    passwordHash: text("password_hash").notNull(),
+    emailCodeHash: text("email_code_hash").notNull(),
+    phoneCodeHash: text("phone_code_hash").notNull(),
+    // Wrong tries; each check is a guarded `attempts < 5` update.
+    attempts: integer("attempts").notNull().default(0),
+    expiresAt: ts("expires_at").notNull(),
+    lastSentAt: ts("last_sent_at").notNull().defaultNow(),
+    createdAt: ts("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    check("pending_signups_attempts", sql`${t.attempts} between 0 and 5`),
+    index("pending_signups_email_idx").on(t.email),
+  ],
+).enableRLS();
+
+// The cookie holds the session id only.
 export const sessions = pgTable(
   "sessions",
   {
@@ -257,7 +293,7 @@ export const payments = pgTable(
     refundedAt: ts("refunded_at"),
   },
   (t) => [
-    check("payments_method", sql`${t.method} in ('venmo', 'card')`),
+    check("payments_method", sql`${t.method} in ('venmo', 'paypal', 'card')`),
     check("payments_status", sql`${t.status} in ('held', 'released', 'refunded')`),
     check("payments_amount", sql`${t.amountCents} > 0`),
     check(
@@ -301,5 +337,40 @@ export const groupPostCounts = pgTable(
   (t) => [
     primaryKey({ columns: [t.groupId, t.day] }),
     check("group_post_counts_n", sql`${t.n} between 0 and 3`),
+  ],
+).enableRLS();
+
+// "Rate your helper": one review per ask, by the asker, after it's done.
+// Editable for 24 h. A tip is charged once, to the method used to hold the ask
+// (mocked, no money moves).
+export const reviews = pgTable(
+  "reviews",
+  {
+    askToken: text("ask_token")
+      .primaryKey()
+      .references(() => asks.token, { onDelete: "cascade" }),
+    helperId: text("helper_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    askerId: text("asker_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    stars: integer("stars").notNull(),
+    tags: text("tags")
+      .array()
+      .notNull()
+      .default(sql`'{}'`),
+    comment: text("comment"),
+    // false = the review shows only the asker's class year (or "A classmate").
+    showName: boolean("show_name").notNull().default(false),
+    tipCents: integer("tip_cents").notNull().default(0),
+    tipFeeCents: integer("tip_fee_cents").notNull().default(0),
+    createdAt: ts("created_at").notNull().defaultNow(),
+    updatedAt: ts("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    check("reviews_stars", sql`${t.stars} between 1 and 5`),
+    check("reviews_tip", sql`${t.tipCents} between 0 and 5000`),
+    index("reviews_helper_idx").on(t.helperId, t.createdAt.desc()),
   ],
 ).enableRLS();

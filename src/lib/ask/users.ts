@@ -12,7 +12,7 @@ import type { BlockedEntry, HelperSetup, Profile } from "./types";
 
 export type SessionUser = { id: string; firstName: string; email: string };
 
-/** Mock sign-up: same email → same account. Marks the email verified (TODO(auth)). */
+/** Mocked "Sign in with Dartmouth" (demo mode only): same email → same account. */
 export async function signInUser(
   firstName: string,
   email: string,
@@ -28,9 +28,7 @@ export async function signInUser(
     })
     .onConflictDoUpdate({ target: users.email, set: { firstName } })
     .returning({ id: users.id, firstName: users.firstName, email: users.email });
-  const sessionId = randomBytes(18).toString("base64url");
-  await db.insert(sessions).values({ id: sessionId, userId: user.id });
-  return { sessionId, user };
+  return { sessionId: await createSession(user.id), user };
 }
 
 export async function getSessionUser(sessionId: string): Promise<SessionUser | null> {
@@ -41,6 +39,14 @@ export async function getSessionUser(sessionId: string): Promise<SessionUser | n
     .innerJoin(users, eq(users.id, sessions.userId))
     .where(eq(sessions.id, sessionId));
   return row ?? null;
+}
+
+/** A new session for a signed-in user; the cookie gets only this id. */
+export async function createSession(userId: string) {
+  const db = await getAskDb();
+  const sessionId = randomBytes(18).toString("base64url");
+  await db.insert(sessions).values({ id: sessionId, userId });
+  return sessionId;
 }
 
 export async function deleteSession(sessionId: string) {
@@ -64,6 +70,7 @@ export async function getProfile(userId: string): Promise<Profile | null> {
     interests: u.interests,
     weeklyLimit: u.weeklyLimit,
     emailNotifications: u.emailNotifications,
+    showReviews: u.showReviews,
   };
 }
 

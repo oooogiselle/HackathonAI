@@ -10,7 +10,7 @@ Full product spec: `docs/PRD.md` (loaded below). It wins on product questions.
 
 @docs/PRD.md
 
-Hackathon demo: one ask, start to finish. **Sign-in is mocked:** "Sign in with Dartmouth" is a mocked SSO step (first name + @dartmouth.edu email), no verification (`src/server/actions/session.ts`, TODO(auth)). Anyone can view the board and a card; posting, claiming and every asker step need the mock sign-in, checked inside each server action. Asks, claims, users, inbox, messages and mocked payments are in Postgres (`src/db/schema/ask.ts`). Locally that's an in-process PGlite database (migrated + seeded on first use, reset on restart); set `ASK_DB=postgres` to use the shared Supabase database so two phones and every Vercel instance see the same card (apply `drizzle/` migrations first; a human runs them). Payments, calendar and school-email sign-up are mocked.
+Hackathon demo: one ask, start to finish. **Accounts are real:** Create account (`/signup`: username, password, @dartmouth.edu email, US mobile) sends a 6-digit code to the email and another to the phone; both must be verified before the account exists; then sign in with username or email + password (`src/lib/ask/accounts.ts`, `src/server/actions/account.ts`). Codes go out by Gmail / Twilio when their keys are set, otherwise they're logged to the server console. **Demo mode** (always in development and tests; in production only with `ASK_DEMO_MODE=1`) also offers the mocked "Sign in with Dartmouth" (first name + email, no checks) and shows codes on screen when nothing can send them. Anyone can view the board and a card; posting, claiming and every asker step need sign-in, checked inside each server action. Asks, claims, users, inbox, messages and mocked payments are in Postgres (`src/db/schema/ask.ts`). Locally that's an in-process PGlite database (migrated + seeded on first use, reset on restart); set `ASK_DB=postgres` to use the shared Supabase database so two phones and every Vercel instance see the same card (apply `drizzle/` migrations first; a human runs them). Payments and calendar are mocked.
 
 ## Run
 
@@ -44,7 +44,10 @@ Side routes: `/resources?type=crisis|tutoring` (safety redirects), `/h/[token]` 
 src/app/(flow)/            flow pages (`/` = needs board, `/ask` = the form, describe/clarify/draft AI path, where, share, matched, thanks) + resources; layout wraps <AskFlowProvider>
 src/app/h/[token]/         task page: details + task-actions (claim, confirm, pay to hold, done, report, cancel);
                            messages/ = the asker-helper thread once both said yes
-src/app/signin/            mocked "Sign in with Dartmouth" (@dartmouth.edu only), returns to ?next=
+src/app/signin/            sign in with username or email + password (plus the demo-mode mocked SSO), returns to ?next=
+src/app/signup/            Create account → Verify school and phone (two codes)
+src/app/welcome/           Splash + Welcome (Sign in / Create account)
+src/app/(flow)/review/     Rate your helper: stars, tags, comment, tip
 src/components/ask/        flow-provider (client state, sessionStorage) + small UI pieces
 src/lib/ai/ask/            one small AI function per step: safety-check, clarify, draft-ask,
                            suggest-where, privacy-scrub; fallback.ts = no-key / error path
@@ -56,7 +59,9 @@ src/server/actions/ask.ts  server actions for the ask flow; re-checks safety + r
 src/server/actions/board.ts board card lifecycle: listBoard, getCard, postToBoard, claimCard, confirmHelper,
                            payToHold, markHelperDone, markDone, reportProblem, saveCardThanks, shareCardToGroup, extendCard, cancelCard,
                            listMyCards, createPrivateAsk (sign-in + ownership checked)
-src/server/actions/session.ts mocked sign-in (cookie → sessions table), profile, blocking
+src/server/actions/account.ts real sign-up (two codes) and password sign-in
+src/server/actions/session.ts demo-mode mocked sign-in, sessions, profile, blocking
+src/server/actions/reviews.ts Rate your helper, my ratings + trust points, a helper's rating for their asker
 src/server/actions/private.ts private asks: sendPrivately, listMyRequests, respondToRequest
 src/server/actions/inbox.ts  inbox notifications and per-ask messages
 src/db/schema/ask.ts       Ask tables; src/lib/ask/db.ts picks PGlite (local) or Supabase (ASK_DB=postgres)
@@ -89,11 +94,12 @@ The rest of the repo (`/app`, `/login`, items, chat, Supabase, Drizzle) is the o
 - Calendar: free/busy only, never event titles or details. Tonight it's seeded in mock helpers; no Google API or OAuth.
 - Matching respects each helper's weekly limit and spreads load. "Not this time" never asks for a reason.
 - Contact info is shared only after both sides say yes.
-- No ratings, streaks or leaderboards. (The design's "Rate your helper" screen and trust points are out; the thank-you note stays.)
+- Ratings (decided Oct 31, reversing the earlier no-ratings rule): after an ask is done, the asker can "Rate your helper" (`/review`): 1–5 stars, "what went well" tags, an optional comment (no contact details), "Show my name" (off = anonymous), and on paid asks an optional tip charged once to the method used to hold (mocked). Editable for 24 h; the tip can't change. Trust points are computed on read, never stored or sold: 4–5 stars +10, 3 stars +5, each finished help +2. Helpers can hide their ratings from askers ("Show reviews on my profile"). Still no streaks or leaderboards; the thank-you note stays.
+- Never weaken sign-in: passwords only as scrypt hashes, codes only as hashes (10-minute expiry, 5 tries via a guarded update, 30 s resend wait), 5 wrong passwords lock sign-in for 15 minutes, and the mocked sign-in only in demo mode.
 - Real campus (Dartmouth College); every person is fictional; no real student names or contact details. Crisis numbers are confirmed by the team, never guessed.
 - To add a chat platform: add an adapter in `src/lib/groups/`, register it in `index.ts`, add the platform to `Platform` in `src/lib/ask/types.ts`.
 - Do not use emojis
 
 ## Not now (leave TODOs)
 
-Real auth and real school-email verification (sign-up is mocked), push notifications, an iOS app, reading group messages, the Stripe API and Stripe Connect, the Google Calendar API and OAuth, Slack interactive buttons. Search for `TODO(` to find the spots.
+Real Dartmouth SSO (accounts use passwords + email and phone codes instead), password reset, push notifications, an iOS app, reading group messages, the Stripe API and Stripe Connect, the Google Calendar API and OAuth, Slack interactive buttons. Search for `TODO(` to find the spots.

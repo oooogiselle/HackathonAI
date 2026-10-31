@@ -11,5 +11,6 @@ export default defineConfig({
       "server-only": src("test/server-only-stub.ts"),
     },
   },
-  test: { include: ["src/**/*.test.ts"] },
+  // PGlite migrates on first use, which can take a while on a cold machine.
+  test: { include: ["src/**/*.test.ts"], hookTimeout: 30_000 },
 });

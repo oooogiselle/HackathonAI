@@ -1,9 +1,11 @@
-// Mocked sign-in actions ("Sign in with Dartmouth" is a mocked SSO step). Anyone can view the board; posting and taking an ask
-// need this sign-in. No email is sent and nothing is verified (TODO(auth)).
+// Session, profile and blocking actions. Real sign-up and password sign-in are
+// in account.ts; mockSignIn here is the demo-mode-only "Sign in with Dartmouth".
+// Anyone can view the board; posting and taking an ask need a signed-in user.
 "use server";
 
 import { z } from "zod";
 
+import { isDemoMode } from "@/lib/ask/demo-mode";
 import { SCHOOL_EMAIL_DOMAIN } from "@/lib/ask/mock-data";
 import { getCurrentUser, signIn, signOut } from "@/lib/ask/mock-session";
 import { type BlockedEntry, INTERESTS, type Profile, type Result } from "@/lib/ask/types";
@@ -31,8 +33,12 @@ const signInSchema = z.object({
 
 export type Me = { firstName: string; email: string };
 
-/** Called only from the "Sign in" button. */
+/**
+ * The mocked "Sign in with Dartmouth": no password, no codes. Demo mode only
+ * (development, tests, or ASK_DEMO_MODE=1); real accounts use account.ts.
+ */
 export async function mockSignIn(input: z.input<typeof signInSchema>): Promise<Result<{ me: Me }>> {
+  if (!isDemoMode()) return { error: "Sign in with your DartAsk account." };
   const parsed = signInSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
   const user = await signIn(parsed.data.firstName, parsed.data.email);
@@ -59,7 +65,6 @@ export async function getMyProfile(): Promise<Profile | null> {
 const profileSchema = z
   .object({
     firstName: z.string().trim().min(1).max(40),
-    phone: z.string().trim().max(30),
     classYear: z.string().trim().max(30),
     showClassYear: z.boolean(),
     canAcceptPayment: z.boolean(),
@@ -68,6 +73,7 @@ const profileSchema = z
     interests: z.array(z.enum(INTERESTS)).max(INTERESTS.length),
     weeklyLimit: z.number().int().min(0).max(20),
     emailNotifications: z.boolean(),
+    showReviews: z.boolean(),
   })
   .partial();
 
@@ -77,7 +83,7 @@ export async function updateMyProfile(input: z.input<typeof profileSchema>): Pro
   if (!user) return { error: "Sign in first." };
   const parsed = profileSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
-  // TODO(auth): verify a new phone number with a code before saving it.
+  // The phone number is verified at sign-up and isn't editable here.
   await updateProfile(user.id, parsed.data);
   return { ok: true };
 }

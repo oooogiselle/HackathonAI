@@ -15,6 +15,7 @@ import {
   holdPayment,
   markHelperDone,
   reportProblem,
+  releaseHold,
   AUTO_CONFIRM_MS,
   type NewCard,
   paymentBreakdown,
@@ -81,6 +82,18 @@ describe("board store (Postgres)", () => {
     expect(results.filter((r) => "card" in r)).toHaveLength(1);
     expect(results.filter((r) => "error" in r && r.error === "Already taken")).toHaveLength(9);
     expect((await listOpenCards(null)).some((c) => c.token === token)).toBe(false);
+  });
+
+  it("lets only the holding helper let go, reopening the card once", async () => {
+    const { token } = await card();
+    await holdCard(token, helpers[0]);
+    expect(await releaseHold(token, helpers[1])).toEqual({
+      error: "Only the helper holding this ask can let it go.",
+    });
+    const results = await Promise.all([1, 2, 3].map(() => releaseHold(token, helpers[0])));
+    expect(results.filter((r) => "card" in r)).toHaveLength(1);
+    expect((await getBoardCard(token))?.status).toBe("open");
+    expect("card" in (await holdCard(token, helpers[1]))).toBe(true);
   });
 
   it("won't let the asker take their own ask", async () => {
@@ -166,11 +179,31 @@ describe("board store (Postgres)", () => {
     expect(later?.payment?.status).toBe("held");
   });
 
-  it("charges a $15 ask by card through Stripe as $17.28", () => {
-    expect(paymentBreakdown(15, "card")).toEqual({
+  it("matches the design's fees: $15 is $16.81 by Venmo, $17.28 by PayPal or card", () => {
+    expect(paymentBreakdown(15, "venmo")).toEqual({
       amountCents: 1500,
       platformFeeCents: 150,
-      processingFeeCents: 78,
+      processingFeeCents: 31,
+      totalCents: 1681,
+    });
+    for (const method of ["paypal", "card"] as const) {
+      expect(paymentBreakdown(15, method)).toEqual({
+        amountCents: 1500,
+        platformFeeCents: 150,
+        processingFeeCents: 78,
+        totalCents: 1728,
+      });
+    }
+  });
+
+  it("holds a PayPal payment and stores the method", async () => {
+    const { token } = await card();
+    await holdCard(token, helpers[2]);
+    await confirmCard(token, asker);
+    const paid = await holdPayment(token, asker, "paypal");
+    expect("card" in paid && paid.card.payment).toMatchObject({
+      method: "paypal",
+      status: "held",
       totalCents: 1728,
     });
   });

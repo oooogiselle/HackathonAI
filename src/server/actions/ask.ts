@@ -11,6 +11,7 @@ import { clarify } from "@/lib/ai/ask/clarify";
 import { draftAsk as draftAskAI } from "@/lib/ai/ask/draft-ask";
 import { privacyScrub } from "@/lib/ai/ask/privacy-scrub";
 import { safetyCheck } from "@/lib/ai/ask/safety-check";
+import { type RewriteSuggestion, suggestRewrite } from "@/lib/ai/ask/suggest-rewrite";
 import { suggestCategories as suggestCategoriesAI } from "@/lib/ai/ask/suggest-category";
 import { suggestWhere as suggestWhereAI } from "@/lib/ai/ask/suggest-where";
 import { COVERED_MESSAGE, formatPostMessage } from "@/lib/ask/format";
@@ -29,6 +30,20 @@ const text = z.string().trim().min(1).max(1000);
 
 export async function checkSafety(need: string) {
   return safetyCheck(text.parse(need));
+}
+
+/**
+ * "Try this instead" for an ask Quick check blocked as graded work: an honest
+ * version a classmate can help with. Only offered for academic asks (never
+ * crisis), and the rewrite itself always passes the keyword check. Read-only:
+ * nothing changes until the student taps "Use this rewrite".
+ */
+export async function getRewrite(need: string): Promise<RewriteSuggestion | null> {
+  const parsed = text.safeParse(need);
+  if (!parsed.success) return null;
+  const safety = await safetyCheck(parsed.data);
+  if (safety.category !== "academic") return null;
+  return suggestRewrite(parsed.data);
 }
 
 export async function getClarifyQuestions(need: string) {

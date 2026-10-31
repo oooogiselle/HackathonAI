@@ -25,6 +25,7 @@ import {
   reportProblem as reportProblemInStore,
   MAX_POSTS_PER_GROUP_PER_DAY,
   refundRateLimit,
+  releaseHold,
   removeSharedGroup,
   saveCardThanks as saveCardThanksInStore,
   takeRateLimit,
@@ -32,6 +33,7 @@ import {
   type Transition,
 } from "@/lib/ask/board-store";
 import { DEFAULT_CATEGORY, normalizeCategory } from "@/lib/ask/categories";
+import { DEFAULT_PAYMENT_METHOD } from "@/lib/ask/fees";
 import { COVERED_MESSAGE, formatPostMessage } from "@/lib/ask/format";
 import { findGroup } from "@/lib/ask/mock-data";
 import { getCurrentUser, type MockUser } from "@/lib/ask/mock-session";
@@ -241,9 +243,17 @@ export async function confirmHelper(cardToken: string): Promise<Result<{ card: P
   return toResult(t, user.id);
 }
 
-// "card" = card or Apple Pay through Stripe, the only method the screens offer.
-// "venmo" stays valid for rows already stored.
-const payMethod = z.enum(["venmo", "card"]);
+/** Helper's "Let go" while held, so someone else can help. */
+export async function letGoOfCard(cardToken: string): Promise<Result<{ card: PublicCard }>> {
+  const user = await requireUser();
+  if (!user) return { error: SIGN_IN_ERROR };
+  const tok = parseToken(cardToken);
+  if (!tok) return NOT_FOUND;
+  return toResult(await releaseHold(tok, user.id), user.id);
+}
+
+// Pay to hold: Venmo, PayPal or a credit or debit card (all mocked).
+const payMethod = z.enum(["venmo", "paypal", "card"]);
 
 /**
  * The mocked "Pay $X and hold" button, right after confirming a helper (paid
@@ -253,7 +263,7 @@ const payMethod = z.enum(["venmo", "card"]);
  */
 export async function payToHold(
   cardToken: string,
-  method: z.infer<typeof payMethod> = "card",
+  method: z.infer<typeof payMethod> = DEFAULT_PAYMENT_METHOD,
 ): Promise<Result<{ card: PublicCard }>> {
   const user = await requireUser();
   if (!user) return { error: SIGN_IN_ERROR };

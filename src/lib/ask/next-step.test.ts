@@ -25,7 +25,7 @@ describe("nextStep", () => {
   });
 
   it("asker pays the full total, fees included, to hold a paid ask", () => {
-    expect(card({ status: "confirmed" })).toEqual({ label: "Pay $17.28 to hold", yourTurn: true });
+    expect(card({ status: "confirmed" })).toEqual({ label: "Pay $16.81 to hold", yourTurn: true });
   });
 
   it("a favor skips the pay step", () => {
