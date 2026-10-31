@@ -15,7 +15,7 @@ import type {
 } from "@/lib/ask/types";
 
 export type AskFlowState = {
-  // "ai": Home → Clarify → Your ask. "form": the student filled in /write.
+  // "form": Home is a form the student fills in. "ai": /describe → Clarify → Your ask.
   mode: "ai" | "form";
   need: string;
   category: SafetyCategory;
@@ -37,7 +37,7 @@ export type AskFlowState = {
 };
 
 const INITIAL: AskFlowState = {
-  mode: "ai",
+  mode: "form",
   need: "",
   category: "none",
   answers: [],

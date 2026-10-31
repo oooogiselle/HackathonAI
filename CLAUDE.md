@@ -29,15 +29,15 @@ pnpm dev                     # http://localhost:3000
 
 ## Flow
 
-**Target demo path (PRD):** Home → Clarify (≤2 chip questions) → Your ask (AI breaks the need into 1–4 small asks, each editable with who to ask and a suggested price; $0 = favor; send one now, the rest after Thank you) → public board (anonymous, privacy-checked) → bot shares the same card to GroupMe → helper claims in the browser → board shows "Already taken", bot posts "Covered" → Matched (public meeting spot) → mocked "Pay $15" → Thank you. Private route (matched helpers → mock inbox) ships as a simple mock and is told, not demoed. Matching uses seeded free/busy and payment eligibility.
+**Target demo path (PRD):** Home (a form: title, details, when, deadline, where, time, who to ask, price; $0 = favor; AI suggestions only on a tap), or the optional AI path ("Let AI help": messy need → Clarify (≤2 chip questions) → Your ask, where AI breaks it into 1–4 small editable asks) → public board (anonymous, privacy-checked) → bot shares the same card to GroupMe → helper claims in the browser → board shows "Already taken", bot posts "Covered" → Matched (public meeting spot) → mocked "Pay $15" → Thank you. Private route (matched helpers → mock inbox) ships as a simple mock and is told, not demoed. Matching uses seeded free/busy and payment eligibility.
 
-**Built today:** `/` Home → `/clarify` → `/draft` (AI breaks the need into small asks) → `/where` (helpers + partner groups) → `/share` (preview + "Post to group") → `/matched/[token]` → `/thanks`. Second path: Home → `/write` (fill in a form yourself; AI suggestions only on a tap) → `/where`.
+**Built today:** `/` Home = the form ("Get suggestions" is opt-in AI) → `/where` (helpers + partner groups) → `/share` (preview + "Post to group") → `/matched/[token]` → `/thanks`. Optional AI path: Home "Let AI help" → `/describe` (messy need) → `/clarify` → `/draft` (AI breaks the need into small asks) → `/where`.
 Side routes: `/resources?type=crisis|tutoring` (safety redirects), `/h/[token]` (public claim page for helpers).
 
 ## Folder map (Ask code)
 
 ```
-src/app/(flow)/            the 7 flow pages + resources; layout wraps <AskFlowProvider>
+src/app/(flow)/            flow pages (Home form, describe/clarify/draft AI path, where, share, matched, thanks) + resources; layout wraps <AskFlowProvider>
 src/app/h/[token]/         public claim page ("I can help": first name + school email)
 src/components/ask/        flow-provider (client state, sessionStorage) + small UI pieces
 src/lib/ai/ask/            one small AI function per step: safety-check, clarify, draft-ask,

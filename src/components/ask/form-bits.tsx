@@ -1,6 +1,6 @@
 "use client";
 
-// Small form pieces shared by Your ask (/draft) and the form (/write).
+// Small form pieces shared by Your ask (/draft) and the Home form (/).
 import { X } from "lucide-react";
 
 import { Label } from "@/components/ui/label";

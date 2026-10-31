@@ -46,7 +46,7 @@ export default function ClarifyPage() {
         step={2}
         title="A couple quick questions"
         subtitle={`“${state.need}”`}
-        backHref="/"
+        backHref="/describe"
       />
       {!questions ? (
         <LoadingLines label="Figuring out what a helper would need to know…" />
