@@ -64,9 +64,9 @@ test("Claimed and Inbox show the asker's next step after a claim", async ({
   await signIn(helper, "Omar");
   await expect(helper.getByText(/Turn on "I can accept payment"/)).toBeVisible();
   await helper.getByLabel("I can accept payment").check();
-  await expect(helper.getByText("Add your payout account to claim.")).toBeVisible();
+  await expect(helper.getByText("Add your payout account to help.")).toBeVisible();
   await helper.getByLabel("Payout account (connected with Stripe)").fill("4242");
-  await helper.getByRole("button", { name: "Claim this task" }).click();
+  await helper.getByRole("button", { name: "I can help" }).click();
   await expect(helper.getByText("Waiting for the asker to confirm.")).toBeVisible();
 
   await helper.goto("/claimed");
@@ -185,7 +185,7 @@ test("a personal topic goes only to helpers the asker picks", async ({ page }) =
   await expect(page.getByRole("link", { name: /Post to the board instead/ })).toHaveCount(0);
   await page.getByRole("button", { name: /^Send to \d (person|people)$/ }).click();
   await expect(page).toHaveURL(/\/h\/[^/]+$/);
-  await expect(page.getByText("Waiting for a helper")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Waiting for a helper" })).toBeVisible();
   // Never on the board, so no link to share around.
   await expect(page.getByRole("button", { name: "Share link" })).toHaveCount(0);
 });

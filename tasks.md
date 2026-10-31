@@ -72,7 +72,7 @@ The PRD's demo path is board-first: Home → Clarify → Your ask with a price �
 - [x] Ask deadline and expiry
       Done when: every ask has `expiresAt` (from the drafted time, default 24 h); expired cards are hidden from `/board`, the claim page shows "This ask has expired", and the claim's atomic update includes `expires_at > now()`; lint + typecheck pass.
       Backend done: `expiresAt` on every ask (3 h / today / 24 h / 3 d or exact), expired asks leave the board, claims check `expires_at > now`, `extendCard` (Extend 24 h). The claim page's "This ask has expired" UI is still to do.
-      Done: the task page shows "This ask has expired" (with "Post again" for the asker) in `src/app/h/[token]/task-actions.tsx`.
+      Done: the task page shows "This ask has expired" (with "Post again" for the asker) in `src/app/h/[token]/asker-expired.tsx` and `closed.tsx`.
 
 - [x] Mocked school-email sign-up + helper setup on the claim page
       Backend done: `mockSignIn` / `getMe` / `mockSignOut` in `src/server/actions/session.ts`; `claimCard` takes the name and email from the session and checks the mocked setup for paid cards. Only the claim-page UI is left.

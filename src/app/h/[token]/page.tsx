@@ -1,128 +1,110 @@
 // The task page: one ask, one card. Two ways in, same page: the link in a
 // GroupMe post, or tapping a card on the board. Anyone can view it; claiming
 // and every asker step need sign-in (checked again in each server action).
+// Each viewer and state gets its own screen, matching the design.
 import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
 
-import { AccountLink } from "@/components/ask/account-link";
-import {
-  ASKER_LABEL,
-  durationLabel,
-  expiresLabel,
-  priceLabel,
-  whenLabel,
-} from "@/lib/ask/card-format";
+import { BottomActions, TaskHeader } from "@/components/task/task-parts";
+import { AutoRefresh } from "@/components/task/use-task-action";
+import { buttonVariants } from "@/components/ui/button";
 import type { PublicCard } from "@/lib/ask/types";
 import { getCard } from "@/server/actions/board";
 import { listMessages } from "@/server/actions/inbox";
 import { getMe, getMyProfile } from "@/server/actions/session";
 
+import { AskerClaimed } from "./asker-claimed";
+import { AskerConfirmed } from "./asker-confirmed";
+import { AskerDone } from "./asker-done";
+import { AskerExpired } from "./asker-expired";
+import { AskerWaiting } from "./asker-waiting";
+import { Closed } from "./closed";
+import { HelperActive } from "./helper-active";
+import { HelperDetail } from "./helper-detail";
+import { HelperOffered } from "./helper-offered";
 import { MessagesRow } from "./messages-row";
-import { TaskActions } from "./task-actions";
-
-function progressSteps(card: PublicCard) {
-  const steps =
-    card.price > 0 ? ["Posted", "Claimed", "Paid", "Done"] : ["Posted", "Claimed", "Done"];
-  let at = 0;
-  if (card.status === "held" || card.status === "confirmed") at = 1;
-  if (card.status === "confirmed" && card.price > 0 && card.payment?.status === "held") at = 2;
-  if (card.status === "done") at = steps.length - 1;
-  return { steps, at };
-}
 
 export default async function TaskPage({ params }: PageProps<"/h/[token]">) {
   const { token } = await params;
   const [card, me, profile] = await Promise.all([getCard(token), getMe(), getMyProfile()]);
-  // Rendered per request, so this is "now".
-  // eslint-disable-next-line react-hooks/purity
-  const now = Date.now();
+
+  if (!card) {
+    return (
+      <>
+        <TaskHeader
+          status="Not found"
+          title="This ask isn't here"
+          subtitle="It expired, or the link is wrong."
+        />
+        <BottomActions>
+          <Link href="/" className={buttonVariants({ size: "lg", className: "h-12 text-base" })}>
+            Back to the board
+          </Link>
+        </BottomActions>
+      </>
+    );
+  }
+
+  const party = card.viewer === "asker" || card.viewer === "helper";
+  const live = card.status === "open" || card.status === "held" || card.status === "confirmed";
   // Messages open once both have said yes.
-  const party = card?.viewer === "asker" || card?.viewer === "helper";
   const thread =
-    card && party && (card.status === "confirmed" || card.status === "done")
+    party && (card.status === "confirmed" || card.status === "done")
       ? await listMessages(token)
       : null;
+  const messages = thread && "messages" in thread && (
+    <MessagesRow token={token} otherAlias={thread.otherAlias} latest={thread.messages.at(-1)} />
+  );
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 px-4 py-6">
-      <div className="flex items-center justify-between text-sm">
-        <Link
-          href="/"
-          className="-ml-1 flex items-center gap-0.5 text-muted-foreground hover:text-foreground"
-        >
-          <ChevronLeft className="size-4" /> Board
-        </Link>
-        <AccountLink firstName={me?.firstName} next={`/h/${token}`} />
-      </div>
-
-      {!card ? (
-        <p className="text-muted-foreground">This ask has expired or doesn&apos;t exist.</p>
-      ) : (
-        <>
-          <header className="flex flex-col gap-2">
-            <div className="flex items-center justify-between gap-2">
-              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                {card.category}
-              </span>
-              <span className="text-lg font-semibold">{priceLabel(card)}</span>
-            </div>
-            <h1 className="text-2xl font-semibold tracking-tight">{card.title}</h1>
-            <p className="text-sm text-muted-foreground">
-              {[
-                ASKER_LABEL,
-                durationLabel(card.minutes),
-                card.startsAt ? whenLabel(card.startsAt) : null,
-                card.status === "open" ? expiresLabel(card.expiresAt, now) : null,
-              ]
-                .filter(Boolean)
-                .join(" · ")}
-            </p>
-          </header>
-
-          <section className="flex flex-col gap-1 rounded-xl bg-muted/50 p-4 text-sm">
-            <h2 className="font-medium">What done looks like</h2>
-            <p className="whitespace-pre-line">{card.text}</p>
-          </section>
-
-          {(card.viewer === "asker" || card.viewer === "helper") &&
-            card.status !== "expired" &&
-            card.status !== "cancelled" && <Progress card={card} />}
-
-          {thread && "messages" in thread && (
-            <MessagesRow
-              token={token}
-              otherAlias={thread.otherAlias}
-              latest={thread.messages.at(-1)}
-            />
-          )}
-
-          <TaskActions
-            card={card}
-            signedIn={Boolean(me)}
-            needsPaymentSetup={
-              card.price > 0 && !(profile?.canAcceptPayment && profile.payoutHandle)
-            }
-          />
-        </>
-      )}
-    </main>
+    <>
+      {party && live && <AutoRefresh />}
+      <Screen
+        card={card}
+        messages={messages || null}
+        signedIn={Boolean(me)}
+        needsPaymentSetup={card.price > 0 && !(profile?.canAcceptPayment && profile.payoutHandle)}
+      />
+    </>
   );
 }
 
-function Progress({ card }: { card: PublicCard }) {
-  const { steps, at } = progressSteps(card);
-  return (
-    <ol
-      aria-label="Progress"
-      className="grid gap-1"
-      style={{ gridTemplateColumns: `repeat(${steps.length}, 1fr)` }}
-    >
-      {steps.map((step, i) => (
-        <li key={step} className="flex flex-col gap-1 text-xs">
-          <span className={`h-1.5 rounded-full ${i <= at ? "bg-primary" : "bg-muted"}`} />
-          <span className={i <= at ? "font-medium" : "text-muted-foreground"}>{step}</span>
-        </li>
-      ))}
-    </ol>
-  );
+function Screen({
+  card,
+  messages,
+  signedIn,
+  needsPaymentSetup,
+}: {
+  card: PublicCard;
+  messages: React.ReactNode;
+  signedIn: boolean;
+  needsPaymentSetup: boolean;
+}) {
+  const { viewer, status } = card;
+
+  if (status === "cancelled") return <Closed card={card} reason="cancelled" />;
+
+  if (viewer === "asker") {
+    if (status === "expired") return <AskerExpired card={card} />;
+    if (status === "open" || status === "held") return <AskerWaiting card={card} />;
+    if (status === "confirmed") {
+      // Paid asks start once the money is held (Pay to hold, /h/[token]/pay).
+      return card.price > 0 && card.payment?.status !== "held" ? (
+        <AskerClaimed card={card} messages={messages} />
+      ) : (
+        <AskerConfirmed card={card} messages={messages} />
+      );
+    }
+    return <AskerDone card={card} />;
+  }
+
+  if (viewer === "helper") {
+    if (status === "expired") return <Closed card={card} reason="expired" />;
+    if (status === "held") return <HelperOffered card={card} />;
+    return <HelperActive card={card} messages={messages} />;
+  }
+
+  // Anyone else: the card's detail, or why it's gone.
+  if (status === "expired") return <Closed card={card} reason="expired" />;
+  if (status !== "open") return <Closed card={card} reason="taken" />;
+  return <HelperDetail card={card} signedIn={signedIn} needsSetup={needsPaymentSetup} />;
 }
