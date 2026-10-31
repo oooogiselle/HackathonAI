@@ -119,8 +119,8 @@ function MyCard({ card }: { card: PublicCard }) {
       }
       meta={[
         { kind: "time", label: durationLabel(card.minutes) },
-        ...(card.heldByFirstName && card.viewer === "asker"
-          ? [{ kind: "who" as const, label: card.heldByFirstName }]
+        ...(card.heldByAlias && card.viewer === "asker"
+          ? [{ kind: "who" as const, label: card.heldByAlias }]
           : []),
       ]}
       notice={

@@ -35,6 +35,7 @@ export type BusySlot = { day: number; start: string; end: string };
 
 export type Helper = {
   id: string;
+  // Private: never shown to another student. They see aliasFor(id).
   firstName: string;
   year: string;
   blurb: string;
@@ -49,9 +50,9 @@ export type Helper = {
 
 export type HelperSuggestion = { helper: Helper; why: string };
 
-// What the asker sees about a matched helper. Never their free/busy, tags,
-// weekly limit or payment status.
-export type PublicHelper = Pick<Helper, "id" | "firstName" | "year">;
+// What the asker sees about a matched helper: an alias (src/lib/ask/alias.ts),
+// never their name, free/busy, tags, weekly limit or payment status.
+export type PublicHelper = Pick<Helper, "id" | "year"> & { alias: string };
 export type MatchSuggestion = { helper: PublicHelper; why: string };
 
 // Quick check's "You're not the only one": a need that comes back every term,
@@ -191,10 +192,6 @@ export type BoardCard = {
   anonymous: boolean;
   // Sent only to picked helpers; never on the board or in a group.
   private: boolean;
-  // Shown only when not anonymous.
-  askerFirstName?: string;
-  // Shown when the asker allows it ("Sophomore").
-  askerYear?: string;
   status: CardStatus;
   createdAt: number;
   startsAt?: number;
@@ -202,7 +199,7 @@ export type BoardCard = {
   expiresAt: number;
   // Groups the bot has shared this card to.
   shares: { groupId: string; postedAt: number }[];
-  heldBy?: { userId: string; firstName: string; email: string; year?: string; heldAt: number };
+  heldBy?: { userId: string; alias: string; year?: string; heldAt: number };
   meetingSpot?: string;
   // The helper tapped "Done". The asker confirms, or it auto-confirms at autoConfirmAt.
   helperDoneAt?: number;
@@ -217,10 +214,11 @@ export type BoardCard = {
 // "invited": a helper the asker picked for a private ask.
 export type CardViewer = "asker" | "helper" | "invited" | "other" | "signed-out";
 
-// What any browser may see. Never includes user ids, the helper's email (contact
-// info is shared only after both say yes) or the asker's name on anonymous cards.
+// What any browser may see. Never includes user ids, names or contact info:
+// students only ever see each other's alias.
 export type PublicCard = Omit<BoardCard, "askerId" | "heldBy" | "payment"> & {
-  heldByFirstName?: string;
+  // Only the asker sees who's holding their ask.
+  heldByAlias?: string;
   heldByYear?: string;
   // Only the asker and the helper see payment details.
   payment?: Payment;
@@ -236,7 +234,7 @@ export type InboxItem = {
   token?: string;
   kind: InboxKind;
   topic: InboxTopic;
-  // Short headline ("Maya can help") and the line under it. Never names an anonymous asker.
+  // Short headline ("Steady Loon 42 can help") and the line under it. Aliases only, never names.
   title: string;
   text: string;
   createdAt: number;
@@ -247,7 +245,7 @@ export type Message = {
   id: string;
   // Never a user id: just whether you sent it.
   fromMe: boolean;
-  senderFirstName: string;
+  senderAlias: string;
   body: string;
   createdAt: number;
   // Scam guard: paying outside Ask, or an ID number. null = clean.
@@ -262,18 +260,29 @@ export type PrivateRequest = {
 };
 
 export type Profile = {
+  // Private: only you see your name. Everyone else sees your alias.
   firstName: string;
+  alias: string;
   email: string;
   phone?: string;
   classYear?: string;
   showClassYear: boolean;
+  // Public: a line or two askers see on your helper card.
+  blurb?: string;
+  // Weekly free/busy used by matching. Never event titles.
+  busy: BusySlot[];
   canAcceptPayment: boolean | null;
   payoutMethod?: "venmo" | "bank";
   payoutHandle?: string;
   interests: Interest[];
+  // Public specifics matching reads ("car", "korean"). Never contact details.
+  tags: string[];
   weeklyLimit: number;
   emailNotifications: boolean;
 };
+
+// A thank-you note an asker wrote after you helped them. Never names an anonymous asker.
+export type ThanksNote = { title: string; thanks: string; at: string };
 
 // "Blocked people". Labels never reveal an anonymous asker.
 export type BlockedEntry = { key: string; label: string };
@@ -289,8 +298,7 @@ export type HelperSetup = {
 export type Result<T extends object = object> = ({ ok: true } & T) | { error: string };
 
 export type Claim = {
-  firstName: string;
-  email: string;
+  alias: string;
   meetingSpot: string;
   claimedAt: number;
 };

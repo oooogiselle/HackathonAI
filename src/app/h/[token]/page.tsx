@@ -6,7 +6,7 @@ import { ChevronLeft } from "lucide-react";
 
 import { AccountLink } from "@/components/ask/account-link";
 import {
-  askerLabel,
+  ASKER_LABEL,
   durationLabel,
   expiresLabel,
   priceLabel,
@@ -69,7 +69,7 @@ export default async function TaskPage({ params }: PageProps<"/h/[token]">) {
             <h1 className="text-2xl font-semibold tracking-tight">{card.title}</h1>
             <p className="text-sm text-muted-foreground">
               {[
-                askerLabel(card),
+                ASKER_LABEL,
                 durationLabel(card.minutes),
                 card.startsAt ? whenLabel(card.startsAt) : null,
                 card.status === "open" ? expiresLabel(card.expiresAt, now) : null,
@@ -91,7 +91,7 @@ export default async function TaskPage({ params }: PageProps<"/h/[token]">) {
           {thread && "messages" in thread && (
             <MessagesRow
               token={token}
-              otherFirstName={thread.otherFirstName}
+              otherAlias={thread.otherAlias}
               latest={thread.messages.at(-1)}
             />
           )}

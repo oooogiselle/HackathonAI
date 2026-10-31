@@ -8,6 +8,7 @@ import { generateText, Output } from "ai";
 import { z } from "zod";
 
 import { askModel } from "@/lib/ai/models";
+import { aliasFor } from "@/lib/ask/alias";
 import { isBusyAt } from "@/lib/ask/free-busy";
 import { helperFits } from "@/lib/ask/helper-fit";
 import { HELPERS } from "@/lib/ask/mock-data";
@@ -95,7 +96,10 @@ export async function matchHelpers(
         model: askModel,
         instructions: INSTRUCTIONS,
         prompt: `Ask: ${input.text}\n\nPeers:\n${candidates
-          .map((h) => `- id=${h.id}: ${h.firstName} (${h.year}). ${h.blurb}`)
+          .map(
+            (h) =>
+              `- id=${h.id}: ${aliasFor(h.id)} (${h.year}). ${h.blurb}${h.tags.length ? ` Good with: ${h.tags.join(", ")}.` : ""}`,
+          )
           .join("\n")}`,
         output: Output.object({ schema }),
       });

@@ -22,7 +22,7 @@ export default function SharePage() {
 
   const canShare = state.category === "none" && !state.keepPrivate;
   const text = state.anonymous && state.scrub ? state.scrub.text : state.ask;
-  const preview = formatPostMessage(text, null, `${siteUrl()}/h/••••••`);
+  const preview = formatPostMessage(text, `${siteUrl()}/h/••••••`);
 
   function useGroup() {
     update({ groupId: group.id, toBoard: true });
@@ -46,9 +46,7 @@ export default function SharePage() {
       <StepHeader title="Post to a group" eyebrow="Share to GroupMe" backHref="/where" />
 
       <section className="flex flex-col gap-2">
-        <h2 className="text-[15px] font-bold">
-          Choose a group
-        </h2>
+        <h2 className="text-[15px] font-bold">Choose a group</h2>
         {GROUPS.map((g) => (
           <button
             key={g.id}

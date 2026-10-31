@@ -368,11 +368,7 @@ export async function shareCardToGroup(input: z.input<typeof shareSchema>): Prom
     return shared;
   }
 
-  const message = formatPostMessage(
-    `${card.title}\n${card.text}`,
-    card.anonymous ? null : card.askerFirstName || null,
-    `${siteUrl()}/h/${card.token}`,
-  );
+  const message = formatPostMessage(`${card.title}\n${card.text}`, `${siteUrl()}/h/${card.token}`);
   try {
     await postToGroup(group, message);
   } catch (error) {

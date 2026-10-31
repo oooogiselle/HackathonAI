@@ -70,3 +70,46 @@ export function guessHelperPrefs(need: string): HelperPrefs {
     why: "Someone who's helped with this before",
   });
 }
+
+// ---------- a helper describing themselves ----------
+
+export type SkillSuggestion = { interests: Interest[]; tags: string[] };
+
+export const MAX_TAGS = 12;
+const MAX_TAG_LENGTH = 24;
+
+/**
+ * Cleans tags from the model, the client or a typed box: lowercase, trimmed,
+ * 2–24 characters, deduped, never an email or phone number (tags are public).
+ */
+export function cleanTags(tags: string[], limit = MAX_TAGS): string[] {
+  const clean = tags
+    // Contact details never become tags, even with the punctuation stripped.
+    .filter((t) => !t.includes("@") && !/\d[\d\s().-]{5,}\d/.test(t))
+    .map((t) =>
+      t
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N}\s'-]/gu, "")
+        .replace(/\s+/g, " ")
+        .trim(),
+    )
+    .filter((t) => t.length >= 2 && t.length <= MAX_TAG_LENGTH);
+  return [...new Set(clean)].slice(0, limit);
+}
+
+export function cleanSkills(raw: { interests: string[]; tags: string[] }): SkillSuggestion {
+  return {
+    interests: INTERESTS.filter((i) => raw.interests.includes(i)),
+    tags: cleanTags(raw.tags, 6),
+  };
+}
+
+// No-AI guess: known tags mentioned in the text, and the interests that go with them.
+export function guessSkills(text: string): SkillSuggestion {
+  const lower = text.toLowerCase();
+  const mentions = (tag: string) => new RegExp(`\\b${tag}s?\\b`).test(lower);
+  return cleanSkills({
+    interests: guessHelperPrefs(text).interests,
+    tags: KNOWN_TAGS.filter(mentions),
+  });
+}

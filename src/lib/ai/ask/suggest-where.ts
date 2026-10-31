@@ -6,6 +6,7 @@ import { generateText, Output } from "ai";
 import { z } from "zod";
 
 import { askModel } from "@/lib/ai/models";
+import { aliasFor } from "@/lib/ask/alias";
 import { GROUPS, OFFICES } from "@/lib/ask/mock-data";
 import type { Helper, HelperSuggestion, SafetyCategory, WhereSuggestion } from "@/lib/ask/types";
 
@@ -46,7 +47,10 @@ export async function suggestWhere(
               model: askModel,
               instructions: INSTRUCTIONS,
               prompt: `Ask: ${ask}\n\nPeers:\n${helpers
-                .map((h) => `- id=${h.id}: ${h.firstName} (${h.year}). ${h.blurb}`)
+                .map(
+                  (h) =>
+                    `- id=${h.id}: ${aliasFor(h.id)} (${h.year}). ${h.blurb}${h.tags.length ? ` Good with: ${h.tags.join(", ")}.` : ""}`,
+                )
                 .join("\n")}`,
               output: Output.object({ schema }),
             });

@@ -4,13 +4,22 @@
 
 import { z } from "zod";
 
+import { suggestSkills } from "@/lib/ai/ask/suggest-skills";
+import { cleanTags, MAX_TAGS, type SkillSuggestion } from "@/lib/ask/helper-fit";
 import { SCHOOL_EMAIL_DOMAIN } from "@/lib/ask/mock-data";
 import { getCurrentUser, signIn, signOut } from "@/lib/ask/mock-session";
-import { type BlockedEntry, INTERESTS, type Profile, type Result } from "@/lib/ask/types";
+import {
+  type BlockedEntry,
+  INTERESTS,
+  type Profile,
+  type Result,
+  type ThanksNote,
+} from "@/lib/ask/types";
 import {
   blockFromCard as blockFromCardInStore,
   getProfile,
   listBlocked,
+  listThanksFor,
   unblock,
   updateProfile,
 } from "@/lib/ask/users";
@@ -62,10 +71,26 @@ const profileSchema = z
     phone: z.string().trim().max(30),
     classYear: z.string().trim().max(30),
     showClassYear: z.boolean(),
+    blurb: z.string().trim().max(160),
+    busy: z
+      .array(
+        z
+          .object({
+            day: z.number().int().min(0).max(6),
+            start: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+            end: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+          })
+          .refine((s) => s.start < s.end),
+      )
+      .max(50),
     canAcceptPayment: z.boolean(),
     payoutMethod: z.enum(["venmo", "bank"]),
     payoutHandle: z.string().trim().max(100),
     interests: z.array(z.enum(INTERESTS)).max(INTERESTS.length),
+    tags: z
+      .array(z.string().max(40))
+      .max(MAX_TAGS * 2)
+      .transform((t) => cleanTags(t)),
     weeklyLimit: z.number().int().min(0).max(20),
     emailNotifications: z.boolean(),
   })
@@ -80,6 +105,24 @@ export async function updateMyProfile(input: z.input<typeof profileSchema>): Pro
   // TODO(auth): verify a new phone number with a code before saving it.
   await updateProfile(user.id, parsed.data);
   return { ok: true };
+}
+
+/**
+ * "In your own words" on the Me tab: interest chips and specific tags to offer.
+ * Suggestions only; the profile changes only when the helper taps and saves.
+ */
+export async function suggestMySkills(input: string): Promise<Result<SkillSuggestion>> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Sign in first." };
+  const parsed = z.string().trim().min(3).max(500).safeParse(input);
+  if (!parsed.success) return { error: "Write a few words about what you could help with." };
+  return { ok: true, ...(await suggestSkills(parsed.data)) };
+}
+
+/** Thank-you notes from asks you helped with (the Me tab). */
+export async function getMyThanks(): Promise<ThanksNote[]> {
+  const user = await getCurrentUser();
+  return user ? listThanksFor(user.id) : [];
 }
 
 // ---------- blocked people ----------
