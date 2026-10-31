@@ -1,6 +1,6 @@
 // Demo data for Dartmouth. The campus and its public places are real; every
 // person (helpers, the seed asker) is made up, with no real contact details.
-import type { BoardCard, Group, Helper, Office } from "./types";
+import type { BoardCard, BusySlot, Group, Helper, Office } from "./types";
 
 export const CAMPUS = "Dartmouth College";
 export const SCHOOL_EMAIL_DOMAIN = "dartmouth.edu";
@@ -389,3 +389,18 @@ export const TUTORING_RESOURCES = [
 export function findGroup(id: string): Group | undefined {
   return GROUPS.find((g) => g.id === id);
 }
+
+// The demo asker's weekly free/busy (classes and a shift), shown when they tap
+// "Find a time from my calendar". Mocked Google Calendar, never event titles.
+// TODO(calendar): read the signed-in student's real free/busy.
+export const ASKER_BUSY: BusySlot[] = [
+  { day: 1, start: "10:10", end: "11:15" },
+  { day: 1, start: "14:25", end: "15:30" },
+  { day: 2, start: "12:15", end: "14:05" },
+  { day: 3, start: "10:10", end: "11:15" },
+  { day: 3, start: "14:25", end: "15:30" },
+  { day: 4, start: "12:15", end: "14:05" },
+  { day: 5, start: "10:10", end: "11:15" },
+  { day: 6, start: "11:00", end: "14:00" },
+  { day: 0, start: "13:00", end: "16:00" },
+];

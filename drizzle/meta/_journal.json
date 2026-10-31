@@ -36,6 +36,13 @@
       "when": 1793419550497,
       "tag": "0004_free_text_categories",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793424307489,
+      "tag": "0005_message_flag",
+      "breakpoints": true
     }
   ]
 }

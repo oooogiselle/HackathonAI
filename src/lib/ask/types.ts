@@ -2,6 +2,8 @@
 // See docs/contract.md for which server action returns what.
 // TODO(db): BoardCard becomes the `asks` table (see tasks.md, Postgres store).
 
+import type { MessageFlag } from "./scam-check";
+
 // Ordered least → most restrictive (see SAFETY_SEVERITY in safety-check.ts).
 // - none: nothing flagged; a normal practical ask
 // - sensitive: visa / money / health. Peers + offices only, never group chats
@@ -246,6 +248,8 @@ export type Message = {
   senderAlias: string;
   body: string;
   createdAt: number;
+  // Scam guard: paying outside Ask, or an ID number. null = clean.
+  flag: MessageFlag | null;
 };
 
 // A private ask waiting in a helper's inbox.

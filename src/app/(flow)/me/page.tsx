@@ -9,12 +9,13 @@ import { getMyProfile, getMyThanks, listBlockedPeople } from "@/server/actions/s
 
 import { ProfileForm } from "./profile-form";
 
-export default async function MePage() {
-  const [profile, unread, thanks, blocked] = await Promise.all([
+export default async function MePage({ searchParams }: PageProps<"/me">) {
+  const [profile, unread, thanks, blocked, { next }] = await Promise.all([
     getMyProfile(),
     countUnread(),
     getMyThanks(),
     listBlockedPeople(),
+    searchParams,
   ]);
 
   return (
@@ -25,6 +26,7 @@ export default async function MePage() {
           profile={profile}
           thanks={thanks}
           blocked={"error" in blocked ? [] : blocked.blocked}
+          backToAsk={next === "/ask"}
         />
       ) : (
         <SignInPrompt next="/me" why="Set what you'd like to help with and how often." />

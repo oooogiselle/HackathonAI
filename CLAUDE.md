@@ -88,7 +88,12 @@ The rest of the repo (`/app`, `/login`, items, chat, Supabase, Drizzle) is the o
 - Public board: posts are anonymous by default and go through `privacyScrub`; crisis, sensitive (visa, money, health) and academic asks can never be posted. Paid board asks show only to helpers who can accept payment.
 - Calendar: free/busy only, never event titles or details. Tonight it's seeded in mock helpers; no Google API or OAuth.
 - Matching respects each helper's weekly limit and spreads load. "Not this time" never asks for a reason.
+<<<<<<< HEAD
 - Fully anonymous: students only ever see each other's alias (`aliasFor(userId)` in `src/lib/ask/alias.ts`, e.g. "Steady Loon 42"), never a name, initial, email or phone, even after a match. Askers show as "A classmate" on cards. Every ask is posted anonymously (`createCard` forces it), and a helper's blurb goes through `privacyScrub` on save. Your first name is only for you.
+=======
+- Contact info is shared only after both sides say yes.
+- Scam guard on messages (`src/lib/ask/scam-check.ts`, `src/lib/ai/ask/message-check.ts`): paying outside Ask or an ID number gets a warning for the sender ("Send anyway" is a tap, never a silent block) and a note for the receiver. Keywords always run; the model can only add a flag. The flag is computed on the server and stored on the message.
+>>>>>>> origin/dev
 - No ratings, streaks or leaderboards. (The design's "Rate your helper" screen and trust points are out; the thank-you note stays.)
 - Real campus (Dartmouth College); every person is fictional; no real student names or contact details. Crisis numbers are confirmed by the team, never guessed.
 - To add a chat platform: add an adapter in `src/lib/groups/`, register it in `index.ts`, add the platform to `Platform` in `src/lib/ask/types.ts`.

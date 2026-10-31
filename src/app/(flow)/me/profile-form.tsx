@@ -6,9 +6,10 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
+import { useCalendarConnection } from "@/components/ask/calendar-slots";
 import { Field, RemovableChip, ToggleChip } from "@/components/ask/form-bits";
 import { ScrubNotice } from "@/components/ask/scrub-notice";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cleanTags, INTEREST_LABELS, MAX_TAGS, type SkillSuggestion } from "@/lib/ask/helper-fit";
@@ -230,12 +231,16 @@ export function ProfileForm({
   profile,
   thanks,
   blocked,
+  backToAsk,
 }: {
   profile: Profile;
   thanks: ThanksNote[];
   blocked: BlockedEntry[];
+  // From "See when you're free" on Post a need (?next=/ask).
+  backToAsk?: boolean;
 }) {
   const router = useRouter();
+  const calendar = useCalendarConnection();
   const [form, setForm] = useState({
     firstName: profile.firstName,
     classYear: profile.classYear ?? "",
@@ -493,7 +498,17 @@ export function ProfileForm({
         note="Green means free. Tap the times you're usually busy. Matching only reads free or busy, never what you're doing."
       >
         <WeekGrid free={free} onToggle={toggleFree} />
-        {/* TODO(calendar): Google Calendar free/busy sync. */}
+        <SwitchRow
+          title="Connect Google Calendar"
+          detail="Ask sees only when you're free, never event details, and suggests times when you ask. Turns on right away. Demo: no real calendar is connected."
+          on={calendar.connected}
+          onChange={calendar.setConnected}
+        />
+        {backToAsk && calendar.connected && (
+          <Link href="/ask" className={buttonVariants({ variant: "outline" })}>
+            Back to your ask
+          </Link>
+        )}
       </Card>
 
       <Card title="Thank-you notes" note="From people you've helped. Only you see these.">

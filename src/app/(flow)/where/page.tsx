@@ -209,7 +209,7 @@ export default function WherePage() {
             </div>
             <p className="text-xs text-muted-foreground">
               {state.expiry === "deadline" && deadline
-                ? `Comes down ${whenLabel(deadline)}, your Needed by time. `
+                ? `Comes down ${whenLabel(deadline)}, the time you picked. `
                 : ""}
               After that it leaves the board, and the GroupMe link says it expired.
             </p>
