@@ -1,5 +1,5 @@
 // Display labels for a card, shared by the board and the task page.
-import type { AskCategory, PublicCard } from "./types";
+import type { AskCategory, AskPart, PublicCard } from "./types";
 
 export const CATEGORY_LABELS: Record<AskCategory, string> = {
   writing: "Writing",
@@ -28,6 +28,11 @@ export function expiresLabel(expiresAt: number, now: number) {
   return `Expires in ${days} day${days === 1 ? "" : "s"}`;
 }
 
+// Under 3 hours left: the board tints the expiry so helpers see it first.
+export function expiresSoon(expiresAt: number, now: number) {
+  return expiresAt - now < 3 * 3_600_000;
+}
+
 /** "Sat, Nov 1, 3:00 PM" */
 export function whenLabel(ms: number) {
   return new Date(ms).toLocaleString("en-US", {
@@ -41,4 +46,10 @@ export function whenLabel(ms: number) {
 
 export function askerLabel(card: Pick<PublicCard, "askerFirstName" | "askerYear">) {
   return card.askerFirstName ?? card.askerYear ?? "A classmate";
+}
+
+// A best guess for the AI path, where nobody picked a category.
+export function guessCategory(part: Pick<AskPart, "helper">): AskCategory {
+  const interests = part.helper.interests;
+  return interests.includes("rides") || interests.includes("moving") ? "errands" : "other";
 }

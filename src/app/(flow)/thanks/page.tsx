@@ -54,7 +54,6 @@ export default function ThanksPage({ searchParams }: PageProps<"/thanks">) {
     return (
       <>
         <StepHeader
-          step={7}
           title="Thank-you sent"
           subtitle="Asking for help takes courage. Nice work."
         />
@@ -83,7 +82,6 @@ export default function ThanksPage({ searchParams }: PageProps<"/thanks">) {
   return (
     <>
       <StepHeader
-        step={7}
         title="Say thank you"
         subtitle="In your own words. A sentence is plenty."
         backHref={token ? `/h/${token}` : "/"}

@@ -72,10 +72,10 @@ export function ToggleChip({
       aria-pressed={pressed}
       onClick={onClick}
       className={cn(
-        "rounded-full border px-3 py-1.5 text-sm",
+        "rounded-[10px] border px-3 py-1.5 text-sm font-semibold",
         pressed
           ? "border-primary bg-primary text-primary-foreground"
-          : "border-border hover:bg-muted",
+          : "border-input bg-card hover:bg-muted",
       )}
     >
       {label}

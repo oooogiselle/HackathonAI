@@ -1,7 +1,7 @@
 // The exact text posted to a group. Shared by the Share preview (client) and
 // postAsk (server) so the preview always matches what's sent.
 export function formatPostMessage(text: string, name: string | null, claimUrl: string) {
-  const signature = name ? `— ${name} (via Ask)` : "— a fellow student (via Ask)";
+  const signature = name ? `— ${name} (via DartAsk)` : "— a fellow student (via DartAsk)";
   return `${text}\n${signature}\n\nCan help? Tap: ${claimUrl}`;
 }
 
@@ -10,7 +10,7 @@ export const COVERED_MESSAGE = "Covered, thanks to whoever helped!";
 // Posted once, by hand, when the bot joins a group (`pnpm bot:intro <groupId>`).
 // Never part of a regular post.
 export const BOT_INTRO_MESSAGE =
-  "I post asks from Ask. I can't read your messages. Remove me anytime.";
+  "I post asks from DartAsk. I can't read your messages. Remove me anytime.";
 
 // Rebuilds an ask's sentence from its fields: the no-AI fallback, and what the
 // Your ask screen uses after the student edits What / When / Where. The price

@@ -1,10 +1,12 @@
 "use client";
 
-// Step 1 (/ask, opened from the board): a plain form. AI only helps when asked ("Get suggestions",
-// or "Let AI help" for the breakdown path), and nothing it suggests is applied
-// without a tap. Safety runs on Continue, before anything else happens.
+// Post a need (/ask, the round Ask button): a plain form. AI only helps when
+// asked ("Get suggestions", or "Let AI help" to start from free text), and
+// nothing it suggests is applied without a tap. Continue goes to Quick check,
+// which runs the safety check on the final wording.
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { Sparkles } from "lucide-react";
 
 import { type AskFlowState, useAskFlow } from "@/components/ask/flow-provider";
 import { Field, ToggleChip } from "@/components/ask/form-bits";
@@ -14,10 +16,19 @@ import { WhoToAsk } from "@/components/ask/who-to-ask";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { CATEGORY_LABELS, guessCategory } from "@/lib/ask/card-format";
 import { INTEREST_LABELS, toHelperPrefs } from "@/lib/ask/helper-fit";
 import { suggestPrice } from "@/lib/ask/price";
-import type { AskPart, AssistField, AssistSuggestions, HelperPrefs } from "@/lib/ask/types";
-import { assistAsk, checkSafety } from "@/server/actions/ask";
+import {
+  ASK_CATEGORIES,
+  type AskCategory,
+  type AskPart,
+  type AssistField,
+  type AssistSuggestions,
+  type HelperPrefs,
+  type PayType,
+} from "@/lib/ask/types";
+import { assistAsk } from "@/server/actions/ask";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const FIELD_IDS: Record<AssistField, string> = {
@@ -25,6 +36,13 @@ const FIELD_IDS: Record<AssistField, string> = {
   where: "write-where",
   details: "write-details",
 };
+
+// The design's pay chips. "Fund" is the asker paying (payType "pay").
+const PAY_CHOICES: { label: string; value: PayType }[] = [
+  { label: "Fund", value: "pay" },
+  { label: "Trade", value: "trade" },
+  { label: "Free", value: "free" },
+];
 
 // <input type="datetime-local"> works in local time without a zone.
 function toLocalInput(date: Date) {
@@ -44,7 +62,9 @@ function formatWhen(local: string) {
 
 type Form = {
   what: string;
+  category: AskCategory;
   details: string;
+  payType: PayType;
   when: string; // datetime-local value, "" = flexible
   deadline: string; // datetime-local value
   deadlineTouched: boolean;
@@ -56,13 +76,19 @@ type Form = {
 };
 
 function initialForm(state: AskFlowState): Form {
-  const part = state.mode === "form" ? state.parts[0] : undefined;
+  // Once the last ask was posted (it has a token), the next one starts blank.
+  const posted = Boolean(state.token);
+  const part = posted ? undefined : state.parts[state.activePart];
   if (part) {
     return {
       what: part.what,
+      category: part.askCategory ?? guessCategory(part),
       details: part.text,
+      payType: part.payType ?? (part.priceSet > 0 ? "pay" : "free"),
       when: part.startsAt ? toLocalInput(new Date(part.startsAt)) : "",
-      deadline: part.deadline ? toLocalInput(new Date(part.deadline)) : "",
+      deadline: part.deadline
+        ? toLocalInput(new Date(part.deadline))
+        : toLocalInput(new Date(Date.now() + DAY_MS)),
       deadlineTouched: true,
       where: part.where ?? "",
       minutes: part.minutes,
@@ -72,8 +98,10 @@ function initialForm(state: AskFlowState): Form {
   }
   return {
     what: "",
+    category: "errands",
     // Carried over from the AI path's "I'd rather fill in a form".
-    details: state.mode === "form" ? state.need : "",
+    details: posted ? "" : state.need,
+    payType: "pay",
     when: "",
     deadline: toLocalInput(new Date(Date.now() + DAY_MS)),
     deadlineTouched: false,
@@ -84,21 +112,23 @@ function initialForm(state: AskFlowState): Form {
   };
 }
 
-export default function Home() {
+export default function PostNeed() {
   const { state, ready } = useAskFlow();
-  // Wait for sessionStorage so Back from Where restores the form.
+  // Wait for sessionStorage so Back from Quick check restores the form.
   return (
     <>
-      <StepHeader
-        step={1}
-        title="What do you need help with?"
-        subtitle="Fill it in. AI can suggest things, only if you ask."
-      />
+      <StepHeader title="Post a need" backHref="/" />
       {ready && <WriteForm initial={initialForm(state)} />}
-      <p className="text-center text-xs text-muted-foreground">
-        Real people do the helping. Nothing is sent without your OK.
-      </p>
     </>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="flex flex-col gap-4 rounded-3xl bg-card p-4 shadow-[0_1px_2px_rgba(14,42,32,0.06)]">
+      <h2 className="text-[15px] font-bold">{title}</h2>
+      {children}
+    </section>
   );
 }
 
@@ -109,10 +139,9 @@ function WriteForm({ initial }: { initial: Form }) {
   const [suggestions, setSuggestions] = useState<AssistSuggestions | null>(null);
   const [error, setError] = useState("");
   const [assisting, startAssist] = useTransition();
-  const [submitting, startSubmit] = useTransition();
 
   const priceSuggestion = suggestPrice(form.minutes, form.helper.interests);
-  const price = form.price ?? priceSuggestion.suggested;
+  const price = form.payType === "pay" ? (form.price ?? priceSuggestion.suggested) : 0;
 
   function set(patch: Partial<Form>) {
     setForm((f) => ({ ...f, ...patch }));
@@ -125,7 +154,7 @@ function WriteForm({ initial }: { initial: Form }) {
     setError("");
   }
 
-  // The AI breakdown path; whatever is typed so far carries over.
+  // The second entry point: free text, and AI suggests the ask.
   function letAiHelp() {
     const need = [form.what.trim(), form.details.trim()].filter(Boolean).join(". ");
     reset({ mode: "ai", need });
@@ -152,13 +181,13 @@ function WriteForm({ initial }: { initial: Form }) {
   }
 
   function validate(): string | null {
-    if (!form.what.trim()) return "Add a title.";
+    if (!form.what.trim()) return "Add what you need.";
     if (!form.details.trim()) return "Add a few details.";
     const deadline = Date.parse(form.deadline);
-    if (Number.isNaN(deadline)) return "Add a deadline.";
-    if (deadline <= Date.now()) return "The deadline has to be in the future.";
+    if (Number.isNaN(deadline)) return "Add a Needed by time.";
+    if (deadline <= Date.now()) return "Needed by has to be in the future.";
     if (form.when && deadline > Date.parse(form.when)) {
-      return "The deadline can't be after the time you need help.";
+      return "Needed by can't be after the time you need help.";
     }
     return null;
   }
@@ -168,34 +197,24 @@ function WriteForm({ initial }: { initial: Form }) {
     if (problem) return setError(problem);
     const what = form.what.trim();
     const details = form.details.trim();
-    startSubmit(async () => {
-      const need = `${what}. ${details}`;
-      const safety = await checkSafety(need);
-      if (safety.category === "crisis") return router.push("/resources?type=crisis");
-      if (safety.category === "academic") return router.push("/resources?type=tutoring");
-      const part: AskPart = {
-        what,
-        when: form.when ? formatWhen(form.when) : undefined,
-        startsAt: form.when ? new Date(form.when).toISOString() : undefined,
-        where: form.where.trim() || undefined,
-        deadline: new Date(form.deadline).toISOString(),
-        minutes: form.minutes,
-        helper: form.helper,
-        price: priceSuggestion,
-        priceSet: price,
-        text: details,
-        category: safety.category,
-      };
-      reset({
-        mode: "form",
-        need,
-        category: safety.category,
-        parts: [part],
-        activePart: 0,
-        ask: details,
-      });
-      router.push("/where");
-    });
+    const part: AskPart = {
+      what,
+      when: form.when ? formatWhen(form.when) : undefined,
+      startsAt: form.when ? new Date(form.when).toISOString() : undefined,
+      where: form.where.trim() || undefined,
+      deadline: new Date(form.deadline).toISOString(),
+      minutes: form.minutes,
+      helper: form.helper,
+      price: priceSuggestion,
+      priceSet: price,
+      text: details,
+      // Quick check fills this in.
+      category: "none",
+      askCategory: form.category,
+      payType: form.payType,
+    };
+    reset({ mode: "form", need: `${what}. ${details}`, parts: [part], activePart: 0, ask: details });
+    router.push("/check");
   }
 
   return (
@@ -203,28 +222,85 @@ function WriteForm({ initial }: { initial: Form }) {
       <button
         type="button"
         onClick={letAiHelp}
-        className="-mt-3 self-start text-sm text-muted-foreground underline"
+        className="-mt-2 flex items-center gap-2 self-start rounded-full bg-pay px-3.5 py-2 text-sm font-semibold text-secondary-foreground"
       >
-        Not sure how to put it? Let AI help
+        <Sparkles className="size-4" /> Not sure how to put it? Let AI help
       </button>
-      <div className="flex flex-col gap-4">
-        <Field label="Title" id="write-what">
+
+      <Section title="The need">
+        <Field label="What do you need?" id="write-what">
           <Input
             id="write-what"
             value={form.what}
             maxLength={80}
-            placeholder="Ride to BTV airport"
+            placeholder="Ride to Lebanon airport"
             onChange={(e) => set({ what: e.target.value })}
           />
         </Field>
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs text-muted-foreground">Category</span>
+          <div className="flex flex-wrap gap-2">
+            {ASK_CATEGORIES.map((c) => (
+              <ToggleChip
+                key={c}
+                label={CATEGORY_LABELS[c]}
+                pressed={form.category === c}
+                onClick={() => set({ category: c })}
+              />
+            ))}
+          </div>
+        </div>
         <Field label="Details" id={FIELD_IDS.details} hint="This is what helpers will read.">
           <Textarea
             id={FIELD_IDS.details}
             value={form.details}
             maxLength={1000}
-            placeholder="I have two suitcases and my flight is at 10am."
+            placeholder="Pick me up at Baker Library at 1:45 pm and drop me at the airport by 2:30 pm. One carry-on."
             onChange={(e) => set({ details: e.target.value })}
             className="min-h-28 text-base"
+          />
+        </Field>
+      </Section>
+
+      <Section title="Pay">
+        <div className="flex gap-2">
+          {PAY_CHOICES.map((c) => (
+            <ToggleChip
+              key={c.value}
+              label={c.label}
+              pressed={form.payType === c.value}
+              onClick={() => set({ payType: c.value })}
+            />
+          ))}
+        </div>
+        {form.payType === "pay" ? (
+          <PriceField
+            price={priceSuggestion}
+            value={price}
+            fits={form.helper.fits}
+            fitsPaid={form.helper.fitsPaid}
+            onChange={(value) => set({ price: value, payType: value === 0 ? "free" : "pay" })}
+          />
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            {form.payType === "trade"
+              ? "No money changes hands. Say what you can trade in the details."
+              : "A favor. It reaches every helper who fits."}
+          </p>
+        )}
+      </Section>
+
+      <Section title="When and where">
+        <Field
+          label="Needed by"
+          id="write-deadline"
+          hint="Your ask comes down after this if nobody's said yes."
+        >
+          <Input
+            id="write-deadline"
+            type="datetime-local"
+            value={form.deadline}
+            onChange={(e) => set({ deadline: e.target.value, deadlineTouched: true })}
           />
         </Field>
         <Field label="When" id={FIELD_IDS.when}>
@@ -238,28 +314,16 @@ function WriteForm({ initial }: { initial: Form }) {
             <ToggleChip label="Flexible" pressed={!form.when} onClick={() => setWhen("")} />
           </div>
         </Field>
-        <Field
-          label="Deadline"
-          id="write-deadline"
-          hint="Your ask comes down after this if nobody's said yes."
-        >
-          <Input
-            id="write-deadline"
-            type="datetime-local"
-            value={form.deadline}
-            onChange={(e) => set({ deadline: e.target.value, deadlineTouched: true })}
-          />
-        </Field>
         <Field label="Where" id={FIELD_IDS.where}>
           <Input
             id={FIELD_IDS.where}
             value={form.where}
             maxLength={80}
-            placeholder="From East Hall"
+            placeholder="From Baker Library"
             onChange={(e) => set({ where: e.target.value })}
           />
         </Field>
-        <Field label="Time needed (min)" id="write-minutes">
+        <Field label="How long it takes (min)" id="write-minutes">
           <Input
             id="write-minutes"
             type="number"
@@ -273,15 +337,11 @@ function WriteForm({ initial }: { initial: Form }) {
             }
           />
         </Field>
+      </Section>
+
+      <section className="rounded-3xl bg-card p-4">
         <WhoToAsk helper={form.helper} onChange={(helper) => set({ helper })} pickInterests />
-        <PriceField
-          price={priceSuggestion}
-          value={price}
-          fits={form.helper.fits}
-          fitsPaid={form.helper.fitsPaid}
-          onChange={(value) => set({ price: value })}
-        />
-      </div>
+      </section>
 
       {suggestions ? (
         <SuggestionsPanel
@@ -294,6 +354,7 @@ function WriteForm({ initial }: { initial: Form }) {
       ) : (
         <Button
           variant="outline"
+          className="h-11"
           disabled={assisting || (!form.what.trim() && !form.details.trim())}
           onClick={getSuggestions}
         >
@@ -303,9 +364,12 @@ function WriteForm({ initial }: { initial: Form }) {
 
       <div className="mt-auto flex flex-col gap-2">
         {error && <p className="text-sm text-destructive">{error}</p>}
-        <Button size="lg" className="h-12 text-base" disabled={submitting} onClick={submit}>
-          {submitting ? "Checking…" : "Continue"}
+        <Button size="lg" className="h-12 text-base" onClick={submit}>
+          Continue
         </Button>
+        <p className="text-center text-xs text-muted-foreground">
+          Only verified .edu accounts can post or claim. Nothing is sent without your OK.
+        </p>
       </div>
     </>
   );
@@ -333,7 +397,7 @@ function SuggestionsPanel({
   ].join(", ");
 
   return (
-    <section className="flex flex-col gap-3 rounded-2xl border border-dashed p-4">
+    <section className="flex flex-col gap-3 rounded-3xl border border-dashed border-input bg-card p-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold">Suggestions</h3>
         <div className="flex gap-3 text-sm">

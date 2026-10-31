@@ -43,7 +43,6 @@ export default function ClarifyPage() {
   return (
     <>
       <StepHeader
-        step={2}
         title="A couple quick questions"
         subtitle={`“${state.need}”`}
         backHref="/describe"

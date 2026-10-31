@@ -19,7 +19,7 @@ const inbox = await import("./inbox");
 
 let asker: SessionUser;
 const helpers: SessionUser[] = [];
-const setup = { canAcceptPayment: true, payoutAccount: "@sam-venmo" };
+const setup = { canAcceptPayment: true, payoutAccount: "•••• 4242" };
 
 beforeAll(async () => {
   await openTestDb();
@@ -138,8 +138,8 @@ describe("board actions", () => {
     expect(covered).toHaveLength(1);
 
     expect("error" in (await board.markDone(token))).toBe(true); // pay to hold first
-    const paid = await board.payToHold(token, "venmo");
-    expect("ok" in paid && paid.card.payment?.totalCents).toBe(1681);
+    const paid = await board.payToHold(token);
+    expect("ok" in paid && paid.card.payment?.totalCents).toBe(1728);
     expect("ok" in paid && paid.card.payment?.status).toBe("held");
     expect("error" in (await board.payToHold(token))).toBe(true);
 

@@ -78,7 +78,8 @@ export async function updateProfile(userId: string, update: ProfileUpdate) {
 export async function saveHelperSetup(userId: string, setup: HelperSetup) {
   await updateProfile(userId, {
     canAcceptPayment: setup.canAcceptPayment,
-    payoutMethod: setup.payoutMethod ?? "venmo",
+    // "bank" = a bank account or debit card connected through Stripe (mocked).
+    payoutMethod: setup.payoutMethod ?? "bank",
     payoutHandle: setup.payoutAccount || undefined,
   });
 }

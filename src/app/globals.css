@@ -6,6 +6,9 @@
 
 @theme inline {
   --color-background: var(--background);
+  --color-ink: var(--ink);
+  --color-pay: var(--pay);
+  --color-brand-light: var(--brand-light);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
@@ -49,38 +52,42 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* DartAsk palette (design: "DartAsk full set in green v2"). Light only. */
+  --ink: #0e2a20;
+  --pay: #d4f3e4;
+  --brand-light: #3d8f67;
+  --background: #f3f6f4;
+  --foreground: #0e2a20;
+  --card: #ffffff;
+  --card-foreground: #0e2a20;
+  --popover: #ffffff;
+  --popover-foreground: #0e2a20;
+  --primary: #155e44;
+  --primary-foreground: #ffffff;
+  --secondary: #d4f3e4;
+  --secondary-foreground: #0b4a36;
+  --muted: #e3efe8;
+  --muted-foreground: #5f6e67;
+  --accent: #d4f3e4;
+  --accent-foreground: #0b4a36;
+  --destructive: #b42318;
+  --border: #e3efe8;
+  --input: #cde9d9;
+  --ring: #3d8f67;
+  --chart-1: #155e44;
+  --chart-2: #3d8f67;
+  --chart-3: #7cc29c;
+  --chart-4: #a9d8bc;
+  --chart-5: #d4f3e4;
+  --radius: 0.875rem;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0e2a20;
+  --sidebar-primary: #155e44;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #d4f3e4;
+  --sidebar-accent-foreground: #0b4a36;
+  --sidebar-border: #e3efe8;
+  --sidebar-ring: #3d8f67;
 }
 
 .dark {
