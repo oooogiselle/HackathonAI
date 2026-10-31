@@ -26,9 +26,10 @@ export function expiresSoon(expiresAt: number, now: number) {
   return expiresAt - now < 3 * 3_600_000;
 }
 
-/** "Sat, Nov 1, 3:00 PM" */
+/** "Sat, Nov 1, 3:00 PM", always in campus time (servers run in UTC). */
 export function whenLabel(ms: number) {
   return new Date(ms).toLocaleString("en-US", {
+    timeZone: "America/New_York",
     weekday: "short",
     month: "short",
     day: "numeric",
