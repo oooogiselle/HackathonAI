@@ -3,7 +3,7 @@
 // task (board or group link), signs in with the mocked Dartmouth SSO and claims
 // it -> a third sees "Already taken" -> the asker confirms and pays to hold ->
 // the helper taps Done -> the asker confirms done -> thank-you.
-// Plus the two safety redirects. See playwright.config.ts for the server setup.
+// Plus the safety redirects (Home and a typed Clarify answer). See playwright.config.ts for the server setup.
 import { type Browser, devices, expect, type Page, test } from "@playwright/test";
 
 /** Mocked "Sign in with Dartmouth", then back to `next`. */
@@ -178,4 +178,23 @@ test("a crisis message shows professional resources only", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "You don't have to handle this alone" }),
   ).toBeVisible();
+});
+
+test("Clarify takes a typed answer, and checks it for safety", async ({ page }) => {
+  await page.goto("/describe");
+  await page
+    .getByLabel("What you need, in your own words")
+    .fill("i need a ride to the airport next month");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page).toHaveURL(/\/clarify$/);
+  const ownAnswer = page.getByPlaceholder("Or type your own").first();
+  await ownAnswer.fill("Boston Logan, Dec 18 around 6am");
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page).toHaveURL(/\/draft$/);
+
+  await page.goBack();
+  await expect(page).toHaveURL(/\/clarify$/);
+  await page.getByPlaceholder("Or type your own").first().fill("honestly I want to die");
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page).toHaveURL(/\/resources\?type=crisis$/);
 });

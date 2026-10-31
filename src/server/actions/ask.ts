@@ -48,10 +48,14 @@ const answersSchema = z
 
 export async function draftAsk(need: string, answers: ClarifyAnswer[]): Promise<DraftResult> {
   const cleanNeed = text.parse(need);
+  const cleanAnswers = answersSchema.parse(answers);
   // Home already redirects these; never break them into asks or price them.
-  const { category } = await safetyCheck(cleanNeed);
+  // Answers can be typed freely on Clarify, so they're checked with the need.
+  const { category } = await safetyCheck(
+    [cleanNeed, ...cleanAnswers.map((a) => a.answer)].join("\n"),
+  );
   if (category === "academic" || category === "crisis") return { parts: [] };
-  return draftAskAI(cleanNeed, answersSchema.parse(answers));
+  return draftAskAI(cleanNeed, cleanAnswers);
 }
 
 const assistInput = z.object({
