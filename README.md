@@ -9,6 +9,10 @@
   <em>AI can make asking easier. Only people can help.</em>
 </p>
 
+<p align="center">
+  <img src="docs/screenshot.png" alt="DartAsk needs board on a phone: open asks for cooking help, moving boxes and a winter coat" width="300" />
+</p>
+
 ---
 
 ## Why
